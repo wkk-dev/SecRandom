@@ -116,7 +116,7 @@ class PrizeWeightSettingWindow(QWidget):
             weights = []
             for item_name, item_info in data.items():
                 if "weight" in item_info and item_info["weight"]:
-                    weights.append(item_info["weight"]) 
+                    weights.append(item_info["weight"])
 
             self.initial_weights = weights.copy()
 

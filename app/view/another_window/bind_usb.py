@@ -6,7 +6,14 @@ from loguru import logger
 
 from app.Language.obtain_language import *
 from app.tools.personalised import *
-from app.common.safety.usb import list_removable_drives, list_usb_drive_letters_wmi, get_volume_serial, get_volume_label, bind_with_options, remove_key_file
+from app.common.safety.usb import (
+    list_removable_drives,
+    list_usb_drive_letters_wmi,
+    get_volume_serial,
+    get_volume_label,
+    bind_with_options,
+    remove_key_file,
+)
 
 
 class BindUsbWindow(QWidget):
@@ -22,10 +29,14 @@ class BindUsbWindow(QWidget):
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(15)
 
-        self.title_label = TitleLabel(get_content_name_async("basic_safety_settings", "bind_usb"))
+        self.title_label = TitleLabel(
+            get_content_name_async("basic_safety_settings", "bind_usb")
+        )
         self.main_layout.addWidget(self.title_label)
 
-        self.description_label = BodyLabel(get_content_description_async("basic_safety_settings", "bind_usb"))
+        self.description_label = BodyLabel(
+            get_content_description_async("basic_safety_settings", "bind_usb")
+        )
         self.description_label.setWordWrap(True)
         self.main_layout.addWidget(self.description_label)
 
@@ -33,9 +44,15 @@ class BindUsbWindow(QWidget):
         layout = QVBoxLayout(card)
 
         self.drive_combo = ComboBox()
-        self.refresh_button = PushButton(get_content_name_async("basic_safety_settings","usb_refresh"))
-        self.require_key_checkbox = CheckBox(get_content_name_async("basic_safety_settings","usb_require_key_file"))
-        self.bind_button = PrimaryPushButton(get_content_name_async("basic_safety_settings","usb_bind"))
+        self.refresh_button = PushButton(
+            get_content_name_async("basic_safety_settings", "usb_refresh")
+        )
+        self.require_key_checkbox = CheckBox(
+            get_content_name_async("basic_safety_settings", "usb_require_key_file")
+        )
+        self.bind_button = PrimaryPushButton(
+            get_content_name_async("basic_safety_settings", "usb_bind")
+        )
 
         layout.addWidget(self.drive_combo)
         layout.addWidget(self.refresh_button)
@@ -46,7 +63,9 @@ class BindUsbWindow(QWidget):
 
         btns = QHBoxLayout()
         btns.addStretch(1)
-        self.close_button = PushButton(get_content_name_async("basic_safety_settings", "cancel_button"))
+        self.close_button = PushButton(
+            get_content_name_async("basic_safety_settings", "cancel_button")
+        )
         btns.addWidget(self.close_button)
         self.main_layout.addLayout(btns)
         self.main_layout.addStretch(1)
@@ -61,7 +80,7 @@ class BindUsbWindow(QWidget):
     def _notify_error(self, text: str, duration: int = 3000):
         try:
             InfoBar.error(
-                title=get_content_name_async("basic_safety_settings","title"),
+                title=get_content_name_async("basic_safety_settings", "title"),
                 content=text,
                 position=InfoBarPosition.TOP,
                 duration=duration,
@@ -73,7 +92,7 @@ class BindUsbWindow(QWidget):
     def _notify_success(self, text: str, duration: int = 3000):
         try:
             InfoBar.success(
-                title=get_content_name_async("basic_safety_settings","title"),
+                title=get_content_name_async("basic_safety_settings", "title"),
                 content=text,
                 position=InfoBarPosition.TOP,
                 duration=duration,
@@ -86,13 +105,13 @@ class BindUsbWindow(QWidget):
         self.drive_combo.clear()
         try:
             import platform
+
             # 优先使用WMI获取USB设备的逻辑盘符（可覆盖固定盘类型的外置硬盘）
             letters = list_usb_drive_letters_wmi()
             if not letters:
                 # 回退到驱动类型为可移动盘的枚举
                 letters = list_removable_drives()
             logger.debug(f"刷新可绑定设备，数量：{len(letters)}")
-            
             for device in letters:
                 if platform.system() == "Windows":
                     # Windows 平台：device 是盘符（如 "E"）
@@ -105,7 +124,6 @@ class BindUsbWindow(QWidget):
                     # 在Linux上，name 可能就是挂载点的目录名，所以直接使用 device 作为显示文本
                     text = device
                     self.drive_combo.addItem(text, device)
-            
             if not letters:
                 self.drive_combo.setCurrentIndex(-1)
                 # 使占位文本可见
@@ -113,7 +131,9 @@ class BindUsbWindow(QWidget):
                     self.drive_combo.setEditable(True)
                     self.drive_combo.lineEdit().setReadOnly(True)
                     self.drive_combo.lineEdit().setPlaceholderText(
-                        get_content_name_async("basic_safety_settings", "usb_no_removable")
+                        get_content_name_async(
+                            "basic_safety_settings", "usb_no_removable"
+                        )
                     )
                     self.bind_button.setEnabled(False)
                 except Exception:
@@ -130,23 +150,27 @@ class BindUsbWindow(QWidget):
     def __bind(self):
         idx = self.drive_combo.currentIndex()
         if idx < 0:
-            self._notify_error(get_content_name_async("basic_safety_settings","usb_no_removable"))
+            self._notify_error(
+                get_content_name_async("basic_safety_settings", "usb_no_removable")
+            )
             return
         text = self.drive_combo.currentText()
         device = self.drive_combo.currentData()
-        
         import platform
+
         try:
             # 允许来自USB设备的逻辑盘（包括部分显示为固定盘的外置硬盘）
             serial = get_volume_serial(device)
             if not serial or serial == "00000000":
-                raise RuntimeError(get_content_name_async("basic_safety_settings","usb_no_removable"))
-            
+                raise RuntimeError(
+                    get_content_name_async("basic_safety_settings", "usb_no_removable")
+                )
             require_key = bool(self.require_key_checkbox.isChecked())
             key_value = None
             if require_key:
                 try:
                     from app.common.safety.usb import write_key_file
+
                     try:
                         remove_key_file(device)
                     except Exception:
@@ -154,22 +178,29 @@ class BindUsbWindow(QWidget):
                     key_value = os.urandom(16).hex()
                     ok = write_key_file(device, key_value)
                     if not ok:
-                        raise RuntimeError(get_content_name_async("basic_safety_settings","usb_no_removable"))
+                        raise RuntimeError(
+                            get_content_name_async(
+                                "basic_safety_settings", "usb_no_removable"
+                            )
+                        )
                 except Exception as e:
-                    raise RuntimeError(str(e))
-            
+                    raise RuntimeError(str(e)) from e
             display_name = get_volume_label(device)
-            bind_with_options(serial, require_key_file=require_key, key_value=key_value, name=display_name)
-            
+            bind_with_options(
+                serial,
+                require_key_file=require_key,
+                key_value=key_value,
+                name=display_name,
+            )
             if platform.system() == "Windows":
                 logger.debug(f"绑定设备成功：{device}:")
             else:
                 logger.debug(f"绑定设备成功：{device}")
-            
-            self._notify_success(f"{get_content_name_async('basic_safety_settings','usb_bind_success')}: {text}")
+            self._notify_success(
+                f"{get_content_name_async('basic_safety_settings', 'usb_bind_success')}: {text}"
+            )
         except Exception as e:
             self._notify_error(str(e))
-
 
     def __cancel(self):
         parent = self.parent()

@@ -6,7 +6,8 @@ import platform
 import ctypes
 import uuid
 from loguru import logger
-from app.tools.path_utils import get_settings_path, get_config_path, ensure_dir
+from app.tools.path_utils import get_settings_path, ensure_dir
+
 try:
     from Cryptodome.Cipher import AES
 except Exception:
@@ -15,40 +16,44 @@ except Exception:
     except Exception:
         AES = None
 
+
 def _set_hidden(path: str) -> None:
     try:
         if platform.system() == "Windows":
             # Windows 平台：设置文件属性为隐藏和系统文件
             FILE_ATTRIBUTE_HIDDEN = 0x2
             FILE_ATTRIBUTE_SYSTEM = 0x4
-            ctypes.windll.kernel32.SetFileAttributesW(path, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)
+            ctypes.windll.kernel32.SetFileAttributesW(
+                path, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM
+            )
         else:  # Linux 平台：使用点前缀隐藏文件
             import os
+
             dirname = os.path.dirname(path)
             basename = os.path.basename(path)
-            
             # 如果文件名已经以点开头，则不需要处理
             if basename.startswith("."):
                 return
-            
             # 将文件重命名为以点开头的文件名
             hidden_path = os.path.join(dirname, f".{basename}")
-            
             # 如果隐藏文件已存在，先删除它
             if os.path.exists(hidden_path):
                 os.remove(hidden_path)
-            
             # 重命名原文件为隐藏文件
             os.rename(path, hidden_path)
     except Exception as e:
         logger.warning(f"隐藏文件失败: {e}")
         pass
 
+
 def _get_machine_guid() -> str:
     if platform.system() == "Windows":
         try:
             import winreg
-            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Cryptography")
+
+            key = winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Cryptography"
+            )
             val, _ = winreg.QueryValueEx(key, "MachineGuid")
             winreg.CloseKey(key)
             return str(val)
@@ -59,9 +64,11 @@ def _get_machine_guid() -> str:
     except Exception:
         return "SecRandom"
 
+
 def _platform_key() -> bytes:
     base = _get_machine_guid() + str(get_settings_path(""))
     return hashlib.sha256(base.encode("utf-8")).digest()[:16]
+
 
 def _encrypt_payload(data: bytes, key: bytes) -> bytes:
     if AES:
@@ -73,6 +80,7 @@ def _encrypt_payload(data: bytes, key: bytes) -> bytes:
     obf = bytes(b ^ stream[i % len(stream)] for i, b in enumerate(data))
     return obf
 
+
 def _decrypt_payload(payload: bytes, key: bytes) -> bytes:
     if AES:
         nonce = payload[:16]
@@ -82,6 +90,7 @@ def _decrypt_payload(payload: bytes, key: bytes) -> bytes:
     stream = hashlib.sha256(key).digest()
     data = bytes(b ^ stream[i % len(stream)] for i, b in enumerate(payload))
     return data
+
 
 def read_secrets() -> dict:
     p = get_settings_path("secrets.json")
@@ -111,6 +120,7 @@ def read_secrets() -> dict:
                 logger.warning("读取安全配置失败，返回空配置")
 
     return {}
+
 
 def write_secrets(d: dict) -> None:
     p = get_settings_path("secrets.json")
