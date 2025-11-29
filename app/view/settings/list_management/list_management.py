@@ -155,7 +155,21 @@ class roll_call_list(GroupHeaderCardWidget):
         create_set_class_name_window()
         # 显示通知
         config = NotificationConfig(
-            title="班级名称设置", content="已打开班级名称设置窗口", duration=3000
+            title=get_content_name_async(
+                "list_management",
+                "notification",
+                "roll_call",
+                "class_name_setting",
+                "title",
+            ),
+            content=get_content_name_async(
+                "list_management",
+                "notification",
+                "roll_call",
+                "class_name_setting",
+                "content",
+            ),
+            duration=3000,
         )
         show_notification(NotificationType.INFO, config, parent=self)
 
@@ -164,7 +178,21 @@ class roll_call_list(GroupHeaderCardWidget):
         create_import_student_name_window()
         # 显示通知
         config = NotificationConfig(
-            title="学生名单导入", content="已打开学生名单导入窗口", duration=3000
+            title=get_content_name_async(
+                "list_management",
+                "notification",
+                "roll_call",
+                "import_student_name",
+                "title",
+            ),
+            content=get_content_name_async(
+                "list_management",
+                "notification",
+                "roll_call",
+                "import_student_name",
+                "content",
+            ),
+            duration=3000,
         )
         show_notification(NotificationType.INFO, config, parent=self)
 
@@ -173,7 +201,17 @@ class roll_call_list(GroupHeaderCardWidget):
         create_name_setting_window()
         # 显示通知
         config = NotificationConfig(
-            title="姓名设置", content="已打开姓名设置窗口", duration=3000
+            title=get_content_name_async(
+                "list_management", "notification", "roll_call", "name_setting", "title"
+            ),
+            content=get_content_name_async(
+                "list_management",
+                "notification",
+                "roll_call",
+                "name_setting",
+                "content",
+            ),
+            duration=3000,
         )
         show_notification(NotificationType.INFO, config, parent=self)
 
@@ -182,7 +220,21 @@ class roll_call_list(GroupHeaderCardWidget):
         create_gender_setting_window()
         # 显示通知
         config = NotificationConfig(
-            title="性别设置", content="已打开性别设置窗口", duration=3000
+            title=get_content_name_async(
+                "list_management",
+                "notification",
+                "roll_call",
+                "gender_setting",
+                "title",
+            ),
+            content=get_content_name_async(
+                "list_management",
+                "notification",
+                "roll_call",
+                "gender_setting",
+                "content",
+            ),
+            duration=3000,
         )
         show_notification(NotificationType.INFO, config, parent=self)
 
@@ -191,7 +243,17 @@ class roll_call_list(GroupHeaderCardWidget):
         create_group_setting_window()
         # 显示通知
         config = NotificationConfig(
-            title="小组设置", content="已打开小组设置窗口", duration=3000
+            title=get_content_name_async(
+                "list_management", "notification", "roll_call", "group_setting", "title"
+            ),
+            content=get_content_name_async(
+                "list_management",
+                "notification",
+                "roll_call",
+                "group_setting",
+                "content",
+            ),
+            duration=3000,
         )
         show_notification(NotificationType.INFO, config, parent=self)
 
@@ -207,9 +269,21 @@ class roll_call_list(GroupHeaderCardWidget):
 
         file_path, selected_filter = QFileDialog.getSaveFileName(
             self,
-            "保存学生名单",
+            get_content_name_async(
+                "list_management",
+                "qfiledialog",
+                "roll_call",
+                "export_student_list",
+                "caption",
+            ),
             f"{class_name}_学生名单-SecRandom",
-            "Excel 文件 (*.xlsx);;CSV 文件 (*.csv);;TXT 文件（仅姓名） (*.txt)",
+            get_content_name_async(
+                "list_management",
+                "qfiledialog",
+                "roll_call",
+                "export_student_list",
+                "filter",
+            ),
         )
 
         if not file_path:
@@ -234,15 +308,45 @@ class roll_call_list(GroupHeaderCardWidget):
 
         if success:
             config = NotificationConfig(
-                title="导出成功",
-                content=f"学生名单已导出到: {file_path}",
+                title=get_content_name_async(
+                    "list_management",
+                    "notification",
+                    "roll_call",
+                    "export",
+                    "title",
+                    "success",
+                ),
+                content=get_content_name_async(
+                    "list_management",
+                    "notification",
+                    "roll_call",
+                    "export",
+                    "content",
+                    "success",
+                ).format(path=file_path),
                 duration=3000,
             )
             show_notification(NotificationType.SUCCESS, config, parent=self)
             logger.info(f"学生名单导出成功: {file_path}")
         else:
             config = NotificationConfig(
-                title="导出失败", content=message, duration=3000
+                title=get_content_name_async(
+                    "list_management",
+                    "notification",
+                    "roll_call",
+                    "export",
+                    "title",
+                    "failure",
+                ),
+                content=get_content_name_async(
+                    "list_management",
+                    "notification",
+                    "roll_call",
+                    "export",
+                    "content",
+                    "error",
+                ).format(message=message),
+                duration=3000,
             )
             show_notification(NotificationType.ERROR, config, parent=self)
             logger.error(f"学生名单导出失败: {message}")
@@ -408,7 +512,21 @@ class lottery_list(GroupHeaderCardWidget):
         create_set_pool_name_window()
         # 显示通知
         config = NotificationConfig(
-            title="奖池名称设置", content="已打开奖池名称设置窗口", duration=3000
+            title=get_content_name_async(
+                "list_management",
+                "notification",
+                "lottery",
+                "pool_name_setting",
+                "title",
+            ),
+            content=get_content_name_async(
+                "list_management",
+                "notification",
+                "lottery",
+                "pool_name_setting",
+                "content",
+            ),
+            duration=3000,
         )
         show_notification(NotificationType.INFO, config, parent=self)
 
@@ -417,7 +535,21 @@ class lottery_list(GroupHeaderCardWidget):
         create_import_prize_name_window()
         # 显示通知
         config = NotificationConfig(
-            title="奖品名单导入", content="已打开奖品名单导入窗口", duration=3000
+            title=get_content_name_async(
+                "list_management",
+                "notification",
+                "lottery",
+                "import_prize_name",
+                "title",
+            ),
+            content=get_content_name_async(
+                "list_management",
+                "notification",
+                "lottery",
+                "import_prize_name",
+                "content",
+            ),
+            duration=3000,
         )
         show_notification(NotificationType.INFO, config, parent=self)
 
@@ -426,7 +558,13 @@ class lottery_list(GroupHeaderCardWidget):
         create_prize_setting_window()
         # 显示通知
         config = NotificationConfig(
-            title="奖品设置", content="已打开奖品设置窗口", duration=3000
+            title=get_content_name_async(
+                "list_management", "notification", "lottery", "prize_setting", "title"
+            ),
+            content=get_content_name_async(
+                "list_management", "notification", "lottery", "prize_setting", "content"
+            ),
+            duration=3000,
         )
         show_notification(NotificationType.INFO, config, parent=self)
 
@@ -435,7 +573,21 @@ class lottery_list(GroupHeaderCardWidget):
         create_prize_weight_setting_window()
         # 显示通知
         config = NotificationConfig(
-            title="奖品权重设置", content="已打开奖品权重设置窗口", duration=3000
+            title=get_content_name_async(
+                "list_management",
+                "notification",
+                "lottery",
+                "prize_weight_setting",
+                "title",
+            ),
+            content=get_content_name_async(
+                "list_management",
+                "notification",
+                "lottery",
+                "prize_weight_setting",
+                "content",
+            ),
+            duration=3000,
         )
         show_notification(NotificationType.INFO, config, parent=self)
 
@@ -451,9 +603,21 @@ class lottery_list(GroupHeaderCardWidget):
 
         file_path, selected_filter = QFileDialog.getSaveFileName(
             self,
-            "保存奖品名单",
+            get_content_name_async(
+                "list_management",
+                "qfiledialog",
+                "lottery",
+                "export_prize_name",
+                "caption",
+            ),
             f"{pool_name}_奖品名单-SecRandom",
-            "Excel 文件 (*.xlsx);;CSV 文件 (*.csv);;TXT 文件（仅奖品名） (*.txt)",
+            get_content_name_async(
+                "list_management",
+                "qfiledialog",
+                "lottery",
+                "export_prize_name",
+                "filter",
+            ),
         )
 
         if not file_path:
@@ -478,15 +642,45 @@ class lottery_list(GroupHeaderCardWidget):
 
         if success:
             config = NotificationConfig(
-                title="导出成功",
-                content=f"奖品名单已导出到: {file_path}",
+                title=get_content_name_async(
+                    "list_management",
+                    "notification",
+                    "lottery",
+                    "export",
+                    "title",
+                    "success",
+                ),
+                content=get_content_name_async(
+                    "list_management",
+                    "notification",
+                    "lottery",
+                    "export",
+                    "content",
+                    "success",
+                ).format(path=file_path),
                 duration=3000,
             )
             show_notification(NotificationType.SUCCESS, config, parent=self)
             logger.info(f"奖品名单导出成功: {file_path}")
         else:
             config = NotificationConfig(
-                title="导出失败", content=message, duration=3000
+                title=get_content_name_async(
+                    "list_management",
+                    "notification",
+                    "lottery",
+                    "export",
+                    "title",
+                    "failure",
+                ),
+                content=get_content_name_async(
+                    "list_management",
+                    "notification",
+                    "lottery",
+                    "export",
+                    "content",
+                    "error",
+                ).format(message=message),
+                duration=3000,
             )
             show_notification(NotificationType.ERROR, config, parent=self)
             logger.error(f"奖品名单导出失败: {message}")

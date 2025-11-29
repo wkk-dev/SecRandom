@@ -81,3 +81,157 @@ lottery_table = {
         },
     }
 }
+
+# 通知文本配置
+notification = {
+    "ZH_CN": {
+        # 点名名单通知
+        "roll_call": {
+            "class_name_setting": {
+                "title": {
+                    "name": "班级名称设置",
+                    "description": "班级名称设置通知标题",
+                },
+                "content": {
+                    "name": "已打开班级名称设置窗口",
+                    "description": "班级名称设置通知内容",
+                },
+            },
+            "import_student_name": {
+                "title": {
+                    "name": "学生名单导入",
+                    "description": "学生名单导入通知标题",
+                },
+                "content": {
+                    "name": "已打开学生名单导入窗口",
+                    "description": "学生名单导入通知内容",
+                },
+            },
+            "name_setting": {
+                "title": {"name": "姓名设置", "description": "姓名设置通知标题"},
+                "content": {
+                    "name": "已打开姓名设置窗口",
+                    "description": "姓名设置通知内容",
+                },
+            },
+            "gender_setting": {
+                "title": {"name": "性别设置", "description": "性别设置通知标题"},
+                "content": {
+                    "name": "已打开性别设置窗口",
+                    "description": "性别设置通知内容",
+                },
+            },
+            "group_setting": {
+                "title": {"name": "小组设置", "description": "小组设置通知标题"},
+                "content": {
+                    "name": "已打开小组设置窗口",
+                    "description": "小组设置通知内容",
+                },
+            },
+            "export": {
+                "title": {
+                    "success": {"name": "导出成功", "description": "导出成功通知标题"},
+                    "failure": {"name": "导出失败", "description": "导出失败通知标题"},
+                },
+                "content": {
+                    "success": {
+                        "name": "学生名单已导出到: {path}",
+                        "description": "导出成功通知内容",
+                    },
+                    "failure": {
+                        "name": "请先选择要导出的班级",
+                        "description": "导出失败通知内容（未选择班级）",
+                    },
+                    "error": {"name": "{message}", "description": "导出错误通知内容"},
+                },
+            },
+        },
+        # 抽奖名单通知
+        "lottery": {
+            "pool_name_setting": {
+                "title": {
+                    "name": "奖池名称设置",
+                    "description": "奖池名称设置通知标题",
+                },
+                "content": {
+                    "name": "已打开奖池名称设置窗口",
+                    "description": "奖池名称设置通知内容",
+                },
+            },
+            "import_prize_name": {
+                "title": {
+                    "name": "奖品名单导入",
+                    "description": "奖品名单导入通知标题",
+                },
+                "content": {
+                    "name": "已打开奖品名单导入窗口",
+                    "description": "奖品名单导入通知内容",
+                },
+            },
+            "prize_setting": {
+                "title": {"name": "奖品设置", "description": "奖品设置通知标题"},
+                "content": {
+                    "name": "已打开奖品设置窗口",
+                    "description": "奖品设置通知内容",
+                },
+            },
+            "prize_weight_setting": {
+                "title": {
+                    "name": "奖品权重设置",
+                    "description": "奖品权重设置通知标题",
+                },
+                "content": {
+                    "name": "已打开奖品权重设置窗口",
+                    "description": "奖品权重设置通知内容",
+                },
+            },
+            "export": {
+                "title": {
+                    "success": {"name": "导出成功", "description": "导出成功通知标题"},
+                    "failure": {"name": "导出失败", "description": "导出失败通知标题"},
+                },
+                "content": {
+                    "success": {
+                        "name": "奖品名单已导出到: {path}",
+                        "description": "导出成功通知内容",
+                    },
+                    "failure": {
+                        "name": "请先选择要导出的奖池",
+                        "description": "导出失败通知内容（未选择奖池）",
+                    },
+                    "error": {"name": "{message}", "description": "导出错误通知内容"},
+                },
+            },
+        },
+    }
+}
+
+# QFileDialog 文本配置
+qfiledialog = {
+    "ZH_CN": {
+        "roll_call": {
+            "export_student_list": {
+                "caption": {
+                    "name": "保存学生名单",
+                    "description": "保存学生名单对话框标题",
+                },
+                "filter": {
+                    "name": "Excel 文件 (*.xlsx);;CSV 文件 (*.csv);;TXT 文件（仅姓名） (*.txt)",
+                    "description": "保存学生名单对话框过滤器",
+                },
+            }
+        },
+        "lottery": {
+            "export_prize_name": {
+                "caption": {
+                    "name": "保存奖品名单",
+                    "description": "保存奖品名单对话框标题",
+                },
+                "filter": {
+                    "name": "Excel 文件 (*.xlsx);;CSV 文件 (*.csv);;TXT 文件（仅奖品名） (*.txt)",
+                    "description": "保存奖品名单对话框过滤器",
+                },
+            }
+        },
+    }
+}
