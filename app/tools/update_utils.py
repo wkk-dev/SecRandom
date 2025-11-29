@@ -356,8 +356,14 @@ def get_update_download_url(
         # 获取 GitHub 仓库 URL
         repo_url = GITHUB_WEB
 
-        # 直接生成默认文件名，避免异步调用
-        file_name = f"SecRandom-{system}-{version}-{arch}-{struct}.zip"
+        # 从 metadata.yaml 获取文件名格式
+        name_format = "SecRandom-[system]-[version]-[arch]-[struct].zip"
+
+        # 替换占位符生成实际文件名
+        file_name = name_format.replace("[system]", system)
+        file_name = file_name.replace("[version]", version)
+        file_name = file_name.replace("[arch]", arch)
+        file_name = file_name.replace("[struct]", struct)
 
         # 构建完整的 GitHub 下载 URL
         github_download_url = f"{repo_url}/releases/download/{version}/{file_name}"
@@ -402,8 +408,14 @@ async def download_update_async(
         download_url = get_update_download_url(version, system, arch, struct)
         logger.debug(f"开始下载更新文件: {download_url}")
 
-        # 获取更新文件名
-        file_name = f"SecRandom-{system}-{version}-{arch}-{struct}.zip"
+        # 从 metadata.yaml 获取文件名格式
+        name_format = "SecRandom-[system]-[version]-[arch]-[struct].zip"
+
+        # 替换占位符生成实际文件名
+        file_name = name_format.replace("[system]", system)
+        file_name = file_name.replace("[version]", version)
+        file_name = file_name.replace("[arch]", arch)
+        file_name = file_name.replace("[struct]", struct)
 
         # 确定下载保存路径
         download_dir = get_resources_path("downloads")
