@@ -18,7 +18,11 @@ from app.tools.personalised import get_theme_icon
 from app.Language.obtain_language import get_content_name_async
 from app.Language.obtain_language import readme_settings_async, update_settings
 from app.common.safety.verify_ops import require_and_run
-from app.page_building.main_window_page import roll_call_page, lottery_page
+from app.page_building.main_window_page import (
+    roll_call_page,
+    lottery_page,
+    history_page,
+)
 from app.view.tray.tray import Tray
 from app.view.floating_window.levitation import LevitationWindow
 from app.common.IPC_URL.url_command_handler import URLCommandHandler
@@ -151,6 +155,9 @@ class MainWindow(MSFluentWindow):
         self.lottery_page = lottery_page(self)
         self.lottery_page.setObjectName("lottery_page")
 
+        self.history_page = history_page(self)
+        self.history_page.setObjectName("history_page")
+
         self.settingsInterface = QWidget(self)
         self.settingsInterface.setObjectName("settingsInterface")
 
@@ -191,6 +198,23 @@ class MainWindow(MSFluentWindow):
             get_theme_icon("ic_fluent_gift_20_filled"),
             get_content_name_async("lottery", "title"),
             position=lottery_position,
+        )
+
+        # 获取历史记录侧边栏位置设置
+        history_sidebar_pos = readme_settings_async(
+            "sidebar_management_window", "main_window_history"
+        )
+        history_position = (
+            NavigationItemPosition.TOP
+            if (history_sidebar_pos is None or history_sidebar_pos != 1)
+            else NavigationItemPosition.BOTTOM
+        )
+
+        self.addSubInterface(
+            self.history_page,
+            get_theme_icon("ic_fluent_history_20_filled"),
+            get_content_name_async("history", "title"),
+            position=history_position,
         )
 
         # 获取设置图标位置设置
