@@ -23,6 +23,10 @@ update = {
         "download_failed": {"name": "下载失败"},
         "failed_to_get_version_info": {"name": "获取版本信息失败"},
         "failed_to_download_update": {"name": "下载更新失败"},
+        "download_and_install": {"name": "下载并安装"},
+        "cancel_update": {"name": "取消更新"},
+        "update_cancelled": {"name": "更新已取消"},
+        "cancelling_update": {"name": "正在取消更新..."},
         "auto_update_mode": {
             "name": "自动检查更新并安装",
             "description": "设置应用的自动更新模式",
