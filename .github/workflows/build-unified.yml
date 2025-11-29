@@ -48,16 +48,11 @@ concurrency:
 
 jobs:
   builder_matrix:
-    # 仅在push或pull_request事件包含特定关键词时执行，workflow_dispatch无条件执行
+    # 仅在push或pull_request事件包含"开始打包"关键词时执行，或有v开头的tag，或手动触发
     if: |
       github.event_name == 'workflow_dispatch' ||
-      contains(github.event.head_commit.message, '打包') ||
-      contains(github.event.head_commit.message, 'pi') ||
-      contains(github.event.head_commit.message, 'all') ||
-      contains(github.event.head_commit.message, 'win') ||
-      contains(github.event.head_commit.message, 'linux') ||
-      (startsWith(github.ref, 'refs/tags/v') && contains(github.ref_name, '.') && !contains(github.ref_name, '-')) ||
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '打包'))
+      contains(github.event.head_commit.message, '开始打包') ||
+      startsWith(github.ref, 'refs/tags/v')
     strategy:
       fail-fast: false
       matrix:
@@ -65,11 +60,6 @@ jobs:
           # Windows PyInstaller 构建
           - os: windows-2022
             arch: x64
-            pack_mode: dir
-            packager: pyinstaller
-            platform: windows
-          - os: windows-2022
-            arch: x86
             pack_mode: dir
             packager: pyinstaller
             platform: windows
@@ -170,38 +160,9 @@ jobs:
       # Windows PyInstaller 构建
       - name: 运行 Windows PyInstaller 构建
         if: |
-          matrix.platform == 'windows' && 
-          (github.event_name != 'workflow_dispatch' || 
-          (inputs.build_target == 'all' || inputs.build_target == 'windows')) &&
-          (github.event_name == 'workflow_dispatch' || 
-          (contains(github.event.head_commit.message, '打包') ||
-           contains(github.event.head_commit.message, 'pi') ||
-           contains(github.event.head_commit.message, 'all') ||
-           contains(github.event.head_commit.message, 'win'))) &&
-          (github.event_name != 'push' ||
-          !startsWith(github.ref, 'refs/tags/v') ||
-          (startsWith(github.ref_name, 'v') && contains(github.ref_name, '.') && !contains(github.ref_name, '-')))
-        run: |
-          echo "开始 Windows PyInstaller 构建流程..."
-          echo "使用uv进行依赖同步..."
-          uv sync --frozen
-          echo "依赖同步完成，开始打包..."
-          uv run build_pyinstaller.py
-
-      # Windows PyInstaller 构建
-      - name: 运行 Windows PyInstaller 构建
-        if: |
-          matrix.platform == 'windows' && 
-          (github.event_name != 'workflow_dispatch' || 
-          (inputs.build_target == 'all' || inputs.build_target == 'windows')) &&
-          (github.event_name == 'workflow_dispatch' || 
-          (contains(github.event.head_commit.message, '打包') ||
-           contains(github.event.head_commit.message, 'pi') ||
-           contains(github.event.head_commit.message, 'all') ||
-           contains(github.event.head_commit.message, 'win'))) &&
-          (github.event_name != 'push' ||
-          !startsWith(github.ref, 'refs/tags/v') ||
-          (startsWith(github.ref_name, 'v') && contains(github.ref_name, '.') && !contains(github.ref_name, '-')))
+          matrix.platform == 'windows' &&
+          (contains(github.event.head_commit.message, '开始打包') ||
+           startsWith(github.ref, 'refs/tags/v'))
         run: |
           echo "开始 Windows PyInstaller 构建流程..."
           echo "使用uv进行依赖同步..."
@@ -212,17 +173,9 @@ jobs:
       # Linux PyInstaller 构建
       - name: 运行 Linux PyInstaller 构建
         if: |
-          matrix.platform == 'linux' && 
-          (github.event_name != 'workflow_dispatch' || 
-          (inputs.build_target == 'all' || inputs.build_target == 'linux')) &&
-          (github.event_name == 'workflow_dispatch' || 
-          (contains(github.event.head_commit.message, '打包') ||
-           contains(github.event.head_commit.message, 'pi') ||
-           contains(github.event.head_commit.message, 'all') ||
-           contains(github.event.head_commit.message, 'linux'))) &&
-          (github.event_name != 'push' ||
-          !startsWith(github.ref, 'refs/tags/v') ||
-          (startsWith(github.ref_name, 'v') && contains(github.ref_name, '.') && !contains(github.ref_name, '-')))
+          matrix.platform == 'linux' &&
+          (contains(github.event.head_commit.message, '开始打包') ||
+           startsWith(github.ref, 'refs/tags/v'))
         run: |
           echo "开始 Linux PyInstaller 构建流程..."
           echo "使用uv进行依赖同步..."
@@ -267,7 +220,7 @@ jobs:
 
           # 使用 zip 压缩文件
           mkdir zip -Force
-          $outputZip = "zip/SecRandom-Windows-${{ github.ref_name }}-${{ matrix.arch }}-dir.zip"
+          $outputZip = "zip/SecRandom-${{ matrix.platform }}-${{ github.ref_name }}-${{ matrix.arch }}-${{ matrix.pack_mode }}.zip"
           Compress-Archive -Path zip_dist/SecRandom/* -DestinationPath $outputZip -Force
           echo "目录模式打包完成: $outputZip"
 
@@ -306,12 +259,12 @@ jobs:
           # 复制 LICENSE 文件到zip_dist/SecRandom目录下
           cp LICENSE zip_dist/SecRandom/
 
-          # 使用 tar 压缩文件
+          # 使用 zip 压缩文件
           mkdir -p zip
           cd zip_dist
-          tar -czf ../zip/SecRandom-Linux-${{ github.ref_name }}-${{ matrix.arch }}-dir.tar.gz SecRandom/
+          zip -r ../zip/SecRandom-${{ matrix.platform }}-${{ github.ref_name }}-${{ matrix.arch }}-${{ matrix.pack_mode }}.zip SecRandom/
           cd ..
-          echo "目录模式打包完成: zip/SecRandom-Linux-${{ github.ref_name }}-${{ matrix.arch }}-dir.tar.gz"
+          echo "目录模式打包完成: zip/SecRandom-${{ matrix.platform }}-${{ github.ref_name }}-${{ matrix.arch }}-${{ matrix.pack_mode }}.zip"
 
       - name: 上传应用程序
         if: |
@@ -376,10 +329,9 @@ jobs:
         run: |
           echo "整理构建产物..."
           # Windows 构建产物
-          mv artifacts/windows-2022-x64-dir-pyinstaller/* release/ 2>/dev/null || echo "未找到 Windows x64 PyInstaller 构建产物"
-          mv artifacts/windows-2022-x86-dir-pyinstaller/* release/ 2>/dev/null || echo "未找到 Windows x86 PyInstaller 构建产物"
+          mv artifacts/windows-x64-dir/* release/ 2>/dev/null || echo "未找到 Windows x64 构建产物"
           # Linux 构建产物
-          mv artifacts/ubuntu-22.04-x64-dir-pyinstaller/* release/ 2>/dev/null || echo "未找到 Linux x64 构建产物"
+          mv artifacts/linux-x64-dir/* release/ 2>/dev/null || echo "未找到 Linux x64 构建产物"
           echo "构建产物整理完成"
           ls -la release/
 
@@ -416,23 +368,19 @@ jobs:
         run: |
           cd release
           echo "" >> ../CHANGELOG.md
-          echo "Full Changelog: [v1.3.0.5...${{ github.ref_name }}](https://github.com/SECTL/SecRandom/compare/v1.3.0.5...${{ github.ref_name }})" >> ../CHANGELOG.md
-          echo "" >> ../CHANGELOG.md
           echo "**国内 下载链接**" >> ../CHANGELOG.md
           echo "| 平台/打包方式 | 支持架构 | 完整版 |" >> ../CHANGELOG.md
           echo "| --- | --- | --- |" >> ../CHANGELOG.md
-          echo "| Windows | x64, x86 | [下载](https://www.123684.com/s/9529jv-U4Fxh) |" >> ../CHANGELOG.md
+          echo "| Windows | x64 | [下载](https://www.123684.com/s/9529jv-U4Fxh) |" >> ../CHANGELOG.md
           echo "| Linux | x64 | [下载](https://www.123684.com/s/9529jv-U4Fxh) |" >> ../CHANGELOG.md
           echo "" >> ../CHANGELOG.md
           echo "**Github 镜像 下载链接**" >> ../CHANGELOG.md
           echo "| 镜像源 | 平台 | 支持架构 | 完整版 |" >> ../CHANGELOG.md
           echo "| --- | --- | --- | --- |" >> ../CHANGELOG.md
-          echo "| ghfast.top | Windows | x64 | [下载 ${{ github.ref_name }}](https://ghfast.top/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Windows-${{ github.ref_name }}-x64-dir.zip) |" >> ../CHANGELOG.md
-          echo "| ghfast.top | Windows | x86 | [下载 ${{ github.ref_name }}](https://ghfast.top/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Windows-${{ github.ref_name }}-x86-dir.zip) |" >> ../CHANGELOG.md
-          echo "| ghfast.top | Linux | x64 | [下载 ${{ github.ref_name }}](https://ghfast.top/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Linux-${{ github.ref_name }}-x64-dir.tar.gz) |" >> ../CHANGELOG.md
-          echo "| gh-proxy.com | Windows | x64 | [下载 ${{ github.ref_name }}](https://gh-proxy.com/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Windows-${{ github.ref_name }}-x64-dir.zip) |" >> ../CHANGELOG.md
-          echo "| gh-proxy.com | Windows | x86 | [下载 ${{ github.ref_name }}](https://gh-proxy.com/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Windows-${{ github.ref_name }}-x86-dir.zip) |" >> ../CHANGELOG.md
-          echo "| gh-proxy.com | Linux | x64 | [下载 ${{ github.ref_name }}](https://gh-proxy.com/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Linux-${{ github.ref_name }}-x64-dir.tar.gz) |" >> ../CHANGELOG.md
+          echo "| ghfast.top | Windows | x64 | [下载 ${{ github.ref_name }}](https://ghfast.top/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-windows-${{ github.ref_name }}-x64-dir.zip) |" >> ../CHANGELOG.md
+          echo "| ghfast.top | Linux | x64 | [下载 ${{ github.ref_name }}](https://ghfast.top/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-linux-${{ github.ref_name }}-x64-dir.zip) |" >> ../CHANGELOG.md
+          echo "| gh-proxy.com | Windows | x64 | [下载 ${{ github.ref_name }}](https://gh-proxy.com/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-windows-${{ github.ref_name }}-x64-dir.zip) |" >> ../CHANGELOG.md
+          echo "| gh-proxy.com | Linux | x64 | [下载 ${{ github.ref_name }}](https://gh-proxy.com/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-linux-${{ github.ref_name }}-x64-dir.zip) |" >> ../CHANGELOG.md
           echo "" >> ../CHANGELOG.md
           echo "**SHA256 校验值-请核对下载的文件的SHA256值是否正确**" >> ../CHANGELOG.md
           echo "| 文件名 | SHA256 值 |" >> ../CHANGELOG.md
