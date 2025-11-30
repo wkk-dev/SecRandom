@@ -246,50 +246,36 @@ class MainWindow(MSFluentWindow):
         self._adjustNavigationBarWidth()
 
     def _adjustNavigationBarWidth(self):
-        """调整导航栏宽度以适应多语言文本"""
+        """调整导航栏宽度以适应多语言文本，按钮保持正方形，长文本换行"""
         try:
             nav = self.navigationInterface
             if not nav or not hasattr(nav, "buttons"):
                 return
 
-            # 计算所有按钮文本所需的最大宽度
-            max_text_width = 0
+            # 设置按钮的正方形尺寸
+            button_size = 80  # 正方形按钮的边长
+
             buttons = nav.buttons()
             for button in buttons:
-                if hasattr(button, "text") and button.text():
-                    # 使用按钮的字体度量计算文本宽度
-                    fm = button.fontMetrics()
-                    text_width = fm.horizontalAdvance(button.text())
-                    max_text_width = max(max_text_width, text_width)
+                button.setFixedSize(button_size, button_size)
+                # 重写绘制方法使图标和文本整体居中
+                self._patchButtonDraw(button, button_size)
 
-            # 计算所需的按钮宽度（文本宽度 + 左右边距）
-            # NavigationBarPushButton 默认为 64x58，图标在上，文本在下
-            button_padding = 16  # 左右边距
-            min_button_width = 64  # 最小按钮宽度
-            required_width = max(min_button_width, max_text_width + button_padding)
-
-            # 设置所有按钮的宽度，并重写图标绘制方法使图标居中
-            for button in buttons:
-                button.setFixedWidth(int(required_width))
-                # 重写 _drawIcon 方法使图标居中
-                self._patchButtonDrawIcon(button, int(required_width))
-
-            # 设置导航栏宽度（按钮宽度 + 滚动区域边距）
-            nav_padding = 8  # 导航栏左右边距
-            nav_width = int(required_width + nav_padding)
+            # 设置导航栏宽度
+            nav_padding = 8
+            nav_width = button_size + nav_padding
             nav.setFixedWidth(nav_width)
 
         except Exception as e:
             logger.debug(f"调整导航栏宽度时出错: {e}")
 
-    def _patchButtonDrawIcon(self, button, button_width):
-        """修补按钮的图标绘制方法，使图标居中"""
-        from PySide6.QtCore import QRectF
-        from PySide6.QtGui import QPainter
+    def _patchButtonDraw(self, button, button_size):
+        """修补按钮的绘制方法，使图标和文本整体垂直居中"""
+        from PySide6.QtCore import QRectF, Qt, QRect
+        from PySide6.QtGui import QPainter, QFontMetrics
         from qfluentwidgets.common.icon import drawIcon, FluentIconBase
         from qfluentwidgets.common.color import autoFallbackThemeColor
-
-        original_draw_icon = button._drawIcon
+        from qfluentwidgets.common.config import isDarkTheme
 
         def centered_draw_icon(painter: QPainter):
             if (button.isPressed or not button.isEnter) and not button.isSelected:
@@ -297,12 +283,33 @@ class MainWindow(MSFluentWindow):
             if not button.isEnabled():
                 painter.setOpacity(0.4)
 
-            # 计算居中的图标位置
+            # 计算文本需要的行数和高度
+            text = button.text()
+            fm = QFontMetrics(button.font())
+            text_width = button_size - 8  # 文本区域宽度
+
+            # 计算文本换行后的高度
+            text_rect = QRect(0, 0, text_width, 1000)
+            bounding = fm.boundingRect(
+                text_rect, Qt.AlignHCenter | Qt.TextWordWrap, text
+            )
+            text_height = bounding.height()
+
+            # 计算整体内容高度（图标 + 间距 + 文本）
             icon_size = 20
-            icon_x = (button_width - icon_size) / 2
-            icon_y = 13
+            spacing = 4  # 图标和文本之间的间距
+            total_height = icon_size + spacing + text_height
+
+            # 计算垂直居中的起始位置
+            start_y = (button_size - total_height) / 2
+            icon_x = (button_size - icon_size) / 2
+            icon_y = start_y
+
             if hasattr(button, "iconAni") and not button._isSelectedTextVisible:
                 icon_y += button.iconAni.offset
+
+            # 保存计算结果供 _drawText 使用
+            button._calculated_text_top = start_y + icon_size + spacing
 
             rect = QRectF(icon_x, icon_y, icon_size, icon_size)
 
@@ -318,7 +325,38 @@ class MainWindow(MSFluentWindow):
             else:
                 drawIcon(button._icon, painter, rect)
 
+        def wrapped_draw_text(painter: QPainter):
+            if button.isSelected and not button._isSelectedTextVisible:
+                return
+
+            if button.isSelected:
+                painter.setPen(
+                    autoFallbackThemeColor(
+                        button.lightSelectedColor, button.darkSelectedColor
+                    )
+                )
+            else:
+                painter.setPen(Qt.white if isDarkTheme() else Qt.black)
+
+            painter.setFont(button.font())
+
+            text = button.text()
+
+            # 使用之前计算的文本顶部位置
+            text_top = getattr(button, "_calculated_text_top", 36)
+            text_rect = QRect(
+                4, int(text_top), button_size - 8, button_size - int(text_top)
+            )
+
+            # 使用 Qt 的自动换行功能
+            painter.drawText(
+                text_rect,
+                Qt.AlignHCenter | Qt.AlignTop | Qt.TextWordWrap,
+                text,
+            )
+
         button._drawIcon = centered_draw_icon
+        button._drawText = wrapped_draw_text
 
     def _toggle_float_window(self):
         if self.float_window.isVisible():
