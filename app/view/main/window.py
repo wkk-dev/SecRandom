@@ -12,12 +12,16 @@ from PySide6.QtCore import QTimer, QEvent, Signal
 from qfluentwidgets import FluentWindow, NavigationItemPosition
 
 from app.tools.variable import MINIMUM_WINDOW_SIZE, APP_INIT_DELAY
-from app.tools.path_utils import get_data_path
-from app.tools.path_utils import get_app_root
+from app.tools.path_utils import get_data_path, get_app_root
 from app.tools.personalised import get_theme_icon
-from app.Language.obtain_language import get_content_name_async
-from app.Language.obtain_language import readme_settings_async, update_settings
+from app.tools.settings_access import get_safe_font_size
+from app.Language.obtain_language import (
+    get_content_name_async,
+    readme_settings_async,
+    update_settings,
+)
 from app.common.safety.verify_ops import require_and_run
+from app.common.display.result_display import ResultDisplayUtils
 from app.page_building.main_window_page import (
     roll_call_page,
     lottery_page,
@@ -101,6 +105,7 @@ class MainWindow(FluentWindow):
         self.float_window.rollCallRequested.connect(
             lambda: self._show_and_switch_to(self.roll_call_page)
         )
+        self.float_window.quickDrawRequested.connect(self._handle_quick_draw)
         self.float_window.lotteryRequested.connect(
             lambda: self._show_and_switch_to(self.lottery_page)
         )
@@ -310,6 +315,234 @@ class MainWindow(FluentWindow):
         self.activateWindow()
         self.raise_()
         self.switchTo(page)
+
+    def _handle_quick_draw(self):
+        """处理闪抽请求
+        点击悬浮窗中的闪抽按钮时调用
+        """
+        logger.debug("_handle_quick_draw: 收到闪抽请求")
+
+        # 确保roll_call_page已经创建
+        if not hasattr(self, "roll_call_page") or not self.roll_call_page:
+            logger.error("_handle_quick_draw: roll_call_page未创建")
+            return
+
+        logger.debug("_handle_quick_draw: roll_call_page已创建")
+
+        # 确保roll_call_widget已经创建
+        roll_call_page = self.roll_call_page
+        roll_call_widget = None
+
+        # 尝试获取roll_call_widget
+        if (
+            hasattr(roll_call_page, "roll_call_widget")
+            and roll_call_page.roll_call_widget
+        ):
+            roll_call_widget = roll_call_page.roll_call_widget
+            logger.debug("_handle_quick_draw: roll_call_widget已创建")
+        else:
+            # 尝试直接获取contentWidget
+            if (
+                hasattr(roll_call_page, "contentWidget")
+                and roll_call_page.contentWidget
+            ):
+                roll_call_widget = roll_call_page.contentWidget
+                logger.debug("_handle_quick_draw: 直接获取contentWidget成功")
+            else:
+                # 尝试创建contentWidget
+                logger.debug("_handle_quick_draw: 尝试创建contentWidget")
+                roll_call_page.create_content()
+                QApplication.processEvents()
+
+                # 再次尝试获取
+                if (
+                    hasattr(roll_call_page, "roll_call_widget")
+                    and roll_call_page.roll_call_widget
+                ):
+                    roll_call_widget = roll_call_page.roll_call_widget
+                    logger.debug(
+                        "_handle_quick_draw: 创建contentWidget后获取roll_call_widget成功"
+                    )
+                elif (
+                    hasattr(roll_call_page, "contentWidget")
+                    and roll_call_page.contentWidget
+                ):
+                    roll_call_widget = roll_call_page.contentWidget
+                    logger.debug(
+                        "_handle_quick_draw: 创建contentWidget后获取contentWidget成功"
+                    )
+                else:
+                    logger.error("_handle_quick_draw: 无法创建或获取roll_call_widget")
+                    return
+
+        logger.debug("_handle_quick_draw: 成功获取roll_call_widget")
+
+        # 保存当前设置
+        original_count = roll_call_widget.current_count
+        original_list_index = roll_call_widget.list_combobox.currentIndex()
+        original_range_index = roll_call_widget.range_combobox.currentIndex()
+        original_gender_index = roll_call_widget.gender_combobox.currentIndex()
+
+        try:
+            # 设置抽取数量为1
+            roll_call_widget.current_count = 1
+            roll_call_widget.count_label.setText("1")
+
+            # 确保所有下拉框都有内容且选择第一项
+            if roll_call_widget.list_combobox.count() > 0:
+                roll_call_widget.list_combobox.setCurrentIndex(0)
+                # 触发班级变化事件，更新相关数据
+                roll_call_widget.on_class_changed()
+
+            if roll_call_widget.range_combobox.count() > 0:
+                roll_call_widget.range_combobox.setCurrentIndex(0)
+
+            if roll_call_widget.gender_combobox.count() > 0:
+                roll_call_widget.gender_combobox.setCurrentIndex(0)
+
+            # 触发筛选变化事件，更新相关数据
+            roll_call_widget.on_filter_changed()
+
+            # 确保所有数据已更新
+            QApplication.processEvents()
+
+            # 获取闪抽专用设置
+            quick_draw_settings = {
+                "draw_mode": readme_settings_async("quick_draw_settings", "draw_mode"),
+                "half_repeat": readme_settings_async(
+                    "quick_draw_settings", "half_repeat"
+                ),
+                "font_size": get_safe_font_size("quick_draw_settings", "font_size"),
+                "display_format": readme_settings_async(
+                    "quick_draw_settings", "display_format"
+                ),
+                "animation": readme_settings_async("quick_draw_settings", "animation"),
+                "animation_interval": readme_settings_async(
+                    "quick_draw_settings", "animation_interval"
+                ),
+                "animation_color_theme": readme_settings_async(
+                    "quick_draw_settings", "animation_color_theme"
+                ),
+                "student_image": readme_settings_async(
+                    "quick_draw_settings", "student_image"
+                ),
+                "show_random": readme_settings_async(
+                    "quick_draw_settings", "show_random"
+                ),
+            }
+
+            # 保存当前的half_repeat设置
+            original_half_repeat = readme_settings_async(
+                "roll_call_settings", "half_repeat"
+            )
+
+            try:
+                # 设置闪抽专用的half_repeat设置
+                update_settings(
+                    "roll_call_settings",
+                    "half_repeat",
+                    quick_draw_settings["half_repeat"],
+                )
+
+                # 调用抽取逻辑
+                roll_call_widget.draw_random()
+            finally:
+                # 恢复原始的half_repeat设置
+                update_settings(
+                    "roll_call_settings", "half_repeat", original_half_repeat
+                )
+
+            # 处理抽取结果
+            if hasattr(roll_call_widget, "final_selected_students") and hasattr(
+                roll_call_widget, "final_class_name"
+            ):
+                # 使用闪抽设置重新显示结果
+                student_labels = ResultDisplayUtils.create_student_label(
+                    class_name=roll_call_widget.final_class_name,
+                    selected_students=roll_call_widget.final_selected_students,
+                    draw_count=1,
+                    font_size=quick_draw_settings["font_size"],
+                    animation_color=quick_draw_settings["animation_color_theme"],
+                    display_format=quick_draw_settings["display_format"],
+                    show_student_image=quick_draw_settings["student_image"],
+                    group_index=0,
+                    show_random=quick_draw_settings["show_random"],
+                    settings_group="quick_draw_settings",
+                )
+                ResultDisplayUtils.display_results_in_grid(
+                    roll_call_widget.result_grid, student_labels
+                )
+
+                # 播放语音
+                roll_call_widget.play_voice_result()
+
+                # 使用闪抽通知设置显示通知
+                call_notification_service = readme_settings_async(
+                    "quick_draw_notification_settings", "call_notification_service"
+                )
+                if call_notification_service:
+                    # 准备通知设置
+                    settings = {
+                        "animation": readme_settings_async(
+                            "quick_draw_notification_settings", "animation"
+                        ),
+                        "window_position": readme_settings_async(
+                            "quick_draw_notification_settings",
+                            "floating_window_position",
+                        ),
+                        "horizontal_offset": readme_settings_async(
+                            "quick_draw_notification_settings",
+                            "floating_window_horizontal_offset",
+                        ),
+                        "vertical_offset": readme_settings_async(
+                            "quick_draw_notification_settings",
+                            "floating_window_vertical_offset",
+                        ),
+                        "transparency": readme_settings_async(
+                            "quick_draw_notification_settings",
+                            "floating_window_transparency",
+                        ),
+                        "auto_close_time": readme_settings_async(
+                            "quick_draw_notification_settings",
+                            "floating_window_auto_close_time",
+                        ),
+                        "enabled_monitor": readme_settings_async(
+                            "quick_draw_notification_settings",
+                            "floating_window_enabled_monitor",
+                        ),
+                    }
+
+                    # 使用ResultDisplayUtils显示通知
+                    ResultDisplayUtils.show_notification_if_enabled(
+                        roll_call_widget.final_class_name,
+                        roll_call_widget.final_selected_students,
+                        1,
+                        settings,
+                        settings_group="quick_draw_notification_settings",
+                    )
+
+        finally:
+            # 恢复原始设置
+            roll_call_widget.current_count = original_count
+            roll_call_widget.count_label.setText(str(original_count))
+
+            # 恢复原始下拉框索引
+            if roll_call_widget.list_combobox.count() > 0:
+                roll_call_widget.list_combobox.setCurrentIndex(original_list_index)
+                # 触发班级变化事件，更新相关数据
+                roll_call_widget.on_class_changed()
+
+            if roll_call_widget.range_combobox.count() > 0:
+                roll_call_widget.range_combobox.setCurrentIndex(original_range_index)
+
+            if roll_call_widget.gender_combobox.count() > 0:
+                roll_call_widget.gender_combobox.setCurrentIndex(original_gender_index)
+
+            # 触发筛选变化事件，更新相关数据
+            roll_call_widget.on_filter_changed()
+
+            # 确保所有数据已更新
+            QApplication.processEvents()
 
     def closeEvent(self, event):
         """窗口关闭事件处理

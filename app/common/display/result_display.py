@@ -164,7 +164,9 @@ class ResultDisplayUtils:
         return container
 
     @staticmethod
-    def _apply_label_style(label, font_size, animation_color):
+    def _apply_label_style(
+        label, font_size, animation_color, settings_group="roll_call_settings"
+    ):
         """
         应用标签样式
 
@@ -172,10 +174,9 @@ class ResultDisplayUtils:
             label: 标签组件
             font_size: 字体大小
             animation_color: 动画颜色模式
+            settings_group: 设置组名称，默认为roll_call_settings
         """
-        fixed_color = readme_settings_async(
-            "roll_call_settings", "animation_fixed_color"
-        )
+        fixed_color = readme_settings_async(settings_group, "animation_fixed_color")
         if (
             isinstance(label, QWidget)
             and hasattr(label, "layout")
@@ -211,9 +212,7 @@ class ResultDisplayUtils:
         else:
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             style_sheet = f"font-size: {font_size}pt; "
-            fixed_color = readme_settings_async(
-                "roll_call_settings", "animation_fixed_color"
-            )
+            fixed_color = readme_settings_async(settings_group, "animation_fixed_color")
             if animation_color == 1:
                 style_sheet += (
                     f"color: {ResultDisplayUtils._generate_vibrant_color()} !important;"
@@ -243,6 +242,7 @@ class ResultDisplayUtils:
         show_student_image=False,
         group_index=0,
         show_random=0,
+        settings_group="roll_call_settings",
     ):
         """
         创建学生显示标签
@@ -256,6 +256,7 @@ class ResultDisplayUtils:
             show_student_image: 是否显示学生头像
             group_index: 小组索引 (0:全班, 1:随机小组, >1:指定小组)
             show_random: 随机组员显示格式 (0:不显示, 1:组名[换行]姓名, 2:组名[短横杠]姓名)
+            settings_group: 设置组名称，默认为roll_call_settings
 
         返回:
             list: 创建的标签列表
@@ -306,7 +307,9 @@ class ResultDisplayUtils:
             else:
                 label = BodyLabel(text)
 
-            ResultDisplayUtils._apply_label_style(label, font_size, animation_color)
+            ResultDisplayUtils._apply_label_style(
+                label, font_size, animation_color, settings_group
+            )
             student_labels.append(label)
 
         return student_labels
@@ -435,7 +438,7 @@ class ResultDisplayUtils:
 
     @staticmethod
     def show_notification_if_enabled(
-        class_name, selected_students, draw_count=1, settings=None
+        class_name, selected_students, draw_count=1, settings=None, settings_group=None
     ):
         """
         如果启用了通知服务，则显示抽取结果通知
@@ -451,4 +454,6 @@ class ResultDisplayUtils:
             show_roll_call_notification,
         )
 
-        show_roll_call_notification(class_name, selected_students, draw_count, settings)
+        show_roll_call_notification(
+            class_name, selected_students, draw_count, settings, settings_group
+        )

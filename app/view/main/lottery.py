@@ -602,6 +602,7 @@ class Lottery(QWidget):
                     self.final_selected_students,
                     self.current_count,
                     settings,
+                    settings_group="lottery_notification_settings",
                 )
 
             # 播放语音
@@ -727,6 +728,7 @@ class Lottery(QWidget):
                 self.final_selected_students,
                 self.current_count,
                 settings,
+                settings_group="lottery_notification_settings",
             )
 
     def display_result(self, selected_students, pool_name):
@@ -745,6 +747,7 @@ class Lottery(QWidget):
             ),
             group_index=0,
             show_random=readme_settings_async("lottery_settings", "show_random"),
+            settings_group="lottery_settings",
         )
         ResultDisplayUtils.display_results_in_grid(self.result_grid, student_labels)
 

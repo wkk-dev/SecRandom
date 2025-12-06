@@ -807,7 +807,12 @@ class FloatingNotificationManager:
             return "通知结果"
 
     def show_roll_call_result(
-        self, class_name, selected_students, draw_count=1, settings=None
+        self,
+        class_name,
+        selected_students,
+        draw_count=1,
+        settings=None,
+        settings_group=None,
     ):
         """在浮动通知窗口中显示点名结果
 
@@ -816,6 +821,7 @@ class FloatingNotificationManager:
             selected_students: 选中的学生列表 [(学号, 姓名, 是否存在), ...]
             draw_count: 抽取的学生数量
             settings: 通知设置参数
+            settings_group: 设置组名称，默认为notification_settings
         """
         # 获取设置
         if settings:
@@ -835,6 +841,10 @@ class FloatingNotificationManager:
         # 使用ResultDisplayUtils创建学生标签（动态导入避免循环依赖）
         from app.common.display.result_display import ResultDisplayUtils
 
+        # 确定使用的设置组
+        if settings_group is None:
+            settings_group = "notification_settings"
+
         student_labels = ResultDisplayUtils.create_student_label(
             class_name=class_name,
             selected_students=selected_students,
@@ -843,6 +853,7 @@ class FloatingNotificationManager:
             animation_color=animation_color,
             display_format=display_format,
             show_student_image=show_student_image,
+            settings_group=settings_group,
         )
 
         # 创建或获取通知窗口
@@ -867,7 +878,7 @@ class FloatingNotificationManager:
 
 
 def show_roll_call_notification(
-    class_name, selected_students, draw_count=1, settings=None
+    class_name, selected_students, draw_count=1, settings=None, settings_group=None
 ):
     """显示点名通知的便捷函数
 
@@ -878,4 +889,6 @@ def show_roll_call_notification(
         settings: 通知设置参数
     """
     manager = FloatingNotificationManager()
-    manager.show_roll_call_result(class_name, selected_students, draw_count, settings)
+    manager.show_roll_call_result(
+        class_name, selected_students, draw_count, settings, settings_group
+    )

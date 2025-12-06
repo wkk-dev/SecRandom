@@ -590,6 +590,7 @@ class roll_call(QWidget):
                     self.final_selected_students,
                     self.current_count,
                     settings,
+                    settings_group="roll_call_notification_settings",
                 )
 
             # 播放语音
@@ -688,6 +689,7 @@ class roll_call(QWidget):
                 self.final_selected_students,
                 self.current_count,
                 settings,
+                settings_group="roll_call_notification_settings",
             )
 
     def display_result(self, selected_students, class_name):
@@ -709,6 +711,7 @@ class roll_call(QWidget):
             ),
             group_index=group_index,
             show_random=readme_settings_async("roll_call_settings", "show_random"),
+            settings_group="roll_call_settings",
         )
         ResultDisplayUtils.display_results_in_grid(self.result_grid, student_labels)
 
