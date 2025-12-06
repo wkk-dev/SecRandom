@@ -225,7 +225,7 @@ class SetClassNameWindow(QWidget):
                 return
 
             # 获取班级名单目录
-            roll_call_list_dir = get_data_path("list/roll_call_list")
+            roll_call_list_dir = get_data_path("list", "roll_call_list")
             roll_call_list_dir.mkdir(parents=True, exist_ok=True)
 
             # 获取现有的班级名称

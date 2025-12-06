@@ -108,6 +108,7 @@ class NameSettingWindow(QWidget):
             # 如果文件不存在，返回空列表
             if not list_file.exists():
                 self.initial_names = []
+                logger.warning(f"班级 {class_name} 没有学生名单文件")
                 return []
 
             # 读取文件内容
@@ -228,7 +229,7 @@ class NameSettingWindow(QWidget):
                 return
 
             # 获取文件路径
-            roll_call_list_dir = get_data_path("list/roll_call_list")
+            roll_call_list_dir = get_data_path("list", "roll_call_list")
             roll_call_list_dir.mkdir(parents=True, exist_ok=True)
 
             # 从设置中获取班级名称

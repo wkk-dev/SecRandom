@@ -235,7 +235,7 @@ class GroupSettingWindow(QWidget):
                 return
 
             # 获取文件路径
-            roll_call_list_dir = get_data_path("list/roll_call_list")
+            roll_call_list_dir = get_data_path("list", "roll_call_list")
             roll_call_list_dir.mkdir(parents=True, exist_ok=True)
 
             # 从设置中获取班级名称

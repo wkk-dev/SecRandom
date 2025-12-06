@@ -325,7 +325,7 @@ class RemainingListPage(QWidget):
 
     def get_students_file(self):
         """获取学生或奖池数据文件路径"""
-        roll_call_list_dir = get_data_path("list/roll_call_list")
+        roll_call_list_dir = get_data_path("list", "roll_call_list")
         lottery_list_dir = get_data_path("list/lottery_list")
         roll_file = roll_call_list_dir / f"{self.class_name}.json"
         lottery_file = lottery_list_dir / f"{self.class_name}.json"

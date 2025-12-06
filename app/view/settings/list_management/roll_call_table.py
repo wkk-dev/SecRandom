@@ -116,7 +116,7 @@ class roll_call_table(GroupHeaderCardWidget):
     def setup_file_watcher(self):
         """设置文件系统监视器，监控班级名单文件夹的变化"""
         # 获取班级名单文件夹路径
-        roll_call_list_dir = get_data_path("list/roll_call_list")
+        roll_call_list_dir = get_data_path("list", "roll_call_list")
 
         # 确保目录存在
         if not roll_call_list_dir.exists():
@@ -265,7 +265,7 @@ class roll_call_table(GroupHeaderCardWidget):
         student_name = name_item.text()
 
         # 加载当前班级的学生数据
-        roll_call_list_dir = get_data_path("list/roll_call_list")
+        roll_call_list_dir = get_data_path("list", "roll_call_list")
         student_file = roll_call_list_dir / f"{class_name}.json"
         try:
             with open_file(student_file, "r", encoding="utf-8") as f:

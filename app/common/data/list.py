@@ -22,7 +22,7 @@ def get_class_name_list() -> List[str]:
     """
     try:
         # 获取班级名单文件夹路径
-        roll_call_list_dir = get_data_path("list/roll_call_list")
+        roll_call_list_dir = get_data_path("list", "roll_call_list")
 
         # 如果文件夹不存在，创建文件夹
         if not roll_call_list_dir.exists():
@@ -62,7 +62,7 @@ def get_student_list(class_name: str) -> List[Dict[str, Any]]:
     """
     try:
         # 获取班级名单文件路径
-        roll_call_list_dir = get_data_path("list/roll_call_list")
+        roll_call_list_dir = get_data_path("list", "roll_call_list")
         class_file_path = roll_call_list_dir / f"{class_name}.json"
 
         # 如果文件不存在，返回空列表
@@ -420,7 +420,7 @@ def export_student_data(
     """
     try:
         # 获取班级名单文件路径
-        roll_call_list_dir = get_data_path("list/roll_call_list")
+        roll_call_list_dir = get_data_path("list", "roll_call_list")
         class_file_path = roll_call_list_dir / f"{class_name}.json"
 
         # 如果文件不存在，返回错误
