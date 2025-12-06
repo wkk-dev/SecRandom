@@ -119,8 +119,7 @@ jobs:
       - name: 运行 Windows PyInstaller 构建
         if: |
           matrix.platform == 'windows' &&
-          (contains(github.event.head_commit.message, '开始打包') ||
-           startsWith(github.ref, 'refs/tags/v'))
+          contains(github.event.head_commit.message, '开始打包')
         run: |
           echo "开始 Windows PyInstaller 构建流程..."
           echo "使用uv进行依赖同步..."
@@ -132,8 +131,7 @@ jobs:
       - name: 运行 Linux PyInstaller 构建
         if: |
           matrix.platform == 'linux' &&
-          (contains(github.event.head_commit.message, '开始打包') ||
-           startsWith(github.ref, 'refs/tags/v'))
+          contains(github.event.head_commit.message, '开始打包')
         run: |
           echo "开始 Linux PyInstaller 构建流程..."
           echo "使用uv进行依赖同步..."

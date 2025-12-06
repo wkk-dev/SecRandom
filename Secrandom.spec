@@ -75,7 +75,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="data/secrandom-icon-paper.ico",
+    icon="resources/secrandom-icon-paper.ico",
 )
 
 # 创建目录模式输出
@@ -89,3 +89,4 @@ coll = COLLECT(
     upx_exclude=[],
     name="SecRandom",
 )
+#nothing
