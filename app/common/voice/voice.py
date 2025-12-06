@@ -219,6 +219,19 @@ class VoicePlaybackSystem:
                 except Exception as e:
                     logger.error(f"关闭音频流失败：{e}", exc_info=True)
 
+            # 播放完成后回收内存
+            try:
+                # 清理临时变量
+                del data
+                del fs
+                # 强制垃圾回收
+                import gc
+
+                gc.collect()
+                logger.debug("播放完成，已回收内存")
+            except Exception as e:
+                logger.error(f"内存回收失败: {e}")
+
     def add_task(self, task: Union[Tuple[np.ndarray, int], str]) -> bool:
         """添加播放任务（线程安全）"""
         try:
@@ -421,8 +434,16 @@ class VoiceCacheManager:
             else:
                 # 检查是否超过容量限制
                 if len(self._memory_cache) >= self.MEMORY_CACHE_SIZE:
-                    # 删除最久未使用的项
-                    self._memory_cache.popitem(last=False)
+                    # 删除最久未使用的项并释放内存
+                    old_key, (old_data, old_fs) = self._memory_cache.popitem(last=False)
+                    # 清理旧数据
+                    del old_data
+                    del old_fs
+                    # 强制垃圾回收
+                    import gc
+
+                    gc.collect()
+                    logger.debug(f"移除过期缓存项: {old_key}, 已回收内存")
                 # 添加新项到末尾
                 self._memory_cache[cache_key] = (data, fs)
 
