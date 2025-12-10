@@ -164,13 +164,13 @@ jobs:
           Copy-Item -Recurse -Force dist/SecRandom/* zip_dist/SecRandom/
 
           # 创建app目录
-          mkdir -p zip_dist/SecRandom/app
+          mkdir -p zip_dist/SecRandom/data
 
           # 复制data文件夹到zip_dist/SecRandom目录下
-          Copy-Item -Recurse -Force data zip_dist/SecRandom/app
+          Copy-Item -Recurse -Force data/* zip_dist/SecRandom/data/
 
-          # 复制 LICENSE 文件到zip_dist/SecRandom目录下
-          Copy-Item LICENSE zip_dist/SecRandom/
+          # 复制 LICENSE 文件到zip_dist/SecRandom/data目录下
+          Copy-Item LICENSE zip_dist/SecRandom/data/
 
           # 使用 zip 压缩文件
           mkdir zip -Force
