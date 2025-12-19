@@ -47,59 +47,59 @@ roll_call = {
             "text_5": "剩余组数: {remaining_count}",
         },
     },
-    "EN_US": {
+            "EN_US": {
         "title": {
             "name": "Pick",
-            "description": "Pick",
+            "description": "Pick"
         },
         "reset_button": {
             "name": "Reset",
-            "description": "重置点名人数",
-            "pushbutton_name": "Reset",
+            "description": "Reset picking count",
+            "pushbutton_name": "Reset"
         },
         "start_button": {
             "name": "Start",
             "description": "Start picking",
-            "pushbutton_name": "Start",
+            "pushbutton_name": "Start"
         },
         "stop_button": {
             "name": "Stop",
             "description": "Stop picking",
-            "pushbutton_name": "Stop",
+            "pushbutton_name": "Stop"
         },
         "range_combobox": {
             "name": "Range",
             "description": "Select pick range",
             "combo_items": {
                 "0": "Pick all students",
-                "1": "Pick all groups",
-            },
+                "1": "Pick all groups"
+            }
         },
         "gender_combobox": {
             "name": "Gender",
             "description": "Select gender range",
             "combo_items": {
-                "0": "Pick all gender",
-            },
+                "0": "Pick all gender"
+            }
         },
         "remaining_button": {
             "name": "View remaining list",
-            "description": "显示剩余名单窗口",
-            "pushbutton_name": "View remaining list",
+            "description": "Show remaining list window",
+            "pushbutton_name": "View remaining list"
         },
         "many_count_label": {
             "name": "Total / Remaining",
-            "description": "显示总人数和剩余人数",
-            "text_0": "总人数: {total_count} | 剩余人数: {remaining_count}",
-            "text_1": "总人数: {total_count}",
-            "text_2": "剩余人数: {remaining_count}",
+            "description": "Show total and remaining student count",
+            "text_0": "Total student count: {total_count} | Remain: {remaining_count}",
+            "text_1": "Total student count: {total_count}",
+            "text_2": "Remain student count: {remaining_count}",
             "text_3": "Total group count: {total_count} | Remain: {remaining_count}",
             "text_4": "Total group count: {total_count}",
-            "text_5": "Remain group count: {remaining_count}",
+            "text_5": "Remain group count: {remaining_count}"
         },
         "default_empty_item": {
             "name": "No list",
-            "description": "Default options when no list is available",
-        },
+            "description": "Default options when no list is available"
+        }
     },
 }

@@ -104,116 +104,116 @@ fair_draw_settings = {
             "combo_items": ["秒", "分钟", "小时"],
         },
     },
-    "EN_US": {
+            "EN_US": {
         "title": {
-            "name": "Fair Extraction Settings",
-            "description": "Fair extraction feature settings",
+            "name": "Fair pick settings",
+            "description": "Fair pick function settings"
         },
         "fair_draw_set": {
             "name": "Fair pick",
-            "description": "Configure equitable extraction algorithm related settings",
+            "description": "Configure fair pick algorithm related settings"
         },
         "basic_fair_settings": {
-            "name": "Basic Equity Settings",
-            "description": "Configure base calculation for equitable extraction",
+            "name": "Basic fair settings",
+            "description": "Configure base calculation for fair pick"
         },
         "weight_range_settings": {
             "name": "Weight range settings",
-            "description": "Configure base value and range of weights",
+            "description": "Configure base value and range of weights"
         },
         "shield_settings": {
-            "name": "Block when extracted",
-            "description": "Configure block rules after extraction.",
+            "name": "Block after pick",
+            "description": "Configure block rules after picking"
         },
         "frequency_settings": {
             "name": "Frequency function settings",
-            "description": "Configure how frequency penalties are to be calculated",
+            "description": "Configure how frequency penalties are to be calculated"
         },
         "balance_weight_settings": {
             "name": "Balanced weight settings",
-            "description": "Configure the weight of the balance factors",
+            "description": "Configure the weight of the balance factors"
         },
         "cold_start_settings": {
-            "name": "Cold Boot Settings",
-            "description": "Configure cold start rules for the initial phase of a new class",
+            "name": "Cold boot settings",
+            "description": "Configure cold start rules for the initial phase of a new class"
         },
         "fair_draw": {
-            "name": "Fair draw by number of withdrawals",
-            "description": "Enable to make fair drawings based on the total number of withdrawals",
+            "name": "Fair pick by total pick times",
+            "description": "Enable to make fair pickings based on the total pick times"
         },
         "fair_draw_group": {
             "name": "Fair pick by group",
-            "description": "Enable when calculated by group participation",
+            "description": "Enable when calculated by group participation"
         },
         "fair_draw_gender": {
             "name": "Fair pick by gender",
-            "description": "When enabled and calculated by gender participation",
+            "description": "When enabled and calculated by gender participation"
         },
         "fair_draw_time": {
             "name": "Fair pick by time",
-            "description": "Enable to participate in fair extraction based on time",
+            "description": "Enable to participate in fair pick by time"
         },
         "base_weight": {
             "name": "Base weight",
-            "description": "Set the base weight of each option",
+            "description": "Set the base weight of each option"
         },
         "min_weight": {
             "name": "Minimum weight range",
-            "description": "Set minimum weight per option",
+            "description": "Set minimum weight per option"
         },
         "max_weight": {
             "name": "Maximum weight range",
-            "description": "Set maximum weight per option",
+            "description": "Set maximum weight per option"
         },
         "frequency_function": {
-            "name": "Frequency Punishment Function",
+            "name": "Frequency punishment function",
             "description": "Select the type of compute function for frequency punishment",
             "combo_items": {
                 "0": "Linear",
                 "1": "Square root",
-                "2": "Index",
-            },
+                "2": "Index"
+            }
         },
         "frequency_weight": {
             "name": "Frequency penalties weight",
-            "description": "Percentage of frequency penalties in total weight",
+            "description": "Percentage of frequency penalties in total weight"
         },
         "group_weight": {
             "name": "Group balance weight",
-            "description": "Adjustment group balance as a percentage of total weight",
+            "description": "Adjustment group balance as a percentage of total weight"
         },
         "gender_weight": {
             "name": "Gender balance weight",
-            "description": "Adjust the proportion of gender balance in total weight",
+            "description": "Adjust the proportion of gender balance in total weight"
         },
         "time_weight": {
             "name": "Time factor weight",
-            "description": "Adjust the percentage of time factor in total weight",
+            "description": "Adjust the percentage of time factor in total weight"
         },
         "cold_start_enabled": {
             "name": "Enable cold launch mode",
-            "description": "Use cold boot mode for new class or initial phase",
+            "description": "Use cold boot mode for new class or initial phase"
         },
         "cold_start_rounds": {
-            "name": "Cold Boot Wheel",
-            "description": "Sets the number of rounds in cold boot mode",
+            "name": "Cold boot rounds",
+            "description": "Sets the number of rounds in cold boot mode"
         },
         "shield_enabled": {
             "name": "Enable block after exam",
-            "description": "When enabled, extracted students will not be duplicated during the specified time",
+            "description": "When enabled, picked students will not be duplicated during the specified time"
         },
         "shield_time": {
             "name": "Blocked time",
-            "description": "Set the length of time to block after extracting",
+            "description": "Set the time to block after picking"
         },
         "shield_time_unit": {
             "name": "Block time units",
             "description": "Select time unit for block time",
             "combo_items": {
                 "0": "Seconds",
-                "1": "minutes",
-                "2": "Hours",
-            },
-        },
+                "1": "Minutes",
+                "2": "Hours"
+            }
+        }
     },
 }
