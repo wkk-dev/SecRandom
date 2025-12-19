@@ -304,7 +304,7 @@ class roll_call_list(GroupHeaderCardWidget):
         elif export_type == "txt" and not file_path.endswith(".txt"):
             file_path += ".txt"
 
-        success, message = export_prize_data(pool_name, file_path, export_type)
+        success, message = export_student_data(class_name, file_path, export_type)
 
         if success:
             config = NotificationConfig(
