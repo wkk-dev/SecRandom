@@ -13,6 +13,109 @@ settings = {
     "EN_US": {"title": {"name": "Settings", "description": "Settings window"}},
 }
 
+# 时间设置语言配置
+time_settings = {
+    "ZH_CN": {
+        "title": {"name": "时间设置", "description": "设置课间禁用和课程表导入"},
+        "class_break_settings": {
+            "name": "课间禁用设置",
+            "description": "设置课间禁用功能",
+        },
+        "cses_import_settings": {
+            "name": "CSES课程表导入",
+            "description": "从CSES格式文件导入课程表",
+        },
+        "class_break_function": {
+            "name": "课间禁用功能",
+            "description": "开启后，在下课时间段内抽取需要安全验证",
+        },
+        "cses_import": {
+            "name": "课程表导入",
+            "description": "从CSES格式文件导入上课时间段，用于课间禁用功能",
+        },
+        "import_from_file": {"name": "从文件导入"},
+        "importing": {"name": "导入中..."},
+        "view_template": {"name": "查看模板"},
+        "no_schedule_imported": {"name": "未导入课程表"},
+        "schedule_imported": {"name": "已导入 {} 个非上课时间段"},
+        "copy_to_clipboard": {"name": "复制到剪贴板"},
+        "save_as_file": {"name": "保存为文件"},
+        "close": {"name": "关闭"},
+        "copy_success": {"name": "复制成功"},
+        "template_copied": {"name": "模板已复制到剪贴板"},
+        "save_success": {"name": "保存成功"},
+        "template_saved": {"name": "模板已保存到: {}"},
+        "import_success": {"name": "成功导入课程表: {}"},
+        "import_failed": {"name": "导入失败: {}"},
+        "import_error": {"name": "导入过程中发生错误: {}"},
+        "template_title": {"name": "CSES课程表模板"},
+        "select_cses_file": {"name": "选择CSES课程表文件"},
+        "yaml_files": {"name": "YAML文件 (*.yaml *.yml)"},
+        "all_files": {"name": "所有文件 (*.*)"},
+        "save_template": {"name": "保存CSES模板"},
+        "cses_template": {"name": "cses_template.yaml"},
+        "save_failed": {"name": "保存失败: {}"},
+        "copy_failed": {"name": "复制失败: {}"},
+        "cses_file_format_error": {"name": "CSES文件格式错误或文件无法读取"},
+        "cses_content_format_error": {"name": "CSES内容格式错误"},
+        "no_valid_time_periods": {"name": "未能从课程表中提取有效的时间段信息"},
+        "save_settings_failed": {"name": "保存设置失败"},
+    },
+    "EN_US": {
+        "title": {
+            "name": "Time Settings",
+            "description": "Set class break restrictions and schedule import",
+        },
+        "class_break_settings": {
+            "name": "Class Break Settings",
+            "description": "Configure class break restrictions",
+        },
+        "cses_import_settings": {
+            "name": "CSES Schedule Import",
+            "description": "Import schedule from CSES format files",
+        },
+        "class_break_function": {
+            "name": "Class Break Restriction",
+            "description": "When enabled, drawing during break times requires safety verification",
+        },
+        "cses_import": {
+            "name": "Schedule Import",
+            "description": "Import class time slots from CSES format files for break time functionality",
+        },
+        "import_from_file": {"name": "Import from File"},
+        "importing": {"name": "Importing..."},
+        "view_template": {"name": "View Template"},
+        "no_schedule_imported": {"name": "No schedule imported"},
+        "schedule_imported": {"name": "Imported {} non-class time periods"},
+        "copy_to_clipboard": {"name": "Copy to Clipboard"},
+        "save_as_file": {"name": "Save as File"},
+        "close": {"name": "Close"},
+        "copy_success": {"name": "Copy Successful"},
+        "template_copied": {"name": "Template copied to clipboard"},
+        "save_success": {"name": "Save Successful"},
+        "template_saved": {"name": "Template saved to: {}"},
+        "import_success": {"name": "Import Successful"},
+        "import_failed": {"name": "Import Failed"},
+        "import_error": {"name": "Error during import: {}"},
+        "template_title": {"name": "CSES Schedule Template"},
+        "select_cses_file": {"name": "Select CSES Schedule File"},
+        "yaml_files": {"name": "YAML files (*.yaml *.yml)"},
+        "all_files": {"name": "All files (*.*)"},
+        "save_template": {"name": "Save CSES Template"},
+        "cses_template": {"name": "cses_template.yaml"},
+        "save_failed": {"name": "Save failed: {}"},
+        "copy_failed": {"name": "Copy failed: {}"},
+        "cses_file_format_error": {
+            "name": "CSES file format error or file cannot be read"
+        },
+        "cses_content_format_error": {"name": "CSES content format error"},
+        "no_valid_time_periods": {
+            "name": "Failed to extract valid time periods from the schedule"
+        },
+        "save_settings_failed": {"name": "Failed to save settings"},
+    },
+}
+
 # 调试设置语言配置
 debug = {
     "ZH_CN": {"title": {"name": "调试设置", "description": "调试功能设置"}},

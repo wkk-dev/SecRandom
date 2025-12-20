@@ -725,7 +725,7 @@ class FloatingNotificationWindow(CardWidget):
         """更新通知窗口的内容
 
         Args:
-            student_labels: 包含学生信息的QLabel控件列表
+            student_labels: 包含学生信息的BodyLabel控件列表
             settings: 通知设置参数
         """
         # 清除现有内容

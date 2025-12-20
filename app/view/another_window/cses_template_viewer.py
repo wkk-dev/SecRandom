@@ -34,13 +34,14 @@ class CsesTemplateViewerWindow(QWidget):
         self.main_layout.setSpacing(15)
 
         # 创建标题标签
-        title_label = QLabel(get_content_name_async("time_settings", "template_title"))
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        title_label = BodyLabel(
+            get_content_name_async("time_settings", "template_title")
+        )
 
         # 创建文本编辑器
-        self.text_edit = QTextEdit()
+        self.text_edit = TextEdit()
         self.text_edit.setReadOnly(True)
-        self.text_edit.setFont(QFont("Consolas", 10))
+        self.text_edit.setFont(QFont(load_custom_font(), 10))
 
         # 获取并设置模板内容
         try:
@@ -101,7 +102,9 @@ class CsesTemplateViewerWindow(QWidget):
             logger.error(f"复制到剪贴板失败: {e}")
             InfoBar.error(
                 title=get_content_name_async("time_settings", "import_failed"),
-                content=f"复制失败: {str(e)}",
+                content=get_content_name_async("time_settings", "copy_failed").format(
+                    str(e)
+                ),
                 orient=Qt.Horizontal,
                 isClosable=True,
                 position=InfoBarPosition.TOP,
@@ -141,10 +144,21 @@ class CsesTemplateViewerWindow(QWidget):
             logger.error(f"保存模板文件失败: {e}")
             InfoBar.error(
                 title=get_content_name_async("time_settings", "import_failed"),
-                content=f"保存失败: {str(e)}",
+                content=get_content_name_async("time_settings", "save_failed").format(
+                    str(e)
+                ),
                 orient=Qt.Horizontal,
                 isClosable=True,
                 position=InfoBarPosition.TOP,
                 duration=3000,
                 parent=self,
             )
+
+    def closeEvent(self, event):
+        """处理窗口关闭事件"""
+        event.accept()
+
+    def close(self):
+        """关闭窗口"""
+        self.closeEvent(QCloseEvent())
+        super().close()
