@@ -48,9 +48,12 @@ class about(GroupHeaderCardWidget):
         self.about_version_label = BodyLabel(version_text)
 
         # 查看当前软件版权所属
-        self.about_author_label = BodyLabel(
-            f"Copyright © {INITIAL_AUTHORING_YEAR}-{CURRENT_YEAR} {COPYRIGHT_HOLDER}"
-        )
+        # 根据发布年份和当前年份是否相同，决定显示格式
+        if INITIAL_AUTHORING_YEAR == CURRENT_YEAR:
+            copyright_text = f"Copyright © {INITIAL_AUTHORING_YEAR} {COPYRIGHT_HOLDER}"
+        else:
+            copyright_text = f"Copyright © {INITIAL_AUTHORING_YEAR}-{CURRENT_YEAR} {COPYRIGHT_HOLDER}"
+        self.about_author_label = BodyLabel(copyright_text)
 
         # 创建贡献人员按钮
         self.contributor_button = PushButton(
