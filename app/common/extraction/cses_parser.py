@@ -135,6 +135,7 @@ class CSESParser:
                     return time(int(parts[0]), int(parts[1]), int(parts[2]))
             raise ValueError(f"无效的时间格式: {time_str}")
         except (ValueError, IndexError):
+            logger.error(f"无法解析时间: {time_str}")
             raise ValueError(f"无法解析时间: {time_str}") from None
 
     def get_non_class_times(self) -> Dict[str, str]:

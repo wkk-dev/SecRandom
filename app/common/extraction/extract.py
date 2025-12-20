@@ -14,7 +14,6 @@ from PySide6.QtCore import QDateTime
 
 from app.tools.path_utils import *
 from app.common.extraction.cses_parser import CSESParser
-from app.Language.obtain_language import get_content_name_async
 
 
 # ==================================================
@@ -186,35 +185,25 @@ def import_cses_schedule(file_path: str) -> tuple[bool, str]:
 
         # 加载CSES文件
         if not parser.load_from_file(file_path):
-            return False, get_content_name_async(
-                "time_settings", "cses_file_format_error"
-            )
+            return False, "CSES文件格式错误或文件无法读取"
 
         # 获取非上课时间段配置
         non_class_times = parser.get_non_class_times()
         if not non_class_times:
-            return False, get_content_name_async(
-                "time_settings", "no_valid_time_periods"
-            )
+            return False, "未能从课程表中提取有效的时间段信息"
 
         # 保存到设置文件
         success = _save_non_class_times_to_settings(non_class_times)
         if not success:
-            return False, get_content_name_async(
-                "time_settings", "save_settings_failed"
-            )
+            return False, "保存设置失败"
 
         # 获取摘要信息
         summary = parser.get_summary()
-        return True, get_content_name_async("time_settings", "import_success").format(
-            summary
-        )
+        return True, f"成功导入课程表: {summary}"
 
     except Exception as e:
         logger.error(f"导入CSES文件失败: {e}")
-        return False, get_content_name_async("time_settings", "import_failed").format(
-            str(e)
-        )
+        return False, f"导入失败: {str(e)}"
 
 
 def import_cses_schedule_from_content(content: str) -> tuple[bool, str]:
@@ -232,35 +221,25 @@ def import_cses_schedule_from_content(content: str) -> tuple[bool, str]:
 
         # 加载CSES内容
         if not parser.load_from_content(content):
-            return False, get_content_name_async(
-                "time_settings", "cses_content_format_error"
-            )
+            return False, "CSES内容格式错误"
 
         # 获取非上课时间段配置
         non_class_times = parser.get_non_class_times()
         if not non_class_times:
-            return False, get_content_name_async(
-                "time_settings", "no_valid_time_periods"
-            )
+            return False, "未能从课程表中提取有效的时间段信息"
 
         # 保存到设置文件
         success = _save_non_class_times_to_settings(non_class_times)
         if not success:
-            return False, get_content_name_async(
-                "time_settings", "save_settings_failed"
-            )
+            return False, "保存设置失败"
 
         # 获取摘要信息
         summary = parser.get_summary()
-        return True, get_content_name_async("time_settings", "import_success").format(
-            summary
-        )
+        return True, f"成功导入课程表: {summary}"
 
     except Exception as e:
         logger.error(f"导入CSES内容失败: {e}")
-        return False, get_content_name_async("time_settings", "import_failed").format(
-            str(e)
-        )
+        return False, f"导入失败: {str(e)}"
 
 
 def _save_non_class_times_to_settings(non_class_times: Dict[str, str]) -> bool:
