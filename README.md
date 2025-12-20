@@ -1,6 +1,6 @@
 <div align="center">
 
-<image src="data/secrandom-icon-paper.png" width="128" height="128" />
+<image src="resources/secrandom-icon-paper.png" width="128" height="128" />
 
 # SecRandom - 公平随机抽取系统
 
@@ -16,7 +16,7 @@
 [![bilibili](https://img.shields.io/badge/-UP%E4%B8%BB%EF%BD%9C黎泽懿-%23FB7299?style=for-the-badge&logo=bilibili)](https://space.bilibili.com/520571577)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://opensource.org/licenses/GPL-3.0)
 
-**语言选择** [ **✔简体中文** | [English](data/README_EN.md) | [繁體中文](data/README_ZH_TW.md) ]
+**语言选择** [ **✔简体中文** | [English](resources/README_EN.md) | [繁體中文](resources/README_ZH_TW.md) ]
 
 </div>
 
@@ -34,7 +34,7 @@
 --------
 > [!NOTE]
 >
-> **SecRandom v2** 将会在 2025/12/14 (GMT +8:00 中国标准时间) 附近发布!
+> **SecRandom v2** 将会在 2026/01/01 (GMT +8:00 中国标准时间) 附近发布!
 >
 > 敬请关注我们的 BiliBili / QQ频道，获取最新动态！
 
@@ -95,10 +95,10 @@
 <details>
 <summary>📸 软件截图展示 ✨</summary>
 
-![点名界面](./data/ScreenShots/主界面_抽人_浅色.png)
-![抽奖界面](./data/ScreenShots/主界面_抽奖_浅色.png)
-![历史记录](./data/ScreenShots/主界面_抽人历史记录_浅色.png)
-![设置界面](./data/ScreenShots/设置_抽人设置_浅色.png)
+![点名界面](./resources/ScreenShots/主界面_抽人_浅色.png)
+![抽奖界面](./resources/ScreenShots/主界面_抽奖_浅色.png)
+![历史记录](./resources/ScreenShots/主界面_抽人历史记录_浅色.png)
+![设置界面](./resources/ScreenShots/设置_抽人设置_浅色.png)
 
 </details>
 
