@@ -405,7 +405,9 @@ class LevitationWindow(QWidget):
         )
         lay.setSpacing(self._spacing)
         self._top = QWidget()
+        self._top.setAttribute(Qt.WA_TranslucentBackground)
         self._bottom = QWidget()
+        self._bottom.setAttribute(Qt.WA_TranslucentBackground)
         t = QHBoxLayout(self._top)
         t.setContentsMargins(0, 0, 0, 0)
         t.setSpacing(self._spacing)
@@ -500,6 +502,7 @@ class LevitationWindow(QWidget):
         btn.setFixedSize(self._btn_size)
         btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         btn.setAttribute(Qt.WA_TranslucentBackground)
+        btn.setStyleSheet("background: transparent; border: none;")
         return btn
 
     def _create_text_only_button(self, text: str) -> PushButton:
@@ -509,9 +512,10 @@ class LevitationWindow(QWidget):
         btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         btn.setFont(self._font(12))
         btn.setAttribute(Qt.WA_TranslucentBackground)
+        btn.setStyleSheet("background: transparent; border: none;")
         return btn
 
-    def _create_composite_button(self, icon: QIcon, text: str) -> PushButton:
+    def _create_composite_button(self, icon: QIcon, text: str) -> QPushButton:
         """创建图文复合按钮"""
         btn = QPushButton()
         layout = QVBoxLayout(btn)
