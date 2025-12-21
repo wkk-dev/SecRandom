@@ -164,9 +164,7 @@
 
 查看我们的贡献指南来了解更多内容：
 
-- [简体中文](./CONTRIBUTING.md)
-- [English](./resources/CONTRIBUTING_EN.md)
-- [繁體中文](./resources/CONTRIBUTING_ZH_TW.md)
+- [简体中文贡献指南](./CONTRIBUTING.md)
 
 ## ✨ Star历程
 

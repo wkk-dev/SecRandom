@@ -1,4 +1,4 @@
-# Contributing to SecRandom
+# Contributing Guidelines
 
 ❤️ Thank you for contributing to SecRandom! You can contribute to the SecRandom project in various ways, including but not limited to reporting bugs, submitting feature requests, and contributing code. Please read the following guidelines before contributing.
 
