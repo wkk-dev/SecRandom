@@ -68,20 +68,9 @@ class CurrentConfigViewerWindow(QWidget):
         scroll_area.setWidgetResizable(True)
         scroll_area.setWidget(self.table_widget)
 
-        # 创建按钮布局
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-
-        # 关闭按钮
-        self.close_button = PushButton(get_content_name_async("time_settings", "close"))
-        self.close_button.clicked.connect(self.close)
-
-        button_layout.addWidget(self.close_button)
-
         # 添加到主布局
         self.main_layout.addWidget(title_label)
         self.main_layout.addWidget(scroll_area)
-        self.main_layout.addLayout(button_layout)
 
     def load_current_config(self):
         """加载当前配置"""
