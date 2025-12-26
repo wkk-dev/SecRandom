@@ -1,10 +1,10 @@
 # 安全设置语言配置
 safety_settings = {
     "ZH_CN": {"title": {"name": "安全设置", "description": "配置软件安全相关设置"}},
-    "EN_US": {
+        "EN_US": {
         "title": {
             "name": "Security settings",
-            "description": "Configure app safety related settings",
+            "description": "Configure app safety related settings"
         }
     },
 }
@@ -156,14 +156,14 @@ basic_safety_settings = {
             "switchbutton_name": {"enable": "", "disable": ""},
         },
     },
-    "EN_US": {
+        "EN_US": {
         "title": {
             "name": "Basic security settings",
-            "description": "Configure basic safety verification function",
+            "description": "Configure basic safety verification function"
         },
         "verification_method": {
             "name": "Verification method",
-            "description": "Configure basic safety verification method",
+            "description": "Configure basic safety verification method"
         },
         "verification_process": {
             "name": "Verification process",
@@ -176,138 +176,233 @@ basic_safety_settings = {
                 "4": "Password + TOTP",
                 "5": "Password + USB drives",
                 "6": "TOTP + USB drives",
-                "7": "Password + TOTP + USB drives",
-            },
+                "7": "Password + TOTP + USB drives"
+            }
         },
         "security_operations": {
             "name": "Security operations",
-            "description": "Configure actions need basic safety verification",
+            "description": "Configure actions need basic safety verification"
         },
         "safety_switch": {
             "name": "Safety switch",
-            "description": "When enabled, all safety actions require password",
+            "description": "When enabled, all safety actions require password"
         },
         "set_password": {
             "name": "Set password",
-            "description": "Set safety verification password",
+            "description": "Set safety verification password"
         },
         "totp_switch": {
             "name": "TOTP verification",
-            "description": "Enable to use the TOTP dynamic password in secure operations",
+            "description": "Enable to use the TOTP dynamic password in secure operations"
         },
         "set_totp": {
             "name": "Set TOTP",
-            "description": "Configure TOTP one-time password verification",
+            "description": "Configure TOTP one-time password verification"
         },
         "usb_switch": {
             "name": "USB drive verification",
-            "description": "Enable to use USB drive verification in secure operations",
+            "description": "Enable to use USB drive verification in secure operations"
         },
         "bind_usb": {
             "name": "Bind USB drive",
-            "description": "Bind the USB drive to verify",
+            "description": "Bind the USB drive to verify"
         },
-        "unbind_usb": {"name": "Unbind USB drive", "description": "Unbind USB drive"},
+        "unbind_usb": {
+            "name": "Unbind USB drive",
+            "description": "Unbind USB drive"
+        },
         "show_hide_floating_window_switch": {
             "name": "Show/hide float window verification",
-            "description": "When enabled, showing or hiding float window will need verification",
+            "description": "When enabled, showing or hiding float window will need verification"
         },
         "restart_switch": {
             "name": "Restart Verification",
-            "description": "When enabled, restarting app will need verification",
+            "description": "When enabled, restarting app will need verification"
         },
         "exit_switch": {
             "name": "Exit Verification",
-            "description": "When enabled, exiting app will need verification",
+            "description": "When enabled, exiting app will need verification"
         },
         "password_rules": {
             "name": "Password requirements",
-            "description": "Length > 8, with at least two categories of letters, numbers, and special characters (recommended three categories)",
+            "description": "Length > 8, with at least two categories of letters, numbers, and special characters (recommended three categories)"
         },
-        "current_password": {"name": "Current password"},
-        "password_input_placeholder": {"name": "Enter password to verify"},
-        "new_password": {"name": "New password"},
-        "confirm_password": {"name": "Confirm new password"},
-        "password_strength_title": {"name": "Password strength"},
-        "strength_weak": {"name": "Weak"},
-        "strength_medium": {"name": "Mid"},
-        "strength_strong": {"name": "Strong"},
-        "save_button": {"name": "Save"},
-        "cancel_button": {"name": "Cancel"},
-        "error_current_password": {"name": "Current password is incorrect"},
-        "error_mismatch": {"name": "New password does not match confirmation"},
-        "error_strength_insufficient": {"name": "Not enough password"},
-        "success_updated": {"name": "Password updated"},
+        "current_password": {
+            "name": "Current password"
+        },
+        "password_input_placeholder": {
+            "name": "Enter password to verify"
+        },
+        "new_password": {
+            "name": "New password"
+        },
+        "confirm_password": {
+            "name": "Confirm new password"
+        },
+        "password_strength_title": {
+            "name": "Password strength"
+        },
+        "strength_weak": {
+            "name": "Weak"
+        },
+        "strength_medium": {
+            "name": "Mid"
+        },
+        "strength_strong": {
+            "name": "Strong"
+        },
+        "save_button": {
+            "name": "Save"
+        },
+        "cancel_button": {
+            "name": "Cancel"
+        },
+        "error_current_password": {
+            "name": "Current password is incorrect"
+        },
+        "error_mismatch": {
+            "name": "New password does not match confirmation"
+        },
+        "error_strength_insufficient": {
+            "name": "Not enough password"
+        },
+        "success_updated": {
+            "name": "Password updated"
+        },
         "remove_password": {
             "name": "Remove password",
-            "description": "Cancel current security verification password",
+            "description": "Cancel current security verification password"
         },
-        "remove_password_confirm_title": {"name": "Confirm Password Removal"},
+        "remove_password_confirm_title": {
+            "name": "Confirm Password Removal"
+        },
         "remove_password_confirm_content": {
             "name": "Removing passwords will disable secure switches, continue?"
         },
         "remove_password_success": {
             "name": "Password removed and security switch closed"
         },
-        "error_title": {"name": "Error"},
-        "dialog_yes_text": {"name": "OK"},
-        "dialog_cancel_text": {"name": "Cancel"},
-        "generate_totp_secret": {"name": "Generate key"},
-        "verify_totp_code": {"name": "Verify verification code"},
-        "totp_input_placeholder": {"name": "Enter TOTP verification code to verify"},
-        "totp_secret_prefix": {"name": "Key"},
-        "totp_uri_prefix": {"name": "URI"},
-        "totp_generated_saved": {"name": "Generated and saved TOTP key"},
-        "totp_generated_error": {"name": "Failed to generate TOTP"},
-        "totp_code_valid": {"name": "Valid code"},
-        "totp_code_invalid": {"name": "Invalid code"},
-        "totp_save_success": {"name": "Settings saved"},
-        "totp_verify_before_save": {"name": "Please verify the code before saving"},
+        "error_title": {
+            "name": "Error"
+        },
+        "dialog_yes_text": {
+            "name": "OK"
+        },
+        "dialog_cancel_text": {
+            "name": "Cancel"
+        },
+        "generate_totp_secret": {
+            "name": "Generate key"
+        },
+        "verify_totp_code": {
+            "name": "Verify verification code"
+        },
+        "totp_input_placeholder": {
+            "name": "Enter TOTP verification code to verify"
+        },
+        "totp_secret_prefix": {
+            "name": "Key"
+        },
+        "totp_uri_prefix": {
+            "name": "URI"
+        },
+        "totp_generated_saved": {
+            "name": "Generated and saved TOTP key"
+        },
+        "totp_generated_error": {
+            "name": "Failed to generate TOTP"
+        },
+        "totp_code_valid": {
+            "name": "Valid code"
+        },
+        "totp_code_invalid": {
+            "name": "Invalid code"
+        },
+        "totp_save_success": {
+            "name": "Settings saved"
+        },
+        "totp_verify_before_save": {
+            "name": "Please verify the code before saving"
+        },
         "totp_qr_unavailable": {
             "name": "Failed to display QR code, please install QR library"
         },
-        "usb_refresh": {"name": "Refresh"},
-        "usb_bind": {"name": "Bind"},
-        "usb_unbind_all": {"name": "Unbind All"},
-        "usb_no_removable": {"name": "No removable disk detected"},
-        "usb_bind_success": {"name": "USB drive binded"},
-        "usb_unbind_all_success": {"name": "Unbound all USB drives"},
-        "usb_require_key_file": {"name": ".key file verification required"},
+        "usb_refresh": {
+            "name": "Refresh"
+        },
+        "usb_bind": {
+            "name": "Bind"
+        },
+        "usb_unbind_all": {
+            "name": "Unbind All"
+        },
+        "usb_no_removable": {
+            "name": "No removable disk detected"
+        },
+        "usb_bind_success": {
+            "name": "USB drive binded"
+        },
+        "usb_unbind_all_success": {
+            "name": "Unbound all USB drives"
+        },
+        "usb_require_key_file": {
+            "name": ".key file verification required"
+        },
         "totp_secret_generated": {
             "name": "Key generated, please complete validation before saving"
         },
-        "error_set_password_first": {"name": "Please set password first"},
-        "error_set_totp_first": {"name": "Please set TOTP first"},
-        "error_bind_usb_first": {"name": "Please bind to a disk first"},
-        "verify_in_progress": {"name": "Verifying, please wait"},
+        "error_set_password_first": {
+            "name": "Please set password first"
+        },
+        "error_set_totp_first": {
+            "name": "Please set TOTP first"
+        },
+        "error_bind_usb_first": {
+            "name": "Please bind to a disk first"
+        },
+        "verify_in_progress": {
+            "name": "Verifying, please wait"
+        },
         "verify_failed_generic": {
             "name": "Verification not passed, please check input"
         },
-        "usb_unbind_selected": {"name": "Unbind selected"},
-        "usb_unbind_selected_success": {"name": "Unbound USB drives"},
-        "usb_select_bound_hint": {"name": "Please select a bound device"},
-        "usb_bound_devices": {"name": "Bind device"},
-        "usb_status_connected": {"name": "USB drive connected"},
-        "usb_status_disconnected": {"name": "USB drive unconnected"},
+        "usb_unbind_selected": {
+            "name": "Unbind selected"
+        },
+        "usb_unbind_selected_success": {
+            "name": "Unbound USB drives"
+        },
+        "usb_select_bound_hint": {
+            "name": "Please select a bound device"
+        },
+        "usb_bound_devices": {
+            "name": "Bind device"
+        },
+        "usb_status_connected": {
+            "name": "USB drive connected"
+        },
+        "usb_status_disconnected": {
+            "name": "USB drive unconnected"
+        },
         "open_settings_switch": {
             "name": "Open settings validation",
-            "description": "Secure authentication is required when opening settings",
+            "description": "Secure authentication is required when opening settings"
         },
         "diagnostic_export_switch": {
             "name": "Diagnostic data export validation",
-            "description": "Secure validation to export diagnostic data when enabled",
+            "description": "Secure validation to export diagnostic data when enabled"
         },
         "data_export_switch": {
             "name": "Data export Validation",
-            "description": "Secure verification before all data are exported when enabled",
+            "description": "Secure verification before all data are exported when enabled"
         },
         "import_overwrite_switch": {
             "name": "Import Overwrite Verification",
-            "description": "Authentication is required to overwrite existing files after import",
+            "description": "Authentication is required to overwrite existing files after import"
         },
         "import_version_mismatch_switch": {
             "name": "Version mismatch import validation",
-            "description": "Authentication is required for importing versions when they do not match",
-        },
+            "description": "Authentication is required for importing versions when they do not match"
+        }
     },
 }

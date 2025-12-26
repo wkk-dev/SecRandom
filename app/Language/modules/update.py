@@ -57,36 +57,86 @@ update = {
             "combo_items": ["github", "ghfast", "gh-proxy"],
         },
     },
-    "EN_US": {
+        "EN_US": {
         "title": {
             "name": "Update settings",
-            "description": "Check and install software updates",
+            "description": "Check and install software updates"
         },
-        "secrandom_update_text": {"name": "SecRandom update"},
-        "check_update": {"name": "Check for updates"},
-        "latest_version": {"name": "is up to date"},
-        "new_version_available": {"name": "New version found"},
-        "update_progress": {"name": "Update progress"},
-        "current_version": {"name": "Current version"},
-        "latest_version_label": {"name": "Latest version"},
-        "checking_update": {"name": "Checking for updates..."},
-        "check_for_updates": {"name": "Check for updates"},
-        "already_latest_version": {"name": "You are up to date!"},
-        "check_update_failed": {"name": "Failed to check for updates"},
-        "last_check_time": {"name": "Last check update time"},
-        "downloading_update": {"name": "Downloading updates..."},
-        "installing_update": {"name": "Installing updates..."},
-        "update_installed_successfully": {"name": "Update installed successfully!"},
-        "update_installed": {"name": "Update installation successful"},
-        "install_failed": {"name": "Installation failed"},
-        "failed_to_install_update": {"name": "Failed to install update"},
-        "download_failed": {"name": "Download failed"},
-        "failed_to_get_version_info": {"name": "Failed to get version information"},
-        "failed_to_download_update": {"name": "Failed to download update"},
-        "download_and_install": {"name": "Download and install"},
-        "cancel_update": {"name": "Cancel update"},
-        "update_cancelled": {"name": "Update cancelled"},
-        "cancelling_update": {"name": "Canceling update..."},
+        "secrandom_update_text": {
+            "name": "SecRandom update"
+        },
+        "check_update": {
+            "name": "Check for updates"
+        },
+        "latest_version": {
+            "name": "is up to date"
+        },
+        "new_version_available": {
+            "name": "New version found"
+        },
+        "update_progress": {
+            "name": "Update progress"
+        },
+        "current_version": {
+            "name": "Current version"
+        },
+        "latest_version_label": {
+            "name": "Latest version"
+        },
+        "checking_update": {
+            "name": "Checking for updates..."
+        },
+        "check_for_updates": {
+            "name": "Check for updates"
+        },
+        "already_latest_version": {
+            "name": "You are up to date!"
+        },
+        "check_update_failed": {
+            "name": "Failed to check for updates"
+        },
+        "last_check_time": {
+            "name": "Last check update time"
+        },
+        "downloading_update": {
+            "name": "Downloading updates..."
+        },
+        "installing_update": {
+            "name": "Installing updates..."
+        },
+        "update_installed_successfully": {
+            "name": "Update installed successfully!"
+        },
+        "update_installed": {
+            "name": "Update installation successful"
+        },
+        "install_failed": {
+            "name": "Installation failed"
+        },
+        "failed_to_install_update": {
+            "name": "Failed to install update"
+        },
+        "download_failed": {
+            "name": "Download failed"
+        },
+        "failed_to_get_version_info": {
+            "name": "Failed to get version information"
+        },
+        "failed_to_download_update": {
+            "name": "Failed to download update"
+        },
+        "download_and_install": {
+            "name": "Download and install"
+        },
+        "cancel_update": {
+            "name": "Cancel update"
+        },
+        "update_cancelled": {
+            "name": "Update cancelled"
+        },
+        "cancelling_update": {
+            "name": "Canceling update..."
+        },
         "auto_update_mode": {
             "name": "Automatically check for updates and install",
             "description": "Set the auto-update mode of the app",
@@ -94,8 +144,8 @@ update = {
                 "0": "Never update automatically",
                 "1": "Automatically check for updates and notice",
                 "2": "Automatically check for updates and download",
-                "3": "Automatically check for updates and install",
-            },
+                "3": "Automatically check for updates and install"
+            }
         },
         "update_channel": {
             "name": "Update channel select",
@@ -103,28 +153,44 @@ update = {
             "combo_items": {
                 "0": "Stable channel",
                 "1": "Test channel",
-                "2": "Publish preview channel",
-            },
+                "2": "Publish preview channel"
+            }
         },
         "update_source": {
             "name": "Update source selection",
             "description": "Select source of download for software update",
-            "combo_items": {"0": "GitHub", "1": "ghfast", "2": "gh-proxy"},
+            "combo_items": {
+                "0": "GitHub",
+                "1": "ghfast",
+                "2": "gh-proxy"
+            }
         },
-        "force_check": {"name": "Force check for updates"},
+        "force_check": {
+            "name": "Force check for updates"
+        },
         "already_downloaded_same_version": {
             "name": "The latest version has been downloaded"
         },
-        "update_confirmation_title": {"name": "Update confirmation"},
+        "update_confirmation_title": {
+            "name": "Update confirmation"
+        },
         "update_confirmation_content": {
             "name": "Update has been downloaded. Install now?"
         },
-        "yes_update_now": {"name": "Update Now"},
-        "no_update_later": {"name": "Update Later"},
-        "update_cancelled_by_user": {"name": "Update cancelled"},
-        "update_notification_title": {"name": "SecRandom update notification"},
+        "yes_update_now": {
+            "name": "Update Now"
+        },
+        "no_update_later": {
+            "name": "Update Later"
+        },
+        "update_cancelled_by_user": {
+            "name": "Update cancelled"
+        },
+        "update_notification_title": {
+            "name": "SecRandom update notification"
+        },
         "update_notification_content": {
             "name": "New version available:{version}\nClick to see details "
-        },
+        }
     },
 }

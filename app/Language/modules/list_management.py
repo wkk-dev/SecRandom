@@ -5,19 +5,19 @@ list_management = {
         "roll_call_list": {"name": "点名名单", "description": "管理点名用学生名单"},
         "lottery_list": {"name": "抽奖名单", "description": "管理抽奖用奖品名单"},
     },
-    "EN_US": {
+        "EN_US": {
         "title": {
             "name": "List management",
-            "description": "Manage the list of picking and lottery",
+            "description": "Manage the list of picking and lottery"
         },
         "roll_call_list": {
             "name": "Picking list",
-            "description": "Manage list of named students",
+            "description": "Manage list of named students"
         },
         "lottery_list": {
             "name": "Lottery list",
-            "description": "Manage the list of prizes",
-        },
+            "description": "Manage the list of prizes"
+        }
     },
 }
 
@@ -42,36 +42,39 @@ roll_call_list = {
             "description": "将学生名单导出到文件",
         },
     },
-    "EN_US": {
+        "EN_US": {
         "title": {
             "name": "Picking list",
-            "description": "Show and manage student list",
+            "description": "Show and manage student list"
         },
         "set_class_name": {
             "name": "Set class name",
-            "description": "Set current class name",
+            "description": "Set current class name"
         },
         "select_class_name": {
             "name": "Select class",
-            "description": "Select a class in existing ones",
+            "description": "Select a class in existing ones"
         },
         "import_student_name": {
             "name": "Import student name",
-            "description": "Import student list from file",
+            "description": "Import student list from file"
         },
-        "name_setting": {"name": "Name settings", "description": "Set student name"},
+        "name_setting": {
+            "name": "Name settings",
+            "description": "Set student name"
+        },
         "gender_setting": {
             "name": "Gender settings",
-            "description": "Set student gender",
+            "description": "Set student gender"
         },
         "group_setting": {
             "name": "Group settings",
-            "description": "Set group of students",
+            "description": "Set group of students"
         },
         "export_student_name": {
             "name": "Export student list",
-            "description": "Export student list to file",
-        },
+            "description": "Export student list to file"
+        }
     },
 }
 
@@ -88,11 +91,14 @@ roll_call_table = {
             "description": "点名表格的列标题",
         },
     },
-    "EN_US": {
-        "title": {"name": "Picking table", "description": "Show and manage name list"},
+        "EN_US": {
+        "title": {
+            "name": "Picking table",
+            "description": "Show and manage name list"
+        },
         "select_class_name": {
             "name": "Select class",
-            "description": "Select the class to show",
+            "description": "Select the class to show"
         },
         "HeaderLabels": {
             "name": {
@@ -100,10 +106,10 @@ roll_call_table = {
                 "1": "Student ID",
                 "2": "Name",
                 "3": "Gender",
-                "4": "Group",
+                "4": "Group"
             },
-            "description": "The column title of the picking table",
-        },
+            "description": "The column title of the picking table"
+        }
     },
 }
 
@@ -127,29 +133,35 @@ lottery_list = {
             "description": "将奖品名单导出到文件",
         },
     },
-    "EN_US": {
-        "title": {"name": "Lottery list", "description": "Manage prize list"},
+        "EN_US": {
+        "title": {
+            "name": "Lottery list",
+            "description": "Manage prize list"
+        },
         "set_pool_name": {
             "name": "Set pool name",
-            "description": "Set current pool name",
+            "description": "Set current pool name"
         },
         "select_pool_name": {
             "name": "Select pool",
-            "description": "Select a pool in existing ones",
+            "description": "Select a pool in existing ones"
         },
         "import_prize_name": {
             "name": "Import prize list",
-            "description": "Import prize list from file",
+            "description": "Import prize list from file"
         },
-        "prize_setting": {"name": "Set prize", "description": "Set prize name"},
+        "prize_setting": {
+            "name": "Set prize",
+            "description": "Set prize name"
+        },
         "prize_weight_setting": {
             "name": "Weight settings",
-            "description": "Set prize weight",
+            "description": "Set prize weight"
         },
         "export_prize_name": {
             "name": "Export prize list",
-            "description": "Export prize list to file",
-        },
+            "description": "Export prize list to file"
+        }
     },
 }
 
@@ -166,16 +178,24 @@ lottery_table = {
             "description": "抽奖表格的列标题",
         },
     },
-    "EN_US": {
-        "title": {"name": "Lottery table", "description": "Show and manage prize list"},
+        "EN_US": {
+        "title": {
+            "name": "Lottery table",
+            "description": "Show and manage prize list"
+        },
         "select_pool_name": {
             "name": "Select pool",
-            "description": "Select the pool to show",
+            "description": "Select the pool to show"
         },
         "HeaderLabels": {
-            "name": {"0": "Exist", "1": "Serial", "2": "Prize", "3": "Weight"},
-            "description": "The column title of the lottery table",
-        },
+            "name": {
+                "0": "Exist",
+                "1": "Serial",
+                "2": "Prize",
+                "3": "Weight"
+            },
+            "description": "The column title of the lottery table"
+        }
     },
 }
 
@@ -301,153 +321,153 @@ notification = {
             },
         },
     },
-    "EN_US": {
+        "EN_US": {
         "roll_call": {
             "class_name_setting": {
                 "title": {
                     "name": "Class name settings",
-                    "description": "Class name settings notification title",
+                    "description": "Class name settings notification title"
                 },
                 "content": {
                     "name": "Class Name Settings window opened",
-                    "description": "Class name setting notification content",
-                },
+                    "description": "Class name setting notification content"
+                }
             },
             "import_student_name": {
                 "title": {
                     "name": "Student list import",
-                    "description": "Student list import notification title",
+                    "description": "Student list import notification title"
                 },
                 "content": {
                     "name": "Open student list import window",
-                    "description": "Student list import notification content",
-                },
+                    "description": "Student list import notification content"
+                }
             },
             "name_setting": {
                 "title": {
                     "name": "Name settings",
-                    "description": "Name set notification title",
+                    "description": "Name set notification title"
                 },
                 "content": {
                     "name": "Name settings window opened",
-                    "description": "Name settings notification content",
-                },
+                    "description": "Name settings notification content"
+                }
             },
             "gender_setting": {
                 "title": {
                     "name": "Gender settings",
-                    "description": "Gender settings notification title",
+                    "description": "Gender settings notification title"
                 },
                 "content": {
                     "name": "Gender settings window opened",
-                    "description": "Gender settings notification content",
-                },
+                    "description": "Gender settings notification content"
+                }
             },
             "group_setting": {
                 "title": {
                     "name": "Group Settings",
-                    "description": "Group Notification Title",
+                    "description": "Group Notification Title"
                 },
                 "content": {
                     "name": "Group settings window opened",
-                    "description": "Group settings notification content",
-                },
+                    "description": "Group settings notification content"
+                }
             },
             "export": {
                 "title": {
                     "success": {
                         "name": "Export success",
-                        "description": "Export successful notification title",
+                        "description": "Export successful notification title"
                     },
                     "failure": {
                         "name": "Export failed",
-                        "description": "Export Failed Notification Title",
-                    },
+                        "description": "Export Failed Notification Title"
+                    }
                 },
                 "content": {
                     "success": {
                         "name": "Student list has been exported to: {path}",
-                        "description": "Export successful notification content",
+                        "description": "Export successful notification content"
                     },
                     "failure": {
                         "name": "Please select a class to export first",
-                        "description": "Export failed notification content (no class selected)",
+                        "description": "Export failed notification content (no class selected)"
                     },
                     "error": {
                         "name": "{message}",
-                        "description": "Export error notification content",
-                    },
-                },
-            },
+                        "description": "Export error notification content"
+                    }
+                }
+            }
         },
         "lottery": {
             "pool_name_setting": {
                 "title": {
                     "name": "Pool name settings",
-                    "description": "Pool name settings notification title",
+                    "description": "Pool name settings notification title"
                 },
                 "content": {
                     "name": "Pool name settings window opened",
-                    "description": "Pool name settings notification",
-                },
+                    "description": "Pool name settings notification"
+                }
             },
             "import_prize_name": {
                 "title": {
                     "name": "Prizes list import",
-                    "description": "Prize list import notification title",
+                    "description": "Prize list import notification title"
                 },
                 "content": {
                     "name": "Open prize list import window",
-                    "description": "Prize list import notification content",
-                },
+                    "description": "Prize list import notification content"
+                }
             },
             "prize_setting": {
                 "title": {
                     "name": "Prizes settings",
-                    "description": "Prize settings notification title",
+                    "description": "Prize settings notification title"
                 },
                 "content": {
                     "name": "Pool settings window opened",
-                    "description": "Prize settings notification content",
-                },
+                    "description": "Prize settings notification content"
+                }
             },
             "prize_weight_setting": {
                 "title": {
                     "name": "Prize weight settings",
-                    "description": "Prizes reset notification title",
+                    "description": "Prizes reset notification title"
                 },
                 "content": {
                     "name": "The prize weight setting window has been opened",
-                    "description": "Prizes reset notification content",
-                },
+                    "description": "Prizes reset notification content"
+                }
             },
             "export": {
                 "title": {
                     "success": {
                         "name": "Export success",
-                        "description": "Export successful notification title",
+                        "description": "Export successful notification title"
                     },
                     "failure": {
                         "name": "Export failed",
-                        "description": "Export Failed Notification Title",
-                    },
+                        "description": "Export Failed Notification Title"
+                    }
                 },
                 "content": {
                     "success": {
                         "name": "Prize list has been exported to: {path}",
-                        "description": "Export successful notification content",
+                        "description": "Export successful notification content"
                     },
                     "failure": {
                         "name": "Please select prize pool to export first",
-                        "description": "Export failed notification content (no pool selected)",
+                        "description": "Export failed notification content (no pool selected)"
                     },
                     "error": {
                         "name": "{message}",
-                        "description": "Export error notification content",
-                    },
-                },
-            },
-        },
+                        "description": "Export error notification content"
+                    }
+                }
+            }
+        }
     },
 }
 
@@ -479,30 +499,30 @@ qfiledialog = {
             }
         },
     },
-    "EN_US": {
+        "EN_US": {
         "roll_call": {
             "export_student_list": {
                 "caption": {
                     "name": "Save student list",
-                    "description": "Save student list dialog title",
+                    "description": "Save student list dialog title"
                 },
                 "filter": {
                     "name": "Excel files (*.xlsx);;CSV files (*.csv);;TXT files (name only) (*.txt)",
-                    "description": "Save student list dialog filter",
-                },
+                    "description": "Save student list dialog filter"
+                }
             }
         },
         "lottery": {
             "export_prize_name": {
                 "caption": {
                     "name": "Save prize list",
-                    "description": "Save prize list dialog title",
+                    "description": "Save prize list dialog title"
                 },
                 "filter": {
                     "name": "Excel files (*.xlsx);;CSV files (*.csv);;TXT files (only prizes) (*.txt)",
-                    "description": "Save prize list dialog filter",
-                },
+                    "description": "Save prize list dialog filter"
+                }
             }
-        },
+        }
     },
 }

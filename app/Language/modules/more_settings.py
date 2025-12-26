@@ -3,14 +3,24 @@ more_settings = {
     "ZH_CN": {
         "title": {"name": "更多设置", "description": "更多功能设置"},
     },
-    "EN_US": {"title": {"name": "More settings", "description": "More settings"}},
+        "EN_US": {
+        "title": {
+            "name": "More settings",
+            "description": "More settings"
+        }
+    },
 }
 
 settings = {
     "ZH_CN": {
         "title": {"name": "设置", "description": "设置窗口"},
     },
-    "EN_US": {"title": {"name": "Settings", "description": "Settings window"}},
+        "EN_US": {
+        "title": {
+            "name": "Settings",
+            "description": "Settings window"
+        }
+    },
 }
 
 # 时间设置语言配置
@@ -81,83 +91,163 @@ time_settings = {
             "7": "周日",
         },
     },
-    "EN_US": {
+        "EN_US": {
         "title": {
-            "name": "Time Settings",
-            "description": "Set class break restrictions and schedule import",
+            "name": "时间设置",
+            "description": "设置课间禁用和课程表导入"
         },
         "class_break_settings": {
-            "name": "Class Break Settings",
-            "description": "Configure class break restrictions",
+            "name": "课间禁用设置",
+            "description": "设置课间禁用功能"
         },
         "cses_import_settings": {
-            "name": "CSES Schedule Import",
-            "description": "Import schedule from CSES format files",
+            "name": "CSES Schedule Importation",
+            "description": "Import schedule from CSES file"
         },
         "class_break_function": {
-            "name": "Class Break Restriction",
-            "description": "When enabled, drawing during break times requires safety verification",
+            "name": "Disable draw during class break",
+            "description": "Draw during class breaks need security authorization when enabled"
         },
         "cses_import": {
-            "name": "Schedule Import",
-            "description": "Import class time slots from CSES format files for break time functionality",
+            "name": "Schedule import",
+            "description": "Import class timetable from CSES file for auto-disable during class breaks"
         },
-        "import_from_file": {"name": "Import from File"},
-        "importing": {"name": "Importing..."},
-        "view_current_config": {"name": "View Current Config"},
-        "no_schedule_imported": {"name": "No schedule imported"},
-        "schedule_imported": {"name": "Imported {} non-class time periods"},
-        "copy_to_clipboard": {"name": "Copy to Clipboard"},
-        "save_as_file": {"name": "Save as File"},
-        "close": {"name": "Close"},
-        "copy_success": {"name": "Copy Successful"},
-        "template_copied": {"name": "Template copied to clipboard"},
-        "save_success": {"name": "Save Successful"},
-        "template_saved": {"name": "Template saved to: {}"},
-        "import_success": {"name": "Import Successful"},
-        "import_failed": {"name": "Import Failed"},
-        "import_error": {"name": "Error during import: {}"},
-        "template_title": {"name": "CSES Schedule Template"},
-        "select_cses_file": {"name": "Select CSES Schedule File"},
-        "yaml_files": {"name": "YAML files (*.yaml *.yml)"},
-        "all_files": {"name": "All files (*.*)"},
-        "save_template": {"name": "Save CSES Template"},
-        "cses_template": {"name": "cses_template.yaml"},
-        "save_failed": {"name": "Save failed: {}"},
-        "copy_failed": {"name": "Copy failed: {}"},
+        "import_from_file": {
+            "name": "Import from file"
+        },
+        "importing": {
+            "name": "导入中..."
+        },
+        "view_template": {
+            "name": "View template"
+        },
+        "no_schedule_imported": {
+            "name": "Haven't imported schedule yet"
+        },
+        "copy_to_clipboard": {
+            "name": "复制到剪贴板"
+        },
+        "save_as_file": {
+            "name": "保存为文件"
+        },
+        "close": {
+            "name": "Disabled"
+        },
+        "copy_success": {
+            "name": "复制成功"
+        },
+        "template_copied": {
+            "name": "Template has been copied to clipboard"
+        },
+        "save_success": {
+            "name": "Item successfully saved"
+        },
+        "template_saved": {
+            "name": "Template have been saved to: {}"
+        },
+        "import_error": {
+            "name": "Error {} occurred when importing"
+        },
+        "template_title": {
+            "name": "CSES schedule template"
+        },
+        "select_cses_file": {
+            "name": "选择CSES课程表文件"
+        },
+        "yaml_files": {
+            "name": "YAML文件 (*.yaml *.yml)"
+        },
+        "all_files": {
+            "name": "所有文件 (*.*)"
+        },
+        "save_template": {
+            "name": "保存CSES模板"
+        },
+        "cses_template": {
+            "name": "cses_template.yaml"
+        },
+        "verification_function": {
+            "name": "验证流程功能",
+            "description": "启用后，在非上课时段触发时将弹出安全验证；若关闭则直接禁用控件"
+        },
+        "view_current_config": {
+            "name": "查看当前配置"
+        },
+        "schedule_imported": {
+            "name": "已导入 {} 个上课时间段"
+        },
+        "import_success": {
+            "name": "成功导入课程表: {}"
+        },
+        "import_failed": {
+            "name": "导入失败: {}"
+        },
+        "save_failed": {
+            "name": "保存失败: {}"
+        },
+        "copy_failed": {
+            "name": "复制失败: {}"
+        },
         "cses_file_format_error": {
-            "name": "CSES file format error or file cannot be read"
+            "name": "CSES文件格式错误或文件无法读取"
         },
-        "cses_content_format_error": {"name": "CSES content format error"},
+        "cses_content_format_error": {
+            "name": "CSES内容格式错误"
+        },
         "no_valid_time_periods": {
-            "name": "Failed to extract valid time periods from the schedule"
+            "name": "未能从课程表中提取有效的时间段信息"
         },
-        "save_settings_failed": {"name": "Failed to save settings"},
-        "no_cses_folder": {"name": "CSES folder not found"},
-        "no_schedule_file": {"name": "No schedule file imported"},
-        "unknown": {"name": "Unknown"},
-        "unknown_course": {"name": "Unknown course"},
-        "parse_failed": {"name": "Parse failed"},
-        "load_config_failed": {"name": "Failed to load config: {}"},
+        "save_settings_failed": {
+            "name": "保存设置失败"
+        },
+        "no_cses_folder": {
+            "name": "未找到CSES文件夹"
+        },
+        "no_schedule_file": {
+            "name": "未导入课程表文件"
+        },
+        "unknown": {
+            "name": "未知"
+        },
+        "unknown_course": {
+            "name": "未知课程"
+        },
+        "parse_failed": {
+            "name": "解析失败"
+        },
+        "load_config_failed": {
+            "name": "加载配置失败: {}"
+        },
         "table_headers": {
-            "name": ["Day", "Course Name", "Start Time", "End Time", "Teacher"]
+            "name": {
+                "0": "星期",
+                "1": "课程名称",
+                "2": "开始时间",
+                "3": "结束时间",
+                "4": "老师"
+            }
         },
         "day_map": {
-            "1": "Monday",
-            "2": "Tuesday",
-            "3": "Wednesday",
-            "4": "Thursday",
-            "5": "Friday",
-            "6": "Saturday",
-            "7": "Sunday",
-        },
+            "1": "周一",
+            "2": "周二",
+            "3": "周三",
+            "4": "周四",
+            "5": "周五",
+            "6": "周六",
+            "7": "周日"
+        }
     },
 }
 
 # 调试设置语言配置
 debug = {
     "ZH_CN": {"title": {"name": "调试设置", "description": "调试功能设置"}},
-    "EN_US": {"title": {"name": "Debug settings", "description": "Debug settings"}},
+        "EN_US": {
+        "title": {
+            "name": "Debug settings",
+            "description": "Debug settings"
+        }
+    },
 }
 
 # 关于语言配置
@@ -185,12 +275,18 @@ about = {
         "copyright": {"name": "版权", "description": "SecRandom遵循GPL-3.0协议"},
         "version": {"name": "版本", "description": "显示当前软件版本号"},
     },
-    "EN_US": {
-        "title": {"name": "About", "description": "APP about page"},
-        "github": {"name": "GitHub", "description": "Visit project repository"},
+        "EN_US": {
+        "title": {
+            "name": "About",
+            "description": "APP about page"
+        },
+        "github": {
+            "name": "GitHub",
+            "description": "Visit project repository"
+        },
         "bilibili": {
             "name": "Bilibili",
-            "description": "Visit 黎泽懿_Aionflux's Bilibili account",
+            "description": "Visit 黎泽懿_Aionflux's Bilibili account"
         },
         "contributor": {
             "name": "Contributors",
@@ -201,24 +297,36 @@ about = {
             "contributor_role_4": "Creativity & Documentation",
             "contributor_role_5": "Creativity & Maintenance",
             "contributor_role_6": "Test & Documentation & Install Package Making",
-            "contributor_role_7": "Responsive frontend page Design and Maintenance & Documentation",
+            "contributor_role_7": "Responsive frontend page Design and Maintenance & Documentation"
         },
-        "donation": {"name": "Donate", "description": "Buy me a coffee"},
+        "donation": {
+            "name": "Donate",
+            "description": "Buy me a coffee"
+        },
         "check_update": {
             "name": "Check for updates",
-            "description": "Check for updates",
+            "description": "Check for updates"
         },
         "website": {
             "name": "SecRandom Website",
-            "description": "Visit SecRandom's official website",
+            "description": "Visit SecRandom's official website"
         },
         "channel": {
             "name": "Update channel",
             "description": "Select SecRandom software update channel",
-            "combo_items": {"0": "Official version", "1": "Beta version"},
+            "combo_items": {
+                "0": "Official version",
+                "1": "Beta version"
+            }
         },
-        "copyright": {"name": "Copyright", "description": "SecRandom follows GPL-3.0"},
-        "version": {"name": "Version", "description": "Show current version"},
+        "copyright": {
+            "name": "Copyright",
+            "description": "SecRandom follows GPL-3.0"
+        },
+        "version": {
+            "name": "Version",
+            "description": "Show current version"
+        }
     },
 }
 

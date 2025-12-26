@@ -144,59 +144,59 @@ basic_settings = {
             },
         },
     },
-    "EN_US": {
+        "EN_US": {
         "title": {
             "name": "Basic settings",
-            "description": "Configure basic features and appearance of software",
+            "description": "Configure basic features and appearance of software"
         },
         "basic_function": {
             "name": "Basic functions",
-            "description": "Configure software's core functions",
+            "description": "Configure software's core functions"
         },
         "data_management": {
             "name": "Data management",
-            "description": "Import or export the software's data",
+            "description": "Import or export the software's data"
         },
         "personalised": {
             "name": "Customization",
-            "description": "Customize the look and experience of software",
+            "description": "Customize the look and experience of software"
         },
         "autostart": {
             "name": "Start on boot",
-            "description": "Set whether the software is running automatically with the system",
+            "description": "Set whether the software is running automatically with the system"
         },
         "check_update": {
             "name": "Check for updates on startup",
-            "description": "Set whether to automatically check for new versions when software starts",
+            "description": "Set whether to automatically check for new versions when software starts"
         },
         "show_startup_window": {
             "name": "Show splash screen",
-            "description": "Set whether to show the splash screen on boot",
+            "description": "Set whether to show the splash screen on boot"
         },
         "export_diagnostic_data": {
             "name": "Export diagnostic data",
             "description": "Export Diagnostic Information on Exit",
-            "pushbutton_name": "Export diagnostic data",
+            "pushbutton_name": "Export diagnostic data"
         },
         "export_settings": {
             "name": "Export settings",
             "description": "Export current settings to profile",
-            "pushbutton_name": "Export settings",
+            "pushbutton_name": "Export settings"
         },
         "import_settings": {
             "name": "Import settings",
             "description": "Import settings from profile to overwrite the current profile",
-            "pushbutton_name": "Import settings",
+            "pushbutton_name": "Import settings"
         },
         "export_all_data": {
             "name": "Export all data",
             "description": "Export all data and settings when exit",
-            "pushbutton_name": "Export all data",
+            "pushbutton_name": "Export all data"
         },
         "import_all_data": {
             "name": "Import all data",
             "description": "Restore all data from backup file when software starts",
-            "pushbutton_name": "Import all data",
+            "pushbutton_name": "Import all data"
         },
         "dpiScale": {
             "name": "DPI scale settings",
@@ -207,33 +207,37 @@ basic_settings = {
                 "2": "150%",
                 "3": "175%",
                 "4": "200%",
-                "5": "Auto",
-            },
+                "5": "Auto"
+            }
         },
         "font": {
             "name": "Font",
-            "description": "Set the font to display (restart required)",
+            "description": "Set the font to display (restart required)"
         },
         "theme": {
             "name": "Theme mode",
             "description": "Select the software interface theme style",
-            "combo_items": {"0": "Light", "1": "Dark", "2": "Follow system"},
+            "combo_items": {
+                "0": "Light",
+                "1": "Dark",
+                "2": "Follow system"
+            }
         },
         "theme_color": {
             "name": "Theme color",
-            "description": "Set the software interface theme color",
+            "description": "Set the software interface theme color"
         },
         "language": {
             "name": "Display language",
-            "description": "Switch display language (restart required)",
+            "description": "Switch display language (restart required)"
         },
         "background_resident": {
             "name": "Run in background",
-            "description": "Whether to remain in the back office after closing all windows",
+            "description": "Whether to remain in the back office after closing all windows"
         },
         "url_protocol": {
             "name": "URL protocol register",
-            "description": "Sign up for custom URL protocol (secrandom://), support to launch app via link",
+            "description": "Sign up for custom URL protocol (secrandom://), support to launch app via link"
         },
         "log_level": {
             "name": "Log level",
@@ -243,86 +247,146 @@ basic_settings = {
                 "1": "INFO",
                 "2": "WARNING",
                 "3": "ERROR",
-                "4": "CRITICAL",
-            },
+                "4": "CRITICAL"
+            }
         },
         "settings_import_export": {
-            "export_success_title": {"name": "Export settings"},
+            "export_success_title": {
+                "name": "Export settings"
+            },
             "export_success_content": {
                 "name": "Settings have been exported to:\n{path}"
             },
-            "export_failure_title": {"name": "Export settings"},
-            "export_failure_content": {"name": "Failed to export settings: \n{error}"},
-            "import_confirm_title": {"name": "Import settings"},
+            "export_failure_title": {
+                "name": "Export settings"
+            },
+            "export_failure_content": {
+                "name": "Failed to export settings: \n{error}"
+            },
+            "import_confirm_title": {
+                "name": "Import settings"
+            },
             "import_confirm_content": {
                 "name": "Are you sure you want to import these settings? This will overwrite the current settings"
             },
-            "import_confirm_button": {"name": "Confirm import"},
-            "import_cancel_button": {"name": "Cancel import"},
-            "import_success_title": {"name": "Import settings"},
+            "import_confirm_button": {
+                "name": "Confirm import"
+            },
+            "import_cancel_button": {
+                "name": "Cancel import"
+            },
+            "import_success_title": {
+                "name": "Import settings"
+            },
             "import_success_content": {
                 "name": "Settings successfully imported\nRestart to take effect"
             },
-            "import_success_button": {"name": "Got it"},
-            "export_success_button": {"name": "Got it"},
-            "import_failure_title": {"name": "Import settings"},
-            "import_failure_content": {"name": "Failed to import settings: \n{error}"},
+            "import_success_button": {
+                "name": "Got it"
+            },
+            "export_success_button": {
+                "name": "Got it"
+            },
+            "import_failure_title": {
+                "name": "Import settings"
+            },
+            "import_failure_content": {
+                "name": "Failed to import settings: \n{error}"
+            }
         },
         "data_import_export": {
-            "export_success_title": {"name": "Export all data"},
+            "export_success_title": {
+                "name": "Export all data"
+            },
             "export_success_content": {
                 "name": "All data has been exported to:\n{path}"
             },
-            "export_failure_title": {"name": "Export all data"},
-            "export_failure_content": {"name": "Failed to export all data: \n{error}"},
-            "import_confirm_title": {"name": "Import all data"},
+            "export_failure_title": {
+                "name": "Export all data"
+            },
+            "export_failure_content": {
+                "name": "Failed to export all data: \n{error}"
+            },
+            "import_confirm_title": {
+                "name": "Import all data"
+            },
             "import_confirm_content": {
                 "name": "Are you sure you want to import these data? This will overwrite the current data"
             },
-            "import_confirm_button": {"name": "Confirm import"},
-            "import_cancel_button": {"name": "Cancel import"},
-            "import_success_title": {"name": "Import all data"},
+            "import_confirm_button": {
+                "name": "Confirm import"
+            },
+            "import_cancel_button": {
+                "name": "Cancel import"
+            },
+            "import_success_title": {
+                "name": "Import all data"
+            },
             "import_success_content": {
                 "name": "Data imported successfully into\nRestart APP to take effect"
             },
-            "import_success_button": {"name": "Got it"},
-            "import_failure_title": {"name": "Import all data"},
-            "import_failure_content": {"name": "Failed to import all data: \n{error}"},
-            "existing_files_count": {"name": "\n... still have {len} files"},
-            "existing_files_title": {"name": "File already exists"},
+            "import_success_button": {
+                "name": "Got it"
+            },
+            "import_failure_title": {
+                "name": "Import all data"
+            },
+            "import_failure_content": {
+                "name": "Failed to import all data: \n{error}"
+            },
+            "existing_files_count": {
+                "name": "\n... still have {len} files"
+            },
+            "existing_files_title": {
+                "name": "File already exists"
+            },
             "existing_files_content": {
                 "name": "The following files already exist:\n{files}\n\nOverwrite these files?"
             },
-            "version_mismatch_title": {"name": "Version mismatch"},
+            "version_mismatch_title": {
+                "name": "Version mismatch"
+            },
             "version_mismatch_content": {
                 "name": "The version from imported data mismatches with current version:\n\nImported data is from: {software_name} {version}\nCurrent software is: SecRandom {current_version}\n\nContinue importing?"
             },
-            "export_warning_title": {"name": "Export all data"},
+            "export_warning_title": {
+                "name": "Export all data"
+            },
             "export_warning_content": {
                 "name": "All data will soon be exported, including:\n\nsoftware version, settings,\nname list, prize list,\nhistory, log file\n\nNOTE: exported data may contain sensitive information, please keep it safe.\n\nContinue exporting?"
-            },
+            }
         },
         "diagnostic_data_export": {
-            "export_confirm_button": {"name": "Confirm Export"},
-            "export_cancel_button": {"name": "Cancel export"},
-            "export_success_title": {"name": "Export diagnostic data"},
+            "export_confirm_button": {
+                "name": "Confirm Export"
+            },
+            "export_cancel_button": {
+                "name": "Cancel export"
+            },
+            "export_success_title": {
+                "name": "Export diagnostic data"
+            },
             "export_success_content": {
                 "name": "Diagnostic data has been exported to:\n{path}"
             },
-            "export_failure_title": {"name": "Export diagnostic data"},
+            "export_failure_title": {
+                "name": "Export diagnostic data"
+            },
             "export_failure_content": {
                 "name": "Failed to export diagnostic data: \n{error}"
             },
-            "export_warning_title": {"name": "Export diagnostic data"},
+            "export_warning_title": {
+                "name": "Export diagnostic data"
+            },
             "export_warning_content": {
                 "name": "Diagnostic data will soon be exported, including:\n\nsoftware information, settings,\nname list, prize list,\nhistory, log file\n\nNOTE: exported data may contain sensitive information, please keep it safe.\n\nContinue exporting?"
-            },
+            }
         },
         "success_enable_content": {
             "name": "Enabled displaying main window when launching"
         },
         "info_disable_content": {
             "name": "Disabled displaying main window when launching"
-        },
+        }
     },
 }

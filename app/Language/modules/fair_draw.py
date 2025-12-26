@@ -129,132 +129,140 @@ fair_draw_settings = {
             "description": "配置各平衡因子的权重占比",
         },
     },
-    "EN_US": {
+        "EN_US": {
         "title": {
             "name": "Fair pick settings",
-            "description": "Fair pick function settings",
+            "description": "Fair pick function settings"
         },
         "fair_draw_set": {
             "name": "Fair pick",
-            "description": "Configure fair pick algorithm related settings",
+            "description": "Configure fair pick algorithm related settings"
         },
         "basic_fair_settings": {
             "name": "Basic fair settings",
-            "description": "Configure base calculation for fair pick",
+            "description": "Configure base calculation for fair pick"
         },
-        "core_fair_mechanism": {
-            "name": "Core fair mechanism",
-            "description": "Includes core algorithms such as frequency function and average gap protection",
+        "weight_range_settings": {
+            "name": "Weight range settings",
+            "description": "Configure base value and range of weights"
         },
-        "draw_protection": {
-            "name": "Draw protection settings",
-            "description": "Includes protection mechanisms such as post-draw shielding",
+        "shield_settings": {
+            "name": "Block after pick",
+            "description": "Configure block rules after picking"
+        },
+        "frequency_settings": {
+            "name": "Frequency function settings",
+            "description": "Configure how frequency penalties are to be calculated"
+        },
+        "balance_weight_settings": {
+            "name": "Balanced weight settings",
+            "description": "Configure the weight of the balance factors"
         },
         "cold_start_settings": {
             "name": "Cold boot settings",
-            "description": "Configure cold start rules for the initial phase of a new class",
-        },
-        "advanced_weight_settings": {
-            "name": "Advanced weight settings",
-            "description": "Includes advanced adjustments such as weight range and balance weights",
+            "description": "Configure cold start rules for the initial phase of a new class"
         },
         "fair_draw": {
             "name": "Fair pick by total pick times",
-            "description": "Enable to make fair pickings based on the total pick times",
+            "description": "Enable to make fair pickings based on the total pick times"
         },
         "fair_draw_group": {
             "name": "Fair pick by group",
-            "description": "Enable when calculated by group participation",
+            "description": "Enable when calculated by group participation"
         },
         "fair_draw_gender": {
             "name": "Fair pick by gender",
-            "description": "When enabled and calculated by gender participation",
+            "description": "When enabled and calculated by gender participation"
         },
         "fair_draw_time": {
             "name": "Fair pick by time",
-            "description": "Enable to participate in fair pick by time",
+            "description": "Enable to participate in fair pick by time"
+        },
+        "base_weight": {
+            "name": "Base weight",
+            "description": "Set the base weight of each option"
+        },
+        "min_weight": {
+            "name": "Minimum weight range",
+            "description": "Set minimum weight per option"
+        },
+        "max_weight": {
+            "name": "Maximum weight range",
+            "description": "Set maximum weight per option"
         },
         "frequency_function": {
             "name": "Frequency punishment function",
             "description": "Select the type of compute function for frequency punishment",
-            "combo_items": {"0": "Linear", "1": "Square root", "2": "Index"},
+            "combo_items": {
+                "0": "Linear",
+                "1": "Square root",
+                "2": "Index"
+            }
         },
         "frequency_weight": {
             "name": "Frequency penalties weight",
-            "description": "Percentage of frequency penalties in total weight",
+            "description": "Percentage of frequency penalties in total weight"
         },
-        "enable_avg_gap_protection": {
-            "name": "Enable average gap protection",
-            "description": "When enabled, apply average filtering and maximum gap protection to avoid extreme uneven picking",
+        "group_weight": {
+            "name": "Group balance weight",
+            "description": "Adjustment group balance as a percentage of total weight"
         },
-        "gap_threshold": {
-            "name": "Gap threshold",
-            "description": "Allowed maximum count gap (max_count - min_count)",
+        "gender_weight": {
+            "name": "Gender balance weight",
+            "description": "Adjust the proportion of gender balance in total weight"
         },
-        "min_pool_size": {
-            "name": "Minimum pool size",
-            "description": "Set the minimum number of students in the candidate pool under average gap protection",
+        "time_weight": {
+            "name": "Time factor weight",
+            "description": "Adjust the percentage of time factor in total weight"
+        },
+        "cold_start_enabled": {
+            "name": "Enable cold launch mode",
+            "description": "Use cold boot mode for new class or initial phase"
+        },
+        "cold_start_rounds": {
+            "name": "Cold boot rounds",
+            "description": "Sets the number of rounds in cold boot mode"
         },
         "shield_enabled": {
             "name": "Enable block after exam",
-            "description": "When enabled, picked students will not be duplicated during the specified time",
+            "description": "When enabled, picked students will not be duplicated during the specified time"
         },
         "shield_time": {
             "name": "Blocked time",
-            "description": "Set the time to block after picking",
+            "description": "Set the time to block after picking"
         },
         "shield_time_unit": {
             "name": "Block time units",
             "description": "Select time unit for block time",
-            "combo_items": {"0": "Seconds", "1": "Minutes", "2": "Hours"},
+            "combo_items": {
+                "0": "Seconds",
+                "1": "Minutes",
+                "2": "Hours"
+            }
         },
-        "cold_start_enabled": {
-            "name": "Enable cold launch mode",
-            "description": "Use cold boot mode for new class or initial phase",
+        "core_fair_mechanism": {
+            "name": "核心公平机制",
+            "description": "包括频率函数、平均值差值保护等核心算法"
         },
-        "cold_start_rounds": {
-            "name": "Cold boot rounds",
-            "description": "Sets the number of rounds in cold boot mode",
+        "draw_protection": {
+            "name": "抽取保护设置",
+            "description": "包括抽取后屏蔽等保护机制"
         },
-        "base_weight": {
-            "name": "Base weight",
-            "description": "Set the base weight of each option",
+        "advanced_weight_settings": {
+            "name": "高级权重设置",
+            "description": "包括权重范围、平衡权重等高级调整"
         },
-        "min_weight": {
-            "name": "Minimum weight range",
-            "description": "Set minimum weight per option",
+        "enable_avg_gap_protection": {
+            "name": "启用平均值差值保护",
+            "description": "启用后，将应用平均值过滤和最大差距保护，避免极端不均抽取"
         },
-        "max_weight": {
-            "name": "Maximum weight range",
-            "description": "Set maximum weight per option",
+        "gap_threshold": {
+            "name": "差值阈值",
+            "description": "允许的最大次数差距"
         },
-        "group_weight": {
-            "name": "Group balance weight",
-            "description": "Adjustment group balance as a percentage of total weight",
-        },
-        "gender_weight": {
-            "name": "Gender balance weight",
-            "description": "Adjust the proportion of gender balance in total weight",
-        },
-        "time_weight": {
-            "name": "Time factor weight",
-            "description": "Adjust the percentage of time factor in total weight",
-        },
-        "weight_range_settings": {
-            "name": "Weight range settings",
-            "description": "Configure base value and range of weights",
-        },
-        "shield_settings": {
-            "name": "Block after pick",
-            "description": "Configure block rules after picking",
-        },
-        "frequency_settings": {
-            "name": "Frequency function settings",
-            "description": "Configure how frequency penalties are to be calculated",
-        },
-        "balance_weight_settings": {
-            "name": "Balanced weight settings",
-            "description": "Configure the weight of the balance factors",
-        },
+        "min_pool_size": {
+            "name": "候选池最少人数",
+            "description": "设置平均值差值保护机制下候选池中的最少学生人数"
+        }
     },
 }

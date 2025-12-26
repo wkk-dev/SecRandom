@@ -3,10 +3,10 @@ history = {
     "ZH_CN": {
         "title": {"name": "历史记录", "description": "查看和管理点名、抽奖的历史记录"}
     },
-    "EN_US": {
+        "EN_US": {
         "title": {
             "name": "History",
-            "description": "View and manage the pick and lottery history",
+            "description": "View and manage the pick and lottery history"
         }
     },
 }
@@ -60,49 +60,59 @@ history_management = {
             "button_text": {"confirm": "确定", "cancel": "取消"},
         },
     },
-    "EN_US": {
+        "EN_US": {
         "title": {
             "name": "History management",
-            "description": "Manage the pick and lottery history",
+            "description": "Manage the pick and lottery history"
         },
         "roll_call": {
             "name": "Picking history",
-            "description": "View and manage the pick history",
+            "description": "View and manage the pick history"
         },
         "lottery_history": {
             "name": "Lottery history",
-            "description": "View and manage the lottery history",
+            "description": "View and manage the lottery history"
         },
         "show_roll_call_history": {
             "name": "Enable picking history",
-            "description": "Control whether pick history is enabled",
+            "description": "Control whether pick history is enabled"
         },
         "select_class_name": {
             "name": "Select class",
-            "description": "Choose a class to view history",
+            "description": "Choose a class to view history"
         },
         "clear_roll_call_history": {
             "name": "Clear pick history",
             "description": "Clear the pick history of the selected class",
             "pushbutton_name": "Clear",
+            "confirm_message": "确定要清除班级 '{name}' 的点名历史记录吗？此操作不可恢复。",
+            "success_message": "班级 '{name}' 的点名历史记录已成功清除。",
+            "error_message": "清除点名历史记录失败: {error}",
+            "button_text": {
+                "confirm": "确定",
+                "cancel": "Cancel"
+            }
         },
         "show_lottery_history": {
             "name": "Enable lottery history",
-            "description": "Control whether lottery history is enabled",
+            "description": "Control whether lottery history is enabled"
         },
         "select_pool_name": {
             "name": "Select pool",
-            "description": "Choose a class to view history",
+            "description": "Choose a class to view history"
         },
         "clear_lottery_history": {
             "name": "Clear lottery history",
             "description": "Clear the lottery history of the selected pool",
             "pushbutton_name": "Clear",
-        },
-        "select_weight": {
-            "name": "Show weight",
-            "description": "Show or hide weight information in table",
-        },
+            "confirm_message": "确定要清除奖池 '{name}' 的抽奖历史记录吗？此操作不可恢复。",
+            "success_message": "奖池 '{name}' 的抽奖历史记录已成功清除。",
+            "error_message": "清除抽奖历史记录失败: {error}",
+            "button_text": {
+                "confirm": "确定",
+                "cancel": "Cancel"
+            }
+        }
     },
 }
 
@@ -154,19 +164,22 @@ roll_call_history_table = {
             "description": "点名历史记录表格列标题（个人记录，包含权重）",
         },
     },
-    "EN_US": {
+        "EN_US": {
         "title": {
             "name": "Picking history table",
-            "description": "Display lists of pick history in table form",
+            "description": "Display lists of pick history in table form"
         },
         "select_class_name": {
             "name": "Select class",
-            "description": "Choose a class to view history",
+            "description": "Choose a class to view history"
         },
         "select_mode": {
             "name": "View mode",
             "description": "Choose how history is viewed",
-            "combo_items": {"0": "All history", "1": "View by time"},
+            "combo_items": {
+                "0": "All history",
+                "1": "View by time"
+            }
         },
         "HeaderLabels_all_not_weight": {
             "name": {
@@ -174,9 +187,9 @@ roll_call_history_table = {
                 "1": "Name",
                 "2": "Gender",
                 "3": "Group",
-                "4": "Picking times",
+                "4": "Picking times"
             },
-            "description": "Picking history table title column header (excluding weight)",
+            "description": "Picking history table title column header (excluding weight)"
         },
         "HeaderLabels_all_weight": {
             "name": {
@@ -185,9 +198,9 @@ roll_call_history_table = {
                 "2": "Gender",
                 "3": "Group",
                 "4": "Picking times",
-                "5": "Weight",
+                "5": "Weight"
             },
-            "description": "Picking history table title column header (including weight)",
+            "description": "Picking history table title column header (including weight)"
         },
         "HeaderLabels_time_not_weight": {
             "name": {
@@ -195,9 +208,9 @@ roll_call_history_table = {
                 "1": "Student ID",
                 "2": "Name",
                 "3": "Gender",
-                "4": "Group",
+                "4": "Group"
             },
-            "description": "Title of the list of picking history tables (viewed by time, excluding weight)",
+            "description": "Title of the list of picking history tables (viewed by time, excluding weight)"
         },
         "HeaderLabels_time_weight": {
             "name": {
@@ -206,9 +219,9 @@ roll_call_history_table = {
                 "2": "Name",
                 "3": "Gender",
                 "4": "Group",
-                "5": "Weight",
+                "5": "Weight"
             },
-            "description": "Title of the list of picking history tables (viewed by time, including weight)",
+            "description": "Title of the list of picking history tables (viewed by time, including weight)"
         },
         "HeaderLabels_Individual_not_weight": {
             "name": {
@@ -216,9 +229,9 @@ roll_call_history_table = {
                 "1": "Picking mode",
                 "2": "Picking amount",
                 "3": "Gender limit",
-                "4": "Group limit",
+                "4": "Group limit"
             },
-            "description": "Title of the list of picking history tables (personal history, excluding weight)",
+            "description": "Title of the list of picking history tables (personal history, excluding weight)"
         },
         "HeaderLabels_Individual_weight": {
             "name": {
@@ -227,15 +240,18 @@ roll_call_history_table = {
                 "2": "Picking amount",
                 "3": "Gender limit",
                 "4": "Group limit",
-                "5": "Weight",
+                "5": "Weight"
             },
-            "description": "Title of the list of picking history tables (personal history, including weight)",
+            "description": "Title of the list of picking history tables (personal history, including weight)"
         },
         "select_weight": {
             "name": "Show weight",
             "description": "Whether to show weight in table",
-            "switchbutton_name": {"enable": "Show", "disable": "Hide"},
-        },
+            "switchbutton_name": {
+                "enable": "Show",
+                "disable": "Hide"
+            }
+        }
     },
 }
 
@@ -268,41 +284,49 @@ lottery_history_table = {
             "description": "抽奖历史记录表格列标题（单次记录）",
         },
     },
-    "EN_US": {
+        "EN_US": {
         "title": {
             "name": "Lottery history table",
-            "description": "Display lists of lottery history in table form",
+            "description": "Display lists of lottery history in table form"
         },
         "select_pool_name": {
             "name": "Select pool",
-            "description": "Choose a lottery pool to view history",
+            "description": "Choose a lottery pool to view history"
         },
         "select_mode": {
             "name": "View mode",
             "description": "Choose how history is viewed",
-            "combo_items": {"0": "All history", "1": "View by time"},
+            "combo_items": {
+                "0": "All history",
+                "1": "View by time"
+            }
         },
         "HeaderLabels_all_weight": {
             "name": {
                 "0": "Serial",
                 "1": "Name",
                 "2": "Lottery winning times",
-                "3": "Weight",
+                "3": "Weight"
             },
-            "description": "Lottery history table title column header weight (all)",
+            "description": "Lottery history table title column header weight (all)"
         },
         "HeaderLabels_time_weight": {
-            "name": {"0": "Lottery time", "1": "Serial", "2": "Name", "3": "Weight"},
-            "description": "Lottery history table title column header weight (sort by time)",
+            "name": {
+                "0": "Lottery time",
+                "1": "Serial",
+                "2": "Name",
+                "3": "Weight"
+            },
+            "description": "Lottery history table title column header weight (sort by time)"
         },
         "HeaderLabels_Individual_weight": {
             "name": {
                 "0": "Lottery time",
                 "1": "Lottery mode",
                 "2": "Picking quantity",
-                "3": "Weight settings",
+                "3": "Weight settings"
             },
-            "description": "Lottery history table title column header (single record)",
-        },
+            "description": "Lottery history table title column header (single record)"
+        }
     },
 }

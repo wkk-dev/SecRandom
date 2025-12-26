@@ -32,30 +32,42 @@ remaining_list = {
             "description": "学生信息卡片的显示格式",
         },
     },
-    "EN_US": {
+        "EN_US": {
         "title": {
             "name": "List of students not picked",
-            "description": "Title of Remaining list page",
+            "description": "Title of Remaining list page"
         },
         "title_with_class": {
-            "name": "Remaining list of {class_name}",
             "description": "Title of page with class name",
+            "name": "{class_name}"
         },
         "count_label": {
             "name": "Remaining person: {count}",
-            "description": 'Showing the "Remaining person" label text',
+            "description": "Showing the \"Remaining person\" label text"
         },
         "group_count_label": {
             "name": "Remaining group: {count}",
-            "description": 'Showing the "Remaining group" label text',
+            "description": "Showing the \"Remaining group\" label text"
         },
         "no_students": {
             "name": "No students remaining",
-            "description": "Error hint shown on no students on list",
+            "description": "Error hint shown on no students on list"
         },
         "student_info": {
             "name": "Student ID: {id}\nGender: {gender}\nGroup: {group}",
-            "description": "Student info card style",
+            "description": "Student info card style"
         },
+        "windows_title": {
+            "name": "未抽取名单",
+            "description": "剩余名单窗口标题"
+        },
+        "prizes_count_label": {
+            "name": "剩余奖数：{count}",
+            "description": "显示剩余奖数的标签文本"
+        },
+        "group_summary": {
+            "name": "等{members}名成员",
+            "description": "已抽取人数和未抽取人数的总结文本"
+        }
     },
 }

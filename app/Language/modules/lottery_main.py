@@ -52,46 +52,56 @@ lottery = {
             "text_5": "剩余组数: {remaining_count}",
         },
     },
-    "EN_US": {
-        "title": {"name": "Lottery", "description": "Lottery function"},
+        "EN_US": {
+        "title": {
+            "name": "Lottery",
+            "description": "Lottery function"
+        },
         "reset_button": {
             "name": "Reset",
             "description": "Reset lottery prize count",
-            "pushbutton_name": "Reset",
+            "pushbutton_name": "Reset"
         },
         "start_button": {
             "name": "Start",
             "description": "Start lottery",
-            "pushbutton_name": "Start",
+            "pushbutton_name": "Start"
         },
         "stop_button": {
             "name": "Stop",
             "description": "Stop lottery",
-            "pushbutton_name": "Stop",
+            "pushbutton_name": "Stop"
         },
         "default_empty_item": {
             "name": "No list",
-            "description": "Default options when no list is available",
+            "description": "Default options when no list is available"
         },
         "list_combobox": {
             "name": "Class",
             "description": "Select class",
-            "combo_items": {"0": "No-picking students"},
+            "combo_items": {
+                "0": "No-picking students"
+            }
         },
         "range_combobox": {
             "name": "Range",
             "description": "Select pick range",
-            "combo_items": {"0": "Pick all students", "1": "Pick all groups"},
+            "combo_items": {
+                "0": "Pick all students",
+                "1": "Pick all groups"
+            }
         },
         "gender_combobox": {
             "name": "Gender",
             "description": "Select gender range",
-            "combo_items": {"0": "Pick all gender"},
+            "combo_items": {
+                "0": "Pick all gender"
+            }
         },
         "remaining_button": {
             "name": "View remaining list",
             "description": "Show remaining list windows",
-            "pushbutton_name": "View remaining list",
+            "pushbutton_name": "View remaining list"
         },
         "many_count_label": {
             "name": "Total / Remaining Prizes",
@@ -101,7 +111,7 @@ lottery = {
             "text_2": "Remain prize count: {remaining_count}",
             "text_3": "Total group count: {total_count} | Remain: {remaining_count}",
             "text_4": "Total group count: {total_count}",
-            "text_5": "Remain group count: {remaining_count}",
-        },
+            "text_5": "Remain group count: {remaining_count}"
+        }
     },
 }
