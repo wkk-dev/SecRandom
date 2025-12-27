@@ -8,6 +8,7 @@ from typing import Optional, Dict, Any
 from PySide6.QtCore import QObject, Signal
 from app.common.IPC_URL import URLIPCHandler
 from app.common.IPC_URL.url_command_handler import URLCommandHandler
+from app.tools.settings_access import readme_settings_async
 
 
 class URLHandler(QObject):
@@ -41,6 +42,10 @@ class URLHandler(QObject):
         )
         self.command_handler.showTrayActionRequested.connect(
             self.showTrayActionRequested.emit
+        )
+        # 连接ClassIsland数据信号
+        self.command_handler.classIslandDataReceived.connect(
+            self._handle_class_island_data
         )
 
     def parse_command_line_args(self) -> Optional[Dict[str, Any]]:
@@ -150,12 +155,26 @@ class URLHandler(QObject):
             如果是第一个实例返回True，否则返回False
         """
         # 尝试启动IPC服务器
-        port = self.url_ipc_handler.load_port_config()
+        # 优先使用用户设置的端口，如果用户设置为0（动态分配）则使用配置文件中的端口
+        user_port = readme_settings_async("basic_settings", "ipc_port") or 0
+        config_port = self.url_ipc_handler.load_port_config()
 
-        if self.url_ipc_handler.start_ipc_server(port or 0):
+        # 如果用户设置了特定端口（非0），则使用用户设置的端口
+        # 如果用户设置为0（动态分配），则先尝试使用配置文件中的端口，如果配置文件中没有则使用0
+        if user_port != 0:
+            port = user_port
+        else:
+            # 用户设置为0（动态分配），使用配置文件中的端口或0
+            port = config_port if config_port is not None else 0
+
+        if self.url_ipc_handler.start_ipc_server(port):
             # 注册消息处理器
             self.url_ipc_handler.register_message_handler(
                 "url", self._handle_ipc_url_message
+            )
+            # 注册ClassIsland数据消息处理器
+            self.url_ipc_handler.register_message_handler(
+                "class_island_data", self._handle_ipc_class_island_message
             )
             return True
         else:
@@ -170,6 +189,28 @@ class URLHandler(QObject):
             return self.handle_url_startup(url)
         else:
             return {"success": False, "error": "缺少URL参数"}
+
+    def _handle_ipc_class_island_message(
+        self, payload: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        处理IPC ClassIsland数据消息
+
+        Args:
+            payload: 包含ClassIsland数据的负载
+
+        Returns:
+            处理结果
+        """
+        class_island_data = payload.get("data", {})
+        if class_island_data:
+            # 调用command_handler处理ClassIsland数据
+            # 构建参数字典，包含ClassIsland数据
+            params = {"data": class_island_data}
+            # 使用command_handler的_class_island_data方法处理数据
+            return self.command_handler._handle_class_island_data(params)
+        else:
+            return {"success": False, "error": "缺少ClassIsland数据参数"}
 
     def send_url_to_existing_instance(self, url: str) -> bool:
         """
@@ -189,6 +230,21 @@ class URLHandler(QObject):
             return response is not None and response.get("success", False)
         else:
             return False
+
+    def _handle_class_island_data(self, class_island_data: dict):
+        """
+        处理ClassIsland数据
+
+        Args:
+            class_island_data: ClassIsland发送的数据
+        """
+        # 将ClassIsland数据信号转发给主窗口
+        # 这里可以添加额外的处理逻辑
+        logger.info("URLHandler接收到ClassIsland数据")
+
+        # 发射信号，让主窗口处理数据
+        # 注意：URLHandler本身不直接处理UI逻辑，只是转发信号
+        self.classIslandDataReceived.emit(class_island_data)
 
 
 def handle_url_arguments() -> Optional[Dict[str, Any]]:

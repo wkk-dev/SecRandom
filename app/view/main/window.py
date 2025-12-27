@@ -44,11 +44,15 @@ class MainWindow(FluentWindow):
     showFloatWindowRequested = Signal()
     showMainPageRequested = Signal(str)  # 请求显示主页面
     showTrayActionRequested = Signal(str)  # 请求执行托盘操作
+    classIslandDataReceived = Signal(dict)  # 接收ClassIsland数据信号
 
-    def __init__(self, float_window: LevitationWindow):
+    def __init__(self, float_window: LevitationWindow, url_handler_instance=None):
         super().__init__()
         # 设置窗口对象名称，方便其他组件查找
         self.setObjectName("MainWindow")
+
+        # 保存URL处理器实例引用
+        self.url_handler_instance = url_handler_instance
 
         self.roll_call_page = None
         self.settingsInterface = None
@@ -83,6 +87,9 @@ class MainWindow(FluentWindow):
         self.url_command_handler.showTrayActionRequested.connect(
             self._handle_tray_action_requested
         )
+        self.url_command_handler.classIslandDataReceived.connect(
+            self._handle_class_island_data
+        )
 
         # 导入并创建托盘图标
         self.tray_icon = Tray(self)
@@ -111,6 +118,47 @@ class MainWindow(FluentWindow):
         )
 
         QTimer.singleShot(APP_INIT_DELAY, lambda: (self.createSubInterface()))
+
+    def restart_ipc_server(self, new_port: int):
+        """重启IPC服务器
+
+        Args:
+            new_port: 新的端口号
+        """
+        logger.info(f"正在请求重启IPC服务器，新端口: {new_port}")
+
+        # 使用保存的url_handler实例
+        if self.url_handler_instance and hasattr(
+            self.url_handler_instance, "url_ipc_handler"
+        ):
+            url_handler = self.url_handler_instance
+
+            if url_handler and hasattr(url_handler, "url_ipc_handler"):
+                # 停止当前的IPC服务器
+                url_handler.url_ipc_handler.stop_ipc_server()
+                logger.info("旧IPC服务器已停止")
+
+                # 重新启动IPC服务器，使用新端口
+                if url_handler.url_ipc_handler.start_ipc_server(new_port):
+                    # 重新注册消息处理器
+                    url_handler.url_ipc_handler.register_message_handler(
+                        "url", url_handler._handle_ipc_url_message
+                    )
+                    url_handler.url_ipc_handler.register_message_handler(
+                        "class_island_data",
+                        url_handler._handle_ipc_class_island_message,
+                    )
+                    logger.info(f"IPC服务器已在端口 {new_port} 上重新启动")
+                    return True
+                else:
+                    logger.error(f"IPC服务器在端口 {new_port} 上启动失败")
+                    return False
+            else:
+                logger.error("无法访问URLHandler实例")
+                return False
+        else:
+            logger.error("无法获取url_handler_instance")
+            return False
 
     def _position_window(self):
         """窗口定位
@@ -599,3 +647,59 @@ class MainWindow(FluentWindow):
         # 完全退出当前应用程序
         QApplication.quit()
         sys.exit(0)
+
+    def _handle_class_island_data(self, class_island_data: dict):
+        """处理ClassIsland数据
+        接收并处理来自ClassIsland软件的课程表信息
+
+        Args:
+            class_island_data: 包含课程表信息的字典
+        """
+        logger.info("收到ClassIsland数据")
+        logger.debug(f"ClassIsland数据内容: {class_island_data}")
+
+        # 提取并处理ClassIsland数据
+        try:
+            # 当前所处时间点的科目
+            current_subject = class_island_data.get("CurrentSubject")
+            # 下一节课的科目
+            next_class_subject = class_island_data.get("NextClassSubject")
+            # 当前时间点状态
+            current_state = class_island_data.get("CurrentState")
+            # 当前所处的时间点
+            current_time_layout_item = class_island_data.get("CurrentTimeLayoutItem")
+            # 当前加载的课表
+            current_class_plan = class_island_data.get("CurrentClassPlan")
+            # 下一个课间休息类型的时间点
+            next_breaking_time_layout_item = class_island_data.get(
+                "NextBreakingTimeLayoutItem"
+            )
+            # 下一个上课类型的时间点
+            next_class_time_layout_item = class_island_data.get(
+                "NextClassTimeLayoutItem"
+            )
+            # 当前所处时间点的索引
+            current_selected_index = class_island_data.get("CurrentSelectedIndex")
+            # 距离上课剩余时间
+            on_class_left_time = class_island_data.get("OnClassLeftTime")
+            # 距下课剩余时间
+            on_breaking_time_left_time = class_island_data.get("OnBreakingTimeLeftTime")
+            # 是否启用课表
+            is_class_plan_enabled = class_island_data.get("IsClassPlanEnabled")
+            # 是否已加载课表
+            is_class_plan_loaded = class_island_data.get("IsClassPlanLoaded")
+            # 是否已确定当前时间点
+            is_lesson_confirmed = class_island_data.get("IsLessonConfirmed")
+
+            # 可以在这里添加处理逻辑，比如更新UI、保存数据等
+            logger.info(f"当前科目: {current_subject}")
+            logger.info(f"下一科目: {next_class_subject}")
+            logger.info(f"当前状态: {current_state}")
+            logger.info(f"课表启用: {is_class_plan_enabled}")
+
+            # 这里可以添加根据ClassIsland数据更新UI的逻辑
+            # 例如：显示当前课程信息、更新课程表显示等
+            # 目前只是记录日志，后续可以根据需要添加具体功能
+
+        except Exception as e:
+            logger.error(f"处理ClassIsland数据时出错: {e}")

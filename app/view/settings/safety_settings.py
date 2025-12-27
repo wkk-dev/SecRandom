@@ -599,6 +599,7 @@ class basic_safety_verification_process(GroupHeaderCardWidget):
 class basic_safety_security_operations(GroupHeaderCardWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._busy = False
         self.setTitle(
             get_content_name_async("basic_safety_settings", "security_operations")
         )

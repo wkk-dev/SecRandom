@@ -33,6 +33,36 @@ basic_settings = {
             "description": "注册自定义URL协议(secrandom://)，支持通过链接启动应用",
             "switchbutton_name": {"enable": "", "disable": ""},
         },
+        "ipc_port": {
+            "name": "IPC端口设置",
+            "description": "设置IPC通信端口（0表示动态分配）",
+            "tooltip": "设置IPC通信端口，范围0-65535。设置为0表示使用动态分配端口",
+        },
+        "ipc_port_notification": {
+            "name": "IPC端口已设置为: {value} (0表示动态分配)",
+            "restart_required": "IPC服务器重启失败，请重启应用以应用新端口设置",
+            "restart_error": "重启IPC服务器时发生错误: {error}",
+        },
+        "autostart_notification": {
+            "enable": "已开启开机自启",
+            "disable": "已关闭开机自启",
+            "failure": "设置开机自启失败",
+        },
+        "background_resident_notification": {
+            "enable": "已开启后台驻留",
+            "disable": "已关闭后台驻留",
+        },
+        "auto_save_window_size_notification": {
+            "enable": "已开启自动保存窗口大小",
+            "disable": "已关闭自动保存窗口大小",
+        },
+        "url_protocol_notification": {
+            "enable": "已开启URL协议注册",
+            "disable": "已关闭URL协议注册",
+            "register_failure": "URL协议注册失败，需要管理员权限",
+            "unregister_failure": "URL协议注销失败，可能需要管理员权限",
+            "permission_error": "权限不足，URL协议注册/注销失败",
+        },
         "export_diagnostic_data": {
             "name": "导出诊断数据",
             "description": "退出软件时导出诊断信息，用于排查问题",
@@ -244,6 +274,10 @@ basic_settings = {
         "url_protocol": {
             "name": "URL protocol register",
             "description": "Sign up for custom URL protocol (secrandom://), support to launch app via link",
+        },
+        "ipc_port": {
+            "name": "IPC port setting",
+            "description": "Set IPC communication port (0 means dynamic allocation)",
         },
         "log_level": {
             "name": "Log level",

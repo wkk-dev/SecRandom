@@ -242,7 +242,7 @@ class SimplePasswordVerifier(SecurityVerifier):
             use_kdf: 是否使用PBKDF2进行密钥强化（针对弱密码）
         """
         super().__init__()
-        original_password = password or "SecRandom2024"
+        original_password = password or "SecRandom2025"
         self.use_kdf = use_kdf
 
         # 验证是否为有效的SHA-512哈希（128个十六进制字符）

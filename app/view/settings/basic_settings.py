@@ -15,12 +15,14 @@ from qfluentwidgets import (
     Theme,
     setTheme,
     setThemeColor,
+    SpinBox,
 )
 
 from app.tools.personalised import get_theme_icon
 from app.tools.settings_access import readme_settings_async, update_settings
 from app.Language.obtain_language import (
     get_all_languages_name,
+    get_any_position_value_async,
     get_content_combo_name_async,
     get_content_description_async,
     get_content_name_async,
@@ -40,6 +42,7 @@ from app.tools.config import (
     NotificationConfig,
 )
 from app.common.IPC_URL import URLIPCHandler
+from app.tools.variable import WIDTH_SPINBOX
 
 
 # ==================================================
@@ -158,6 +161,18 @@ class basic_settings_function(GroupHeaderCardWidget):
         # 初始化URL IPC处理器
         self.url_ipc_handler = URLIPCHandler("SecRandom", "secrandom")
 
+        # IPC端口设置
+        self.ipc_port_spinbox = SpinBox()
+        self.ipc_port_spinbox.setRange(1, 65535)  # 端口范围 1-65535
+        self.ipc_port_spinbox.setFixedWidth(WIDTH_SPINBOX)
+        self.ipc_port_spinbox.setValue(
+            readme_settings_async("basic_settings", "ipc_port")
+        )
+        self.ipc_port_spinbox.valueChanged.connect(self.__on_ipc_port_changed)
+        self.ipc_port_spinbox.setToolTip(
+            get_any_position_value_async("basic_settings", "ipc_port", "tooltip")
+        )
+
         # 检查协议是否已注册
         is_protocol_registered = self.url_ipc_handler.is_protocol_registered()
         self.url_protocol_switch.setChecked(is_protocol_registered)
@@ -194,6 +209,12 @@ class basic_settings_function(GroupHeaderCardWidget):
             get_content_description_async("basic_settings", "url_protocol"),
             self.url_protocol_switch,
         )
+        self.addGroup(
+            get_theme_icon("ic_fluent_server_20_filled"),
+            get_content_name_async("basic_settings", "ipc_port"),
+            get_content_description_async("basic_settings", "ipc_port"),
+            self.ipc_port_spinbox,
+        )
 
     def __on_autostart_changed(self, checked):
         update_settings("basic_settings", "autostart", checked)
@@ -204,7 +225,9 @@ class basic_settings_function(GroupHeaderCardWidget):
                     NotificationType.SUCCESS,
                     NotificationConfig(
                         title=get_content_name_async("basic_settings", "autostart"),
-                        content="已开启开机自启",
+                        content=get_any_position_value_async(
+                            "basic_settings", "autostart_notification", "enable"
+                        ),
                     ),
                     parent=self.window(),
                 )
@@ -213,7 +236,9 @@ class basic_settings_function(GroupHeaderCardWidget):
                     NotificationType.INFO,
                     NotificationConfig(
                         title=get_content_name_async("basic_settings", "autostart"),
-                        content="已关闭开机自启",
+                        content=get_any_position_value_async(
+                            "basic_settings", "autostart_notification", "disable"
+                        ),
                     ),
                     parent=self.window(),
                 )
@@ -222,7 +247,9 @@ class basic_settings_function(GroupHeaderCardWidget):
                 NotificationType.ERROR,
                 NotificationConfig(
                     title=get_content_name_async("basic_settings", "autostart"),
-                    content="设置开机自启失败",
+                    content=get_any_position_value_async(
+                        "basic_settings", "autostart_notification", "failure"
+                    ),
                 ),
                 parent=self.window(),
             )
@@ -271,7 +298,9 @@ class basic_settings_function(GroupHeaderCardWidget):
                     title=get_content_name_async(
                         "basic_settings", "background_resident"
                     ),
-                    content="已开启后台驻留",
+                    content=get_any_position_value_async(
+                        "basic_settings", "background_resident_notification", "enable"
+                    ),
                 ),
                 parent=self.window(),
             )
@@ -282,7 +311,9 @@ class basic_settings_function(GroupHeaderCardWidget):
                     title=get_content_name_async(
                         "basic_settings", "background_resident"
                     ),
-                    content="已关闭后台驻留",
+                    content=get_any_position_value_async(
+                        "basic_settings", "background_resident_notification", "disable"
+                    ),
                 ),
                 parent=self.window(),
             )
@@ -296,7 +327,9 @@ class basic_settings_function(GroupHeaderCardWidget):
                     title=get_content_name_async(
                         "basic_settings", "auto_save_window_size"
                     ),
-                    content="已开启自动保存窗口大小",
+                    content=get_any_position_value_async(
+                        "basic_settings", "auto_save_window_size_notification", "enable"
+                    ),
                 ),
                 parent=self.window(),
             )
@@ -307,7 +340,11 @@ class basic_settings_function(GroupHeaderCardWidget):
                     title=get_content_name_async(
                         "basic_settings", "auto_save_window_size"
                     ),
-                    content="已关闭自动保存窗口大小",
+                    content=get_any_position_value_async(
+                        "basic_settings",
+                        "auto_save_window_size_notification",
+                        "disable",
+                    ),
                 ),
                 parent=self.window(),
             )
@@ -331,7 +368,9 @@ class basic_settings_function(GroupHeaderCardWidget):
                             title=get_content_name_async(
                                 "basic_settings", "url_protocol"
                             ),
-                            content="已开启URL协议注册",
+                            content=get_any_position_value_async(
+                                "basic_settings", "url_protocol_notification.enable"
+                            ),
                         ),
                         parent=self.window(),
                     )
@@ -346,7 +385,11 @@ class basic_settings_function(GroupHeaderCardWidget):
                             title=get_content_name_async(
                                 "basic_settings", "url_protocol"
                             ),
-                            content="URL协议注册失败，需要管理员权限",
+                            content=get_any_position_value_async(
+                                "basic_settings",
+                                "url_protocol_notification",
+                                "register_failure",
+                            ),
                         ),
                         parent=self.window(),
                     )
@@ -361,7 +404,9 @@ class basic_settings_function(GroupHeaderCardWidget):
                             title=get_content_name_async(
                                 "basic_settings", "url_protocol"
                             ),
-                            content="已关闭URL协议注册",
+                            content=get_any_position_value_async(
+                                "basic_settings", "url_protocol_notification", "disable"
+                            ),
                         ),
                         parent=self.window(),
                     )
@@ -376,7 +421,11 @@ class basic_settings_function(GroupHeaderCardWidget):
                             title=get_content_name_async(
                                 "basic_settings", "url_protocol"
                             ),
-                            content="URL协议注销失败，可能需要管理员权限",
+                            content=get_any_position_value_async(
+                                "basic_settings",
+                                "url_protocol_notification",
+                                "unregister_failure",
+                            ),
                         ),
                         parent=self.window(),
                     )
@@ -386,7 +435,9 @@ class basic_settings_function(GroupHeaderCardWidget):
             self.url_protocol_switch.setChecked(not checked)
             error_msg = str(e)
             if "Access is denied" in error_msg or "WinError 5" in error_msg:
-                content = "权限不足，URL协议注册/注销失败"
+                content = get_any_position_value_async(
+                    "basic_settings", "url_protocol_notification", "permission_error"
+                )
             else:
                 content = f"URL协议设置错误: {error_msg}"
 
@@ -403,6 +454,75 @@ class basic_settings_function(GroupHeaderCardWidget):
             self.url_protocol_switch.checkedChanged.connect(
                 self.__on_url_protocol_changed
             )
+
+    def __on_ipc_port_changed(self, value):
+        """IPC端口变化处理"""
+        update_settings("basic_settings", "ipc_port", value)
+        logger.info(f"IPC端口设置已更新为: {value}")
+
+        # 重启IPC服务器以应用新端口
+        self._restart_ipc_server(value)
+
+        show_notification(
+            NotificationType.INFO,
+            NotificationConfig(
+                title=get_content_name_async("basic_settings", "ipc_port"),
+                content=get_content_name_async(
+                    "basic_settings", "ipc_port_notification"
+                ).format(value=value),
+            ),
+            parent=self.window(),
+        )
+
+    def _restart_ipc_server(self, new_port: int):
+        """重启IPC服务器以应用新端口设置"""
+        try:
+            # 获取主窗口实例并重启IPC服务器
+            main_window = self._get_main_window()
+            if main_window and hasattr(main_window, "restart_ipc_server"):
+                success = main_window.restart_ipc_server(new_port)
+                if success:
+                    logger.info(f"IPC服务器已成功重启，使用新端口: {new_port}")
+                else:
+                    logger.error(f"重启IPC服务器失败，端口: {new_port}")
+                    show_notification(
+                        NotificationType.ERROR,
+                        NotificationConfig(
+                            title=get_content_name_async("basic_settings", "ipc_port"),
+                            content=get_any_position_value_async(
+                                "basic_settings",
+                                "ipc_port_notification",
+                                "restart_required",
+                            ),
+                        ),
+                        parent=self.window(),
+                    )
+            else:
+                logger.warning("无法获取主窗口实例，无法重启IPC服务器")
+        except Exception as e:
+            logger.error(f"重启IPC服务器时发生错误: {e}")
+            show_notification(
+                NotificationType.ERROR,
+                NotificationConfig(
+                    title=get_content_name_async("basic_settings", "ipc_port"),
+                    content=get_any_position_value_async(
+                        "basic_settings", "ipc_port_notification", "restart_error"
+                    ).format(error=str(e)),
+                ),
+                parent=self.window(),
+            )
+
+    def _get_main_window(self):
+        """获取主窗口实例"""
+        from PySide6.QtWidgets import QApplication
+
+        app = QApplication.instance()
+        if app:
+            # 遍历所有顶层窗口，查找MainWindow实例
+            for widget in app.topLevelWidgets():
+                if widget.__class__.__name__ == "MainWindow":
+                    return widget
+        return None
 
 
 class basic_settings_personalised(GroupHeaderCardWidget):

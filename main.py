@@ -267,7 +267,9 @@ def start_main_window():
         from app.view.main.window import MainWindow
 
         create_float_window()  # Ensure the global float window is created
-        main_window = MainWindow(float_window=float_window)
+        main_window = MainWindow(
+            float_window=float_window, url_handler_instance=url_handler
+        )
         # 连接显示设置请求信号，添加验证逻辑
         from app.common.safety.verify_ops import (
             should_require_password,
@@ -309,7 +311,7 @@ def start_main_window():
             main_window.show()
 
         # 连接 URLHandler 信号到 main_window 信号处理器
-        global url_handler
+        # url_handler已经在模块级别声明为global，这里直接使用
         if url_handler:
             url_handler.showMainPageRequested.connect(
                 main_window._handle_main_page_requested
