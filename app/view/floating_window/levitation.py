@@ -864,17 +864,10 @@ class LevitationWindow(QWidget):
                 logger.debug(
                     f"贴边隐藏动画完成，选择显示样式: {self._stick_indicator_style}"
                 )
-                # 根据配置选择创建收纳浮窗或箭头按钮
-                if self._stick_indicator_style == 0:  # 使用收纳浮窗
-                    logger.debug("创建收纳浮窗")
-                    self._create_storage_window(
-                        "right", 0, window_pos.y() + window_height // 2 - 30
-                    )
-                else:  # 使用箭头按钮
-                    logger.debug("创建DraggableWidget箭头按钮")
-                    self._create_arrow_button(
-                        "right", 0, window_pos.y() + window_height // 2 - 15
-                    )
+                logger.debug("创建DraggableWidget箭头按钮")
+                self._create_arrow_button(
+                    "right", 0, window_pos.y() + window_height // 2 - 15
+                )
                 # 标记为已收纳状态，但保持原始坐标不变
                 self._retracted = True
 
@@ -915,20 +908,12 @@ class LevitationWindow(QWidget):
                     f"贴边隐藏动画完成，选择显示样式: {self._stick_indicator_style}"
                 )
                 # 根据配置选择创建收纳浮窗或箭头按钮
-                if self._stick_indicator_style == 0:  # 使用收纳浮窗
-                    logger.debug("创建收纳浮窗")
-                    self._create_storage_window(
-                        "left",
-                        screen.width() - 30,
-                        window_pos.y() + window_height // 2 - 30,
-                    )
-                else:  # 使用箭头按钮
-                    logger.debug("创建DraggableWidget箭头按钮")
-                    self._create_arrow_button(
-                        "left",
-                        screen.width() - 30,
-                        window_pos.y() + window_height // 2 - 15,
-                    )
+                logger.debug("创建DraggableWidget箭头按钮")
+                self._create_arrow_button(
+                    "left",
+                    screen.width() - 30,
+                    window_pos.y() + window_height // 2 - 15,
+                )
                 # 标记为已收纳状态，但保持原始坐标不变
                 self._retracted = True
 
@@ -951,76 +936,6 @@ class LevitationWindow(QWidget):
                 delattr(self, "_original_position")
 
         self._retracted = False
-
-    def _create_storage_window(self, direction, x, y):
-        """创建只能在y轴移动的收纳浮窗"""
-        # 先删除可能存在的收纳浮窗
-        self._delete_storage_window()
-
-        # 创建收纳浮窗
-        self.storage_window = QWidget()
-        self.storage_window.setWindowFlags(
-            Qt.FramelessWindowHint
-            | Qt.WindowStaysOnTopHint
-            | Qt.Tool
-            | Qt.NoFocus
-            | Qt.NoDropShadowWindowHint
-        )
-        self.storage_window.setAttribute(Qt.WA_TranslucentBackground)
-
-        # 设置收纳浮窗尺寸
-        self.storage_window.setFixedSize(30, 30)
-
-        # 根据主题设置不同的背景颜色，与主浮窗保持一致
-        dark = is_dark_theme(qconfig)
-        opacity = self._opacity
-
-        if dark:
-            bg_color = f"rgba(32, 32, 32, {opacity})"
-            color = "#ffffff"
-        else:
-            bg_color = f"rgba(255, 255, 255, {opacity})"
-            color = "#000000"
-
-        # 设置收纳浮窗样式，与主浮窗保持一致的风格
-        self.storage_window.setStyleSheet(
-            f"background-color: {bg_color};"
-            "border-radius: 15px;"
-            "border: 1px solid rgba(0, 0, 0, 12);"
-            "background-clip: padding-box;"
-        )
-
-        # 创建标签显示内容
-        label = BodyLabel(self.storage_window)
-        label.setAlignment(Qt.AlignCenter)
-
-        # 根据方向设置显示内容
-        if direction == "right":
-            label.setText(">")
-        elif direction == "left":
-            label.setText("<")
-
-        label.setStyleSheet(f"color: {color}; font-size: 12px; font-weight: bold;")
-        label.setGeometry(0, 0, 30, 30)
-
-        # 设置收纳浮窗位置
-        self.storage_window.move(x, y)
-
-        # 初始化拖动相关属性
-        self._storage_dragging = False
-        self._storage_drag_start = QPoint()
-
-        # 连接鼠标事件
-        self.storage_window.mousePressEvent = self._on_storage_press
-        self.storage_window.mouseMoveEvent = self._on_storage_move
-        self.storage_window.mouseReleaseEvent = self._on_storage_release
-
-        # 存储收纳浮窗方向和初始位置
-        self._storage_direction = direction
-        self._storage_initial_x = x
-
-        # 显示收纳浮窗
-        self.storage_window.show()
 
     def _smart_snap_to_edge(self):
         """智能吸附到屏幕边缘"""
@@ -1343,30 +1258,15 @@ class LevitationWindow(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # 创建箭头按钮
-        self.arrow_button = PushButton()
+        self.arrow_button = TransparentToolButton()
         self.arrow_button.setFixedSize(30, 30)
-        self.arrow_button.setFont(QFont(self._font_family, 12))
-
-        # 根据主题设置不同的背景颜色
-        dark = is_dark_theme(qconfig)
-        opacity = self._opacity
-
-        if dark:
-            bg_color = f"rgba(65, 66, 66, {opacity})"
-            color = "#ffffff"
-        else:
-            bg_color = f"rgba(240, 240, 240, {opacity})"
-            color = "#000000"
-
-        self.arrow_button.setStyleSheet(
-            f"border: none; border-radius: 5px; background-color: {bg_color}; text-align: center; color: {color};"
-        )
+        self.arrow_button.setAttribute(Qt.WA_TranslucentBackground)
+        self.arrow_button.setStyleSheet("background: transparent; border: none;")
 
         # 根据指示器样式设置按钮内容
         if self._stick_indicator_style == 1:  # 文字模式
             self.arrow_button.setText("抽")
-        elif self._stick_indicator_style == 2:  # 图标模式
+        elif self._stick_indicator_style == 0:  # 图标模式
             try:
                 icon = get_theme_icon("ic_fluent_people_20_filled")
                 self.arrow_button.setIcon(icon)
