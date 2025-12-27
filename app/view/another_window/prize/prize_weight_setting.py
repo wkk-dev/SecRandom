@@ -99,7 +99,8 @@ class PrizeWeightSettingWindow(QWidget):
     def __load_existing_weights(self):
         """加载现有奖品权重"""
         try:
-            lottery_list_dir = get_data_path("lottery_list")
+            # 使用与保存一致的路径
+            lottery_list_dir = get_data_path("list/lottery_list")
 
             # 从设置中获取奖池名称
             if self.list_name:
@@ -119,8 +120,9 @@ class PrizeWeightSettingWindow(QWidget):
 
             weights = []
             for item_name, item_info in data.items():
-                if "weight" in item_info and item_info["weight"]:
-                    weights.append(item_info["weight"])
+                if "weight" in item_info and item_info["weight"] is not None:
+                    # 只显示权重值
+                    weights.append(str(item_info["weight"]))
 
             self.initial_weights = weights.copy()
 
@@ -237,7 +239,10 @@ class PrizeWeightSettingWindow(QWidget):
             lottery_list_dir.mkdir(parents=True, exist_ok=True)
 
             # 从设置中获取班级名称
-            pool_name = readme_settings_async("lottery_list", "select_pool_name")
+            if self.list_name:
+                pool_name = self.list_name
+            else:
+                pool_name = readme_settings_async("lottery_list", "select_pool_name")
             list_file = lottery_list_dir / f"{pool_name}.json"
 
             # 读取现有数据
@@ -249,10 +254,11 @@ class PrizeWeightSettingWindow(QWidget):
             # 如果奖品权重没有新增
             existing_weights = []
             for item_name, item_info in existing_data.items():
-                if "weight" in item_info and item_info["weight"]:
-                    existing_weights.append(item_info["weight"])
+                if "weight" in item_info and item_info["weight"] is not None:
+                    # 只比较权重值
+                    existing_weights.append(str(item_info["weight"]))
 
-            if set(lines) == set(map(str, existing_weights)):
+            if set(lines) == set(existing_weights):
                 # 显示提示消息
                 config = NotificationConfig(
                     title=get_content_name_async("weight_setting", "info_title"),
@@ -267,16 +273,19 @@ class PrizeWeightSettingWindow(QWidget):
             # 更新现有数据中的奖品权重信息
             updated_data = existing_data.copy()
 
-            for line in lines:
-                parts = [p.strip() for p in re.split(r"[,\s]", line) if p.strip()]
-                if len(parts) >= 2:
-                    name, weight_str = parts[0], parts[1]
+            # 获取现有奖品列表（按顺序）
+            existing_items = list(existing_data.keys())
+
+            # 按顺序分配权重值给奖品
+            for i, line in enumerate(lines):
+                if i < len(existing_items):  # 确保不超过现有奖品数量
                     try:
-                        weight_val = float(weight_str)
-                    except Exception:
+                        weight_val = float(line.strip())
+                        item_name = existing_items[i]
+                        updated_data[item_name]["weight"] = weight_val
+                    except ValueError:
+                        # 如果无法转换为浮点数，跳过这一行
                         continue
-                    if name in updated_data:
-                        updated_data[name]["weight"] = weight_val
 
             # 保存到文件
             with open_file(list_file, "w", encoding="utf-8") as f:

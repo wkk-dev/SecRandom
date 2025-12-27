@@ -293,7 +293,7 @@ class lottery_table(GroupHeaderCardWidget):
                         new_pool_data[key] = value
                 pool_data = new_pool_data
         elif col == 3:  # 奖品权重列
-            pool_data[matched_key]["weight"] = int(new_value)
+            pool_data[matched_key]["weight"] = float(new_value)
         elif col == 0:  # "存在"勾选框列
             checkbox_item = self.table.item(row, 0)
             if checkbox_item:
