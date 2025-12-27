@@ -61,7 +61,10 @@ class class_break_settings(GroupHeaderCardWidget):
         )
 
         # 从设置中读取当前状态
-        self.class_break_switch.setChecked(self.class_break_switch.isChecked())
+        instant_draw_disable = readme_settings_async(
+            "time_settings", "instant_draw_disable", False
+        )
+        self.class_break_switch.setChecked(instant_draw_disable)
 
         self.class_break_switch.checkedChanged.connect(
             lambda: update_settings(
@@ -81,13 +84,39 @@ class class_break_settings(GroupHeaderCardWidget):
         )
 
         # 从设置中读取当前状态
-        self.verification_switch.setChecked(self.verification_switch.isChecked())
+        verification_required = readme_settings_async(
+            "time_settings", "verification_required", False
+        )
+        self.verification_switch.setChecked(verification_required)
 
         self.verification_switch.checkedChanged.connect(
             lambda: update_settings(
                 "time_settings",
                 "verification_required",
                 self.verification_switch.isChecked(),
+            )
+        )
+
+        # ClassIsland数据源开关
+        self.class_island_source_switch = SwitchButton()
+        self.class_island_source_switch.setOffText(
+            get_content_name_async("time_settings", "disable")
+        )
+        self.class_island_source_switch.setOnText(
+            get_content_name_async("time_settings", "enable")
+        )
+
+        # 从设置中读取当前状态
+        class_island_source_enabled = readme_settings_async(
+            "time_settings", "class_island_source_enabled", False
+        )
+        self.class_island_source_switch.setChecked(class_island_source_enabled)
+
+        self.class_island_source_switch.checkedChanged.connect(
+            lambda: update_settings(
+                "time_settings",
+                "class_island_source_enabled",
+                self.class_island_source_switch.isChecked(),
             )
         )
 
@@ -103,6 +132,14 @@ class class_break_settings(GroupHeaderCardWidget):
             get_content_name_async("time_settings", "verification_function"),
             get_content_description_async("time_settings", "verification_function"),
             self.verification_switch,
+        )
+        self.addGroup(
+            get_theme_icon("ic_fluent_desktop_mac_20_filled"),
+            get_content_name_async("time_settings", "class_island_source_function"),
+            get_content_description_async(
+                "time_settings", "class_island_source_function"
+            ),
+            self.class_island_source_switch,
         )
 
 

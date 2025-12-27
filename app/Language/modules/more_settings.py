@@ -37,6 +37,10 @@ time_settings = {
             "name": "验证流程功能",
             "description": "启用后，在非上课时段触发时将弹出安全验证；若关闭则直接禁用控件",
         },
+        "class_island_source_function": {
+            "name": "ClassIsland数据源",
+            "description": "启用后，使用ClassIsland软件提供的课程表信息判断课间时间",
+        },
         "import_from_file": {"name": "从文件导入"},
         "importing": {"name": "导入中..."},
         "view_current_config": {"name": "查看当前配置"},
@@ -119,6 +123,10 @@ time_settings = {
         "verification_function": {
             "name": "验证流程功能",
             "description": "启用后，在非上课时段触发时将弹出安全验证；若关闭则直接禁用控件",
+        },
+        "class_island_source_function": {
+            "name": "ClassIsland data source",
+            "description": "When enabled, use ClassIsland software's schedule information to determine class break times",
         },
         "view_current_config": {"name": "查看当前配置"},
         "schedule_imported": {"name": "已导入 {} 个上课时间段"},

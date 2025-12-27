@@ -436,6 +436,9 @@ DEFAULT_SETTINGS = {
         "title": {"default_value": None},
         "verification_required": {"default_value": True},
         "instant_draw_disable": {"default_value": False},
+        "class_island_source_enabled": {"default_value": False},
+        "current_class_island_break_status": {"default_value": False},
+        "last_class_island_state": {"default_value": ""},
     },
     "fair_draw_settings": {
         "title": {"default_value": None},

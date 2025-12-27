@@ -32,44 +32,39 @@ def _is_non_class_time() -> bool:
     """
     try:
         # 1. 检查课间禁用开关是否启用
-        if not _is_instant_draw_disable_enabled():
+        instant_draw_disable = readme_settings_async(
+            "program_functionality", "instant_draw_disable"
+        )
+        if not instant_draw_disable:
             return False
 
-        # 2. 获取非上课时间段配置
-        non_class_times = _get_non_class_times_config()
-        if not non_class_times:
-            return False
+        # 2. 检查是否启用了ClassIsland数据源
+        use_class_island_source = readme_settings_async(
+            "time_settings", "class_island_source_enabled"
+        )
 
-        # 3. 获取当前时间并转换为总秒数
-        current_total_seconds = _get_current_time_in_seconds()
+        if use_class_island_source:
+            # 使用ClassIsland数据判断是否为课间时间
+            class_island_break_status = readme_settings_async(
+                "time_settings", "current_class_island_break_status"
+            )
+            # 确保返回布尔值
+            return bool(class_island_break_status)
+        else:
+            # 使用CSES配置的非上课时间段
+            non_class_times = _get_non_class_times_config()
+            if not non_class_times or not isinstance(non_class_times, dict):
+                # 如果非上课时间配置不存在或格式不正确，返回False
+                return False
 
-        # 4. 检查当前时间是否在任何非上课时间段内
-        return _is_time_in_ranges(current_total_seconds, non_class_times)
+            # 3. 获取当前时间并转换为总秒数
+            current_total_seconds = _get_current_time_in_seconds()
+
+            # 4. 检查当前时间是否在任何非上课时间段内
+            return _is_time_in_ranges(current_total_seconds, non_class_times)
 
     except Exception as e:
         logger.error(f"检测非上课时间失败: {e}")
-        return False
-
-
-def _is_instant_draw_disable_enabled() -> bool:
-    """检查课间禁用开关是否启用
-
-    Returns:
-        bool: 如果课间禁用开关启用返回True，否则返回False
-    """
-    try:
-        settings_path = get_settings_path()
-        if not file_exists(settings_path):
-            return False
-
-        with open_file(settings_path, "r", encoding="utf-8") as f:
-            settings = json.load(f)
-
-        program_functionality = settings.get("program_functionality", {})
-        return program_functionality.get("instant_draw_disable", False)
-
-    except Exception as e:
-        logger.error(f"读取课间禁用设置失败: {e}")
         return False
 
 
@@ -80,17 +75,39 @@ def _get_non_class_times_config() -> Dict[str, str]:
         Dict[str, str]: 非上课时间段配置字典，如果获取失败返回空字典
     """
     try:
-        time_settings_path = get_settings_path()
-        if not file_exists(time_settings_path):
+        # 从data/CSES目录获取CSES文件
+        cses_dir = get_data_path("CSES")
+        if not os.path.exists(cses_dir):
+            logger.info("CSES目录不存在，返回空的非上课时间配置")
             return {}
 
-        with open_file(time_settings_path, "r", encoding="utf-8") as f:
-            time_settings = json.load(f)
+        # 获取CSES目录中的所有YAML文件
+        import os
 
-        return time_settings.get("non_class_times", {})
+        cses_files = [
+            f for f in os.listdir(cses_dir) if f.lower().endswith((".yaml", ".yml"))
+        ]
+
+        if not cses_files:
+            logger.info("CSES目录中没有找到YAML文件，返回空的非上课时间配置")
+            return {}
+
+        # 使用第一个找到的CSES文件
+        cses_file_path = os.path.join(cses_dir, cses_files[0])
+
+        # 创建CSES解析器并加载文件
+        parser = CSESParser()
+        if not parser.load_from_file(cses_file_path):
+            logger.error(f"加载CSES文件失败: {cses_file_path}")
+            return {}
+
+        # 使用CSES解析器获取非上课时间段
+        non_class_times = parser.get_non_class_times()
+        logger.info(f"成功从CSES文件生成{len(non_class_times)}个非上课时间段")
+        return non_class_times
 
     except Exception as e:
-        logger.error(f"读取时间设置失败: {e}")
+        logger.error(f"读取CSES时间设置失败: {e}")
         return {}
 
 

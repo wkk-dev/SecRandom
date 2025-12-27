@@ -17,6 +17,8 @@ v2.0 - Koharu（小鸟游星野） Alpha 6
 - 新增 **ClassIsland数据接收功能**，实现接收ClassIsland软件发送的JSON格式课程表数据，包含当前科目、下一节课、当前状态等信息
 - 新增 **IPC端口配置功能**，在基本设置页面添加端口设置选项，支持1-65535范围内的端口自定义
 - 新增 **C# IPC通信示例**，提供ClassIsland软件通过TCP Socket向SecRandom发送JSON数据的实现方法
+- 新增 **ClassIsland数据源切换功能**，在**时间设置**中添加开关以选择使用CSES或ClassIsland数据判断课间时间
+- 新增 **ClassIsland状态处理机制**，实现对ClassIsland传入数据的解析和课间状态的动态更新
 
 ## 💡 功能优化
 
@@ -37,8 +39,11 @@ v2.0 - Koharu（小鸟游星野） Alpha 6
 - 优化 **安全操作组件状态管理**，为 **basic_safety_security_operations** 类添加 `_update_enabled_state` 方法，实现根据全局安全开关状态控制组件启用状态
 - 优化 **信号转发机制**，修复URLHandler中ClassIsland数据信号转发问题，确保数据正确传递到UI界面
 - 优化 **端口配置逻辑**，优先使用用户设置的端口值而非配置文件，实现端口变更时自动重启IPC服务器
-- 优化 **多语言支持**，将IPC端口相关提示信息添加到语言文件，支持国际化显示
 - 优化 **默认端口设置**，将IPC端口默认值从0（动态分配）改为固定值11010，提高外部通信稳定性
+- 优化 **设置管理**，添加class_island_source_enabled、current_class_island_break_status等新设置项及其默认值
+- 优化 **课间禁用逻辑**，新增根据ClassIsland软件传入的课程表信息实时判断当前是否为课间时间的功能
+- 优化 **CSES解析功能**，修改**非上课时间判断逻辑**，使用CSES解析器从CSES文件动态生成非上课时间段配置，替代原有的静态配置方式
+- 优化 **时间设置模块**，新增从**data/CSES目录**读取YAML格式课程表文件功能，提升时间配置的灵活性和准确性
 
 ## 🐛 修复问题
 

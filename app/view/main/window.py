@@ -691,11 +691,25 @@ class MainWindow(FluentWindow):
             # 是否已确定当前时间点
             is_lesson_confirmed = class_island_data.get("IsLessonConfirmed")
 
-            # 可以在这里添加处理逻辑，比如更新UI、保存数据等
-            logger.info(f"当前科目: {current_subject}")
-            logger.info(f"下一科目: {next_class_subject}")
-            logger.info(f"当前状态: {current_state}")
-            logger.info(f"课表启用: {is_class_plan_enabled}")
+            # 检查是否启用了ClassIsland数据源
+            use_class_island_source = readme_settings_async(
+                "time_settings", "class_island_source_enabled", False
+            )
+
+            if (
+                use_class_island_source
+                and is_class_plan_enabled
+                and is_class_plan_loaded
+            ):
+                # 使用ClassIsland数据来判断是否为课间时间
+                # 根据当前状态判断当前是否为课间时间
+                is_break_time = self._is_class_island_break_time(
+                    current_state, current_time_layout_item
+                )
+
+                # 更新全局状态以反映当前是否为课间时间
+                # 注意：这将影响到整个应用的课间禁用行为
+                self._update_class_island_break_status(is_break_time, current_state)
 
             # 这里可以添加根据ClassIsland数据更新UI的逻辑
             # 例如：显示当前课程信息、更新课程表显示等
@@ -703,3 +717,84 @@ class MainWindow(FluentWindow):
 
         except Exception as e:
             logger.error(f"处理ClassIsland数据时出错: {e}")
+
+    def _is_class_island_break_time(
+        self, current_state: str, current_time_layout_item: dict
+    ) -> bool:
+        """根据ClassIsland数据判断是否为课间时间
+
+        Args:
+            current_state: 当前时间点状态
+            current_time_layout_item: 当前时间布局项
+
+        Returns:
+            bool: 如果当前是课间时间返回True，否则返回False
+        """
+        if not current_state:
+            return False
+
+        # 通常课间时间的状态包含 "break", "rest", "interval", "free" 等关键词
+        # 或者当前状态明确表示是课间时间
+        current_state_lower = current_state.lower()
+
+        # 检查状态是否表明当前是课间时间
+        break_indicators = [
+            "break",
+            "rest",
+            "interval",
+            "free",
+            "recess",
+            "pause",
+            "课间",
+            "休息",
+            "间歇",
+            "自由",
+            "breaktime",
+            "break_time",
+            "Breaking",
+        ]
+
+        for indicator in break_indicators:
+            if indicator in current_state_lower:
+                return True
+
+        # 如果时间布局项存在，可以进一步检查其类型
+        if current_time_layout_item and isinstance(current_time_layout_item, dict):
+            time_type = current_time_layout_item.get("Type", "")
+            time_name = current_time_layout_item.get("Name", "")
+
+            # 检查时间布局项的类型或名称是否表明是课间时间
+            time_type_lower = time_type.lower()
+            time_name_lower = time_name.lower()
+
+            for indicator in break_indicators:
+                if indicator in time_type_lower or indicator in time_name_lower:
+                    return True
+
+        return False
+
+    def _update_class_island_break_status(
+        self, is_break_time: bool, current_state: str
+    ):
+        """更新ClassIsland课间状态
+
+        Args:
+            is_break_time: 是否为课间时间
+            current_state: 当前状态
+        """
+        logger.debug(
+            f"ClassIsland课间状态更新: {'课间时间' if is_break_time else '上课时间'} (状态: {current_state})"
+        )
+
+        # 这里可以添加逻辑来更新应用的课间禁用状态
+        # 例如，可以设置一个全局标志或更新设置
+        try:
+            # 保存当前ClassIsland的课间状态
+            from app.tools.settings_access import update_settings
+
+            update_settings(
+                "time_settings", "current_class_island_break_status", is_break_time
+            )
+            update_settings("time_settings", "last_class_island_state", current_state)
+        except Exception as e:
+            logger.error(f"更新ClassIsland课间状态失败: {e}")
