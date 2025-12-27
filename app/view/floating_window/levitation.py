@@ -132,6 +132,10 @@ class LevitationWindow(QWidget):
         self._margins = self.DEFAULT_MARGINS
         self._placement = self.DEFAULT_PLACEMENT
         self._display_style = self.DEFAULT_DISPLAY_STYLE
+        self._quick_draw_disabled = False
+        self._disable_quick_draw_timer = QTimer(self)
+        self._disable_quick_draw_timer.setSingleShot(True)
+        self._disable_quick_draw_timer.timeout.connect(self._enable_quick_draw)
 
     def _init_periodic_topmost_properties(self):
         """初始化周期性置顶相关属性"""
@@ -441,6 +445,11 @@ class LevitationWindow(QWidget):
         """
         # 检查是否是闪抽按钮
         if signal == self.quickDrawRequested:
+            # 检查闪抽是否被禁用
+            if self._quick_draw_disabled:
+                logger.info("闪抽功能已被禁用，请稍后再试")
+                return
+
             # 检查当前时间是否在非上课时间段内
             if _is_non_class_time():
                 # 检查是否需要验证流程
@@ -455,8 +464,29 @@ class LevitationWindow(QWidget):
                     # 如果不需要验证流程，直接禁止点击
                     logger.info("当前时间在非上课时间段内，禁止闪抽")
                     return
+
+            # 获取禁用时间设置
+            disable_time = int(
+                readme_settings_async("quick_draw_settings", "disable_after_click")
+            )
+
+            # 如果设置了禁用时间，则禁用闪抽功能
+            if disable_time >= 1:
+                self._disable_quick_draw()
+                self._disable_quick_draw_timer.start(disable_time * 1000)
+                logger.info(f"闪抽功能已禁用，将在 {disable_time}s 后恢复")
+
         # 发出信号
         signal.emit()
+
+    def _disable_quick_draw(self):
+        """禁用闪抽功能"""
+        self._quick_draw_disabled = True
+
+    def _enable_quick_draw(self):
+        """启用闪抽功能"""
+        self._quick_draw_disabled = False
+        logger.info("闪抽功能已恢复")
 
     def _create_button(self, spec: str) -> QPushButton:
         """创建按钮

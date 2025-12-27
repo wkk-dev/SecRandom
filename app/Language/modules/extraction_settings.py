@@ -255,6 +255,10 @@ quick_draw_settings = {
             "name": "默认抽取名单",
             "description": "设置默认使用的抽取名单",
         },
+        "disable_after_click": {
+            "name": "点击后禁用时间",
+            "description": "设置点击一次闪抽后禁用闪抽功能的时间（秒）",
+        },
         "font_size": {"name": "字体大小", "description": "设置闪抽结果字体大小"},
         "display_format": {
             "name": "结果显示格式",
@@ -416,6 +420,10 @@ quick_draw_settings = {
         "default_class": {
             "name": "默认抽取名单",
             "description": "设置默认使用的抽取名单",
+        },
+        "disable_after_click": {
+            "name": "Disable after click",
+            "description": "Set the time to disable Quick Pick after one click (s)",
         },
     },
 }

@@ -123,6 +123,7 @@ DEFAULT_SETTINGS = {
         "half_repeat": {"default_value": 1},
         "draw_type": {"default_value": 0},
         "default_class": {"default_value": ""},
+        "disable_after_click": {"default_value": 2},
         "font_size": {"default_value": 50},
         "display_format": {"default_value": 0},
         "show_random": {"default_value": 0},
