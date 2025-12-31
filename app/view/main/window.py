@@ -510,9 +510,8 @@ class MainWindow(FluentWindow):
 
     def closeEvent(self, event):
         """窗口关闭事件处理
-        根据“后台驻留”设置决定是否真正关闭窗口"""
+        根据"后台驻留"设置决定是否真正关闭窗口"""
         resident = readme_settings_async("basic_settings", "background_resident")
-        resident = True if resident is None else resident
         if resident:
             self.hide()
             event.ignore()
@@ -529,7 +528,8 @@ class MainWindow(FluentWindow):
 
     def resizeEvent(self, event):
         """窗口大小变化事件处理
-        检测窗口大小变化，但不启动尺寸记录倒计时，减少IO操作"""
+        检测窗口大小变化，启动尺寸记录倒计时，避免频繁IO操作"""
+        # 每次窗口大小变化时重新启动定时器，确保在窗口大小稳定后才保存
         self.resize_timer.start(500)
         super().resizeEvent(event)
 
@@ -579,7 +579,6 @@ class MainWindow(FluentWindow):
         auto_save_enabled = readme_settings_async(
             "basic_settings", "auto_save_window_size"
         )
-        auto_save_enabled = True if auto_save_enabled is None else auto_save_enabled
 
         if auto_save_enabled:
             # 只有在非最大化状态下才保存窗口大小

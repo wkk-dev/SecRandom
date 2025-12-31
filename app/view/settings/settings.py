@@ -974,7 +974,6 @@ class SettingsWindow(FluentWindow):
         auto_save_enabled = readme_settings_async(
             "basic_settings", "auto_save_window_size"
         )
-        auto_save_enabled = True if auto_save_enabled is None else auto_save_enabled
 
         if auto_save_enabled:
             if not self.isMaximized():
