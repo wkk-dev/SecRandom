@@ -5,8 +5,7 @@
 
 from pathlib import Path
 from PySide6.QtCore import QFileSystemWatcher, Signal, QObject
-from typing import Dict, Set, Callable
-import weakref
+from typing import Dict, Set, Callable, Any
 
 
 class SharedFileWatcherManager(QObject):
@@ -32,9 +31,8 @@ class SharedFileWatcherManager(QObject):
         self._initialized = True
 
         # 存储监视器和引用计数
-        self._watchers: Dict[str, QFileSystemWatcher] = {}
         self._reference_counts: Dict[str, int] = {}
-        self._callbacks: Dict[str, Set[weakref.ref]] = {}
+        self._callbacks: Dict[str, Set[Callable[[str], Any]]] = {}
 
         # 创建主监视器
         self._main_watcher = QFileSystemWatcher()
@@ -76,8 +74,8 @@ class SharedFileWatcherManager(QObject):
         if path_str not in self._callbacks:
             self._callbacks[path_str] = set()
 
-        # 使用弱引用存储回调，避免循环引用
-        self._callbacks[path_str].add(weakref.ref(callback))
+        # 直接存储回调函数，避免弱引用导致的问题
+        self._callbacks[path_str].add(callback)
 
         return True
 
@@ -99,12 +97,8 @@ class SharedFileWatcherManager(QObject):
 
         # 移除回调函数
         if path_str in self._callbacks:
-            # 清理已失效的弱引用
-            self._callbacks[path_str] = {
-                ref
-                for ref in self._callbacks[path_str]
-                if ref() is not None and ref() != callback
-            }
+            # 直接移除回调函数
+            self._callbacks[path_str].discard(callback)
 
         # 减少引用计数
         self._reference_counts[path_str] -= 1
@@ -128,24 +122,17 @@ class SharedFileWatcherManager(QObject):
         """
         path_str = str(Path(path).resolve())
 
-        # 清理已失效的回调引用
+        # 调用所有有效的回调函数
         if path_str in self._callbacks:
-            self._callbacks[path_str] = {
-                ref for ref in self._callbacks[path_str] if ref() is not None
-            }
+            for callback in list(self._callbacks[path_str]):
+                try:
+                    callback(path_str)
+                except Exception as e:
+                    import logging
 
-            # 调用所有有效的回调函数
-            for callback_ref in self._callbacks[path_str]:
-                callback = callback_ref()
-                if callback is not None:
-                    try:
-                        callback(path_str)
-                    except Exception as e:
-                        import logging
-
-                        logging.getLogger(__name__).error(
-                            f"文件监视器回调函数执行失败: {e}"
-                        )
+                    logging.getLogger(__name__).error(
+                        f"文件监视器回调函数执行失败: {e}"
+                    )
 
         # 发出全局信号
         self.directory_changed.emit(path_str)

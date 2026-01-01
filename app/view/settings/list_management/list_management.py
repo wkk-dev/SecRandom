@@ -132,23 +132,42 @@ class roll_call_list(GroupHeaderCardWidget):
         )
 
         # 初始化班级列表（在所有按钮都创建后）
-        self.refresh_class_list()
-        if not get_class_name_list():
-            self.class_name_combo.setCurrentIndex(-1)
-            self.class_name_combo.setPlaceholderText(
-                get_content_name_async("roll_call_list", "select_class_name")
-            )
-        else:
-            self.class_name_combo.setCurrentText(
-                readme_settings_async("roll_call_list", "select_class_name")
-            )
-        self.class_name_combo.currentIndexChanged.connect(
-            lambda: update_settings(
-                "roll_call_list",
-                "select_class_name",
-                self.class_name_combo.currentText(),
-            )
-        )
+        try:
+            self.refresh_class_list()
+            if not get_class_name_list():
+                if (
+                    hasattr(self, "class_name_combo")
+                    and self.class_name_combo is not None
+                ):
+                    self.class_name_combo.setCurrentIndex(-1)
+                    self.class_name_combo.setPlaceholderText(
+                        get_content_name_async("roll_call_list", "select_class_name")
+                    )
+            else:
+                if (
+                    hasattr(self, "class_name_combo")
+                    and self.class_name_combo is not None
+                ):
+                    self.class_name_combo.setCurrentText(
+                        readme_settings_async("roll_call_list", "select_class_name")
+                    )
+        except RuntimeError as e:
+            logger.error(f"初始化班级列表时发生错误: {e}")
+        except Exception as e:
+            logger.error(f"初始化班级列表时发生未知错误: {e}")
+        if hasattr(self, "class_name_combo") and self.class_name_combo is not None:
+            try:
+                self.class_name_combo.currentIndexChanged.connect(
+                    lambda: update_settings(
+                        "roll_call_list",
+                        "select_class_name",
+                        self.class_name_combo.currentText(),
+                    )
+                )
+            except RuntimeError as e:
+                logger.error(f"连接班级下拉框信号时发生错误: {e}")
+            except Exception as e:
+                logger.error(f"连接班级下拉框信号时发生未知错误: {e}")
 
         # 设置文件系统监视器
         self.setup_file_watcher()
@@ -382,15 +401,59 @@ class roll_call_list(GroupHeaderCardWidget):
 
     def update_button_states(self):
         """根据班级列表状态更新按钮禁用状态"""
-        class_list = get_class_name_list()
-        has_class = len(class_list) > 0
+        try:
+            class_list = get_class_name_list()
+            has_class = len(class_list) > 0
 
-        # 禁用/启用相关按钮
-        self.import_student_button.setEnabled(has_class)
-        self.name_setting_button.setEnabled(has_class)
-        self.gender_setting_button.setEnabled(has_class)
-        self.group_setting_button.setEnabled(has_class)
-        self.export_student_button.setEnabled(has_class)
+            # 为每个按钮单独保护，避免因为某个按钮被删除导致整个方法失败
+            if (
+                hasattr(self, "import_student_button")
+                and self.import_student_button is not None
+            ):
+                try:
+                    self.import_student_button.setEnabled(has_class)
+                except RuntimeError:
+                    pass  # 按钮已删除，跳过设置
+
+            if (
+                hasattr(self, "name_setting_button")
+                and self.name_setting_button is not None
+            ):
+                try:
+                    self.name_setting_button.setEnabled(has_class)
+                except RuntimeError:
+                    pass  # 按钮已删除，跳过设置
+
+            if (
+                hasattr(self, "gender_setting_button")
+                and self.gender_setting_button is not None
+            ):
+                try:
+                    self.gender_setting_button.setEnabled(has_class)
+                except RuntimeError:
+                    pass  # 按钮已删除，跳过设置
+
+            if (
+                hasattr(self, "group_setting_button")
+                and self.group_setting_button is not None
+            ):
+                try:
+                    self.group_setting_button.setEnabled(has_class)
+                except RuntimeError:
+                    pass  # 按钮已删除，跳过设置
+
+            if (
+                hasattr(self, "export_student_button")
+                and self.export_student_button is not None
+            ):
+                try:
+                    self.export_student_button.setEnabled(has_class)
+                except RuntimeError:
+                    pass  # 按钮已删除，跳过设置
+        except RuntimeError as e:
+            logger.error(f"更新按钮状态时发生错误: {e}")
+        except Exception as e:
+            logger.error(f"更新按钮状态时发生未知错误: {e}")
 
     def cleanup_file_watcher(self):
         """清理文件系统监视器"""
@@ -401,32 +464,67 @@ class roll_call_list(GroupHeaderCardWidget):
                     str(roll_call_list_dir), self.on_directory_changed
                 )
 
+    def __del__(self):
+        """析构函数，确保清理文件监视器"""
+        try:
+            self.cleanup_file_watcher()
+        except Exception:
+            pass
+
     def refresh_class_list(self):
         """刷新班级下拉框列表"""
-        # 保存当前选中的班级名称
-        current_class_name = self.class_name_combo.currentText()
+        # 检查班级下拉框是否仍然有效
+        if not hasattr(self, "class_name_combo") or self.class_name_combo is None:
+            logger.debug("班级下拉框已被销毁，跳过刷新")
+            return
 
-        # 获取最新的班级列表
-        class_list = get_class_name_list()
+        try:
+            # 保存当前选中的班级名称
+            current_class_name = None
+            try:
+                current_class_name = self.class_name_combo.currentText()
+            except RuntimeError:
+                logger.debug("班级下拉框已销毁，跳过获取当前文本")
+                return
 
-        # 清空并重新添加班级列表
-        self.class_name_combo.clear()
-        self.class_name_combo.addItems(class_list)
+            # 获取最新的班级列表
+            class_list = get_class_name_list()
 
-        # 尝试恢复之前选中的班级
-        if current_class_name and current_class_name in class_list:
-            index = class_list.index(current_class_name)
-            self.class_name_combo.setCurrentIndex(index)
-        elif not class_list:
-            self.class_name_combo.setCurrentIndex(-1)
-            self.class_name_combo.setPlaceholderText(
-                get_content_name_async("roll_call_list", "select_class_name")
-            )
+            # 清空并重新添加班级列表
+            try:
+                self.class_name_combo.clear()
+            except RuntimeError:
+                logger.debug("班级下拉框已销毁，跳过清空操作")
+                return
 
-        # 更新按钮状态
-        self.update_button_states()
+            try:
+                self.class_name_combo.addItems(class_list)
+            except RuntimeError:
+                logger.debug("班级下拉框已销毁，跳过添加项目")
+                return
 
-        # logger.debug(f"班级列表已刷新，共 {len(class_list)} 个班级")
+            # 尝试恢复之前选中的班级
+            try:
+                if current_class_name and current_class_name in class_list:
+                    index = class_list.index(current_class_name)
+                    self.class_name_combo.setCurrentIndex(index)
+                elif not class_list:
+                    self.class_name_combo.setCurrentIndex(-1)
+                    self.class_name_combo.setPlaceholderText(
+                        get_content_name_async("roll_call_list", "select_class_name")
+                    )
+            except RuntimeError:
+                logger.debug("班级下拉框已销毁，跳过设置选中项")
+                return
+
+            # 更新按钮状态
+            self.update_button_states()
+
+            # logger.debug(f"班级列表已刷新，共 {len(class_list)} 个班级")
+        except RuntimeError as e:
+            logger.error(f"刷新班级列表时发生错误: {e}")
+        except Exception as e:
+            logger.error(f"刷新班级列表时发生未知错误: {e}")
 
 
 class lottery_list(GroupHeaderCardWidget):
@@ -509,26 +607,43 @@ class lottery_list(GroupHeaderCardWidget):
         )
 
         # 初始化奖池列表（在所有按钮都创建后）
-        self.refresh_pool_list()
-        saved_pool = readme_settings_async("lottery_list", "select_pool_name")
         try:
-            if isinstance(saved_pool, int):
-                if 0 <= saved_pool < self.pool_name_combo.count():
-                    self.pool_name_combo.setCurrentIndex(saved_pool)
-            elif isinstance(saved_pool, str) and saved_pool:
-                self.pool_name_combo.setCurrentText(saved_pool)
-        except Exception:
-            pass
-        if not get_pool_name_list():
-            self.pool_name_combo.setCurrentIndex(-1)
-            self.pool_name_combo.setPlaceholderText(
-                get_content_name_async("lottery_list", "select_pool_name")
-            )
-        self.pool_name_combo.currentIndexChanged.connect(
-            lambda: update_settings(
-                "lottery_list", "select_pool_name", self.pool_name_combo.currentText()
-            )
-        )
+            self.refresh_pool_list()
+            saved_pool = readme_settings_async("lottery_list", "select_pool_name")
+            try:
+                if isinstance(saved_pool, int):
+                    if 0 <= saved_pool < self.pool_name_combo.count():
+                        self.pool_name_combo.setCurrentIndex(saved_pool)
+                elif isinstance(saved_pool, str) and saved_pool:
+                    self.pool_name_combo.setCurrentText(saved_pool)
+            except Exception:
+                pass
+            if not get_pool_name_list():
+                if (
+                    hasattr(self, "pool_name_combo")
+                    and self.pool_name_combo is not None
+                ):
+                    self.pool_name_combo.setCurrentIndex(-1)
+                    self.pool_name_combo.setPlaceholderText(
+                        get_content_name_async("lottery_list", "select_pool_name")
+                    )
+        except RuntimeError as e:
+            logger.error(f"初始化奖池列表时发生错误: {e}")
+        except Exception as e:
+            logger.error(f"初始化奖池列表时发生未知错误: {e}")
+        if hasattr(self, "pool_name_combo") and self.pool_name_combo is not None:
+            try:
+                self.pool_name_combo.currentIndexChanged.connect(
+                    lambda: update_settings(
+                        "lottery_list",
+                        "select_pool_name",
+                        self.pool_name_combo.currentText(),
+                    )
+                )
+            except RuntimeError as e:
+                logger.error(f"连接奖池下拉框信号时发生错误: {e}")
+            except Exception as e:
+                logger.error(f"连接奖池下拉框信号时发生未知错误: {e}")
 
         # 设置文件系统监视器
         self.setup_file_watcher()
@@ -748,14 +863,50 @@ class lottery_list(GroupHeaderCardWidget):
 
     def update_button_states(self):
         """根据奖池列表状态更新按钮禁用状态"""
-        pool_list = get_pool_name_list()
-        has_pool = len(pool_list) > 0
+        try:
+            pool_list = get_pool_name_list()
+            has_pool = len(pool_list) > 0
 
-        # 禁用/启用相关按钮
-        self.import_prize_button.setEnabled(has_pool)
-        self.prize_setting_button.setEnabled(has_pool)
-        self.prize_weight_setting_button.setEnabled(has_pool)
-        self.export_prize_button.setEnabled(has_pool)
+            # 为每个按钮单独保护，避免因为某个按钮被删除导致整个方法失败
+            if (
+                hasattr(self, "import_prize_button")
+                and self.import_prize_button is not None
+            ):
+                try:
+                    self.import_prize_button.setEnabled(has_pool)
+                except RuntimeError:
+                    pass  # 按钮已删除，跳过设置
+
+            if (
+                hasattr(self, "prize_setting_button")
+                and self.prize_setting_button is not None
+            ):
+                try:
+                    self.prize_setting_button.setEnabled(has_pool)
+                except RuntimeError:
+                    pass  # 按钮已删除，跳过设置
+
+            if (
+                hasattr(self, "prize_weight_setting_button")
+                and self.prize_weight_setting_button is not None
+            ):
+                try:
+                    self.prize_weight_setting_button.setEnabled(has_pool)
+                except RuntimeError:
+                    pass  # 按钮已删除，跳过设置
+
+            if (
+                hasattr(self, "export_prize_button")
+                and self.export_prize_button is not None
+            ):
+                try:
+                    self.export_prize_button.setEnabled(has_pool)
+                except RuntimeError:
+                    pass  # 按钮已删除，跳过设置
+        except RuntimeError as e:
+            logger.error(f"更新奖池按钮状态时发生错误: {e}")
+        except Exception as e:
+            logger.error(f"更新奖池按钮状态时发生未知错误: {e}")
 
     def cleanup_file_watcher(self):
         """清理文件系统监视器"""
@@ -766,29 +917,64 @@ class lottery_list(GroupHeaderCardWidget):
                     str(lottery_list_dir), self.on_directory_changed
                 )
 
+    def __del__(self):
+        """析构函数，确保清理文件监视器"""
+        try:
+            self.cleanup_file_watcher()
+        except Exception:
+            pass
+
     def refresh_pool_list(self):
         """刷新奖池下拉框列表"""
-        # 保存当前选中的奖池名称
-        current_pool_name = self.pool_name_combo.currentText()
+        # 检查奖池下拉框是否仍然有效
+        if not hasattr(self, "pool_name_combo") or self.pool_name_combo is None:
+            logger.debug("奖池下拉框已被销毁，跳过刷新")
+            return
 
-        # 获取最新的奖池列表
-        pool_list = get_pool_name_list()
+        try:
+            # 保存当前选中的奖池名称
+            current_pool_name = None
+            try:
+                current_pool_name = self.pool_name_combo.currentText()
+            except RuntimeError:
+                logger.debug("奖池下拉框已销毁，跳过获取当前文本")
+                return
 
-        # 清空并重新添加奖池列表
-        self.pool_name_combo.clear()
-        self.pool_name_combo.addItems(pool_list)
+            # 获取最新的奖池列表
+            pool_list = get_pool_name_list()
 
-        # 尝试恢复之前选中的奖池
-        if current_pool_name and current_pool_name in pool_list:
-            index = pool_list.index(current_pool_name)
-            self.pool_name_combo.setCurrentIndex(index)
-        elif not pool_list:
-            self.pool_name_combo.setCurrentIndex(-1)
-            self.pool_name_combo.setPlaceholderText(
-                get_content_name_async("lottery_list", "select_pool_name")
-            )
+            # 清空并重新添加奖池列表
+            try:
+                self.pool_name_combo.clear()
+            except RuntimeError:
+                logger.debug("奖池下拉框已销毁，跳过清空操作")
+                return
 
-        # 更新按钮状态
-        self.update_button_states()
+            try:
+                self.pool_name_combo.addItems(pool_list)
+            except RuntimeError:
+                logger.debug("奖池下拉框已销毁，跳过添加项目")
+                return
 
-        # logger.debug(f"奖池列表已刷新，共 {len(pool_list)} 个奖池")
+            # 尝试恢复之前选中的奖池
+            try:
+                if current_pool_name and current_pool_name in pool_list:
+                    index = pool_list.index(current_pool_name)
+                    self.pool_name_combo.setCurrentIndex(index)
+                elif not pool_list:
+                    self.pool_name_combo.setCurrentIndex(-1)
+                    self.pool_name_combo.setPlaceholderText(
+                        get_content_name_async("lottery_list", "select_pool_name")
+                    )
+            except RuntimeError:
+                logger.debug("奖池下拉框已销毁，跳过设置选中项")
+                return
+
+            # 更新按钮状态
+            self.update_button_states()
+
+            # logger.debug(f"奖池列表已刷新，共 {len(pool_list)} 个奖池")
+        except RuntimeError as e:
+            logger.error(f"刷新奖池列表时发生错误: {e}")
+        except Exception as e:
+            logger.error(f"刷新奖池列表时发生未知错误: {e}")

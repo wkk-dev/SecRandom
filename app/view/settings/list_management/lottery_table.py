@@ -63,14 +63,20 @@ class lottery_table(GroupHeaderCardWidget):
             self.lottery_comboBox.setPlaceholderText(
                 get_content_name_async("lottery_table", "select_pool_name")
             )
-        self.lottery_comboBox.currentIndexChanged.connect(
-            lambda: update_settings(
-                "lottery_table",
-                "select_pool_name",
-                self.lottery_comboBox.currentIndex(),
-            )
-        )
-        self.lottery_comboBox.currentTextChanged.connect(self.refresh_data)
+        if hasattr(self, "lottery_comboBox") and self.lottery_comboBox is not None:
+            try:
+                self.lottery_comboBox.currentIndexChanged.connect(
+                    lambda: update_settings(
+                        "lottery_table",
+                        "select_pool_name",
+                        self.lottery_comboBox.currentIndex(),
+                    )
+                )
+                self.lottery_comboBox.currentTextChanged.connect(self.refresh_data)
+            except RuntimeError as e:
+                logger.error(f"连接抽奖名单下拉框信号时发生错误: {e}")
+            except Exception as e:
+                logger.error(f"连接抽奖名单下拉框信号时发生未知错误: {e}")
 
         self.addGroup(
             get_theme_icon("ic_fluent_class_20_filled"),
@@ -143,38 +149,57 @@ class lottery_table(GroupHeaderCardWidget):
 
     def refresh_lottery_list(self):
         """刷新抽奖名单下拉框列表"""
-        # 保存当前选中的抽奖名单名称
-        current_lottery_name = self.lottery_comboBox.currentText()
+        # 检查抽奖名单下拉框是否仍然有效
+        if not hasattr(self, "lottery_comboBox") or self.lottery_comboBox is None:
+            logger.debug("抽奖名单下拉框已被销毁，跳过刷新")
+            return
 
-        # 获取最新的抽奖名单列表
-        lottery_list = get_pool_name_list()
+        try:
+            # 保存当前选中的抽奖名单名称
+            current_lottery_name = self.lottery_comboBox.currentText()
 
-        # 清空并重新添加抽奖名单列表
-        self.lottery_comboBox.clear()
-        self.lottery_comboBox.addItems(lottery_list)
+            # 获取最新的抽奖名单列表
+            lottery_list = get_pool_name_list()
 
-        # 尝试恢复之前选中的抽奖池
-        if current_lottery_name and current_lottery_name in lottery_list:
-            index = lottery_list.index(current_lottery_name)
-            self.lottery_comboBox.setCurrentIndex(index)
-        elif not lottery_list:
-            self.lottery_comboBox.setCurrentIndex(-1)
-            self.lottery_comboBox.setPlaceholderText(
-                get_content_name_async("lottery_list", "select_pool_name")
-            )
+            # 清空并重新添加抽奖名单列表
+            self.lottery_comboBox.clear()
+            self.lottery_comboBox.addItems(lottery_list)
 
-        # logger.debug(f"抽奖名单列表已刷新，共 {len(lottery_list)} 个抽奖名单")
-        # 只有在表格已经创建时才刷新数据
-        if hasattr(self, "table"):
-            self.refresh_data()
+            # 尝试恢复之前选中的抽奖池
+            if current_lottery_name and current_lottery_name in lottery_list:
+                index = lottery_list.index(current_lottery_name)
+                self.lottery_comboBox.setCurrentIndex(index)
+            elif not lottery_list:
+                self.lottery_comboBox.setCurrentIndex(-1)
+                self.lottery_comboBox.setPlaceholderText(
+                    get_content_name_async("lottery_list", "select_pool_name")
+                )
+
+            # logger.debug(f"抽奖名单列表已刷新，共 {len(lottery_list)} 个抽奖名单")
+            # 只有在表格已经创建时才刷新数据
+            if hasattr(self, "table") and self.table is not None:
+                self.refresh_data()
+        except RuntimeError as e:
+            logger.error(f"刷新抽奖名单列表时发生错误: {e}")
+        except Exception as e:
+            logger.error(f"刷新抽奖名单列表时发生未知错误: {e}")
 
     def refresh_data(self):
         """刷新抽奖名单数据"""
         # 确保表格已经创建
-        if not hasattr(self, "table"):
+        if not hasattr(self, "table") or self.table is None:
             return
 
-        pool_name = self.lottery_comboBox.currentText()
+        # 确保抽奖名单下拉框仍然有效
+        if not hasattr(self, "lottery_comboBox") or self.lottery_comboBox is None:
+            return
+
+        try:
+            pool_name = self.lottery_comboBox.currentText()
+        except RuntimeError:
+            logger.error("抽奖名单下拉框已被销毁")
+            return
+
         if not pool_name:
             self.table.setRowCount(0)
             return
@@ -342,3 +367,10 @@ class lottery_table(GroupHeaderCardWidget):
                 self._shared_watcher.remove_watcher(
                     str(lottery_list_dir), self.on_directory_changed
                 )
+
+    def __del__(self):
+        """析构函数，确保清理文件监视器"""
+        try:
+            self.cleanup_file_watcher()
+        except Exception:
+            pass

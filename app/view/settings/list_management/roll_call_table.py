@@ -144,38 +144,57 @@ class roll_call_table(GroupHeaderCardWidget):
 
     def refresh_class_list(self):
         """刷新班级下拉框列表"""
-        # 保存当前选中的班级名称
-        current_class_name = self.class_comboBox.currentText()
+        # 检查班级下拉框是否仍然有效
+        if not hasattr(self, "class_comboBox") or self.class_comboBox is None:
+            logger.debug("班级下拉框已被销毁，跳过刷新")
+            return
 
-        # 获取最新的班级列表
-        class_list = get_class_name_list()
+        try:
+            # 保存当前选中的班级名称
+            current_class_name = self.class_comboBox.currentText()
 
-        # 清空并重新添加班级列表
-        self.class_comboBox.clear()
-        self.class_comboBox.addItems(class_list)
+            # 获取最新的班级列表
+            class_list = get_class_name_list()
 
-        # 尝试恢复之前选中的班级
-        if current_class_name and current_class_name in class_list:
-            index = class_list.index(current_class_name)
-            self.class_comboBox.setCurrentIndex(index)
-        elif not class_list:
-            self.class_comboBox.setCurrentIndex(-1)
-            self.class_comboBox.setPlaceholderText(
-                get_content_name_async("roll_call_list", "select_class_name")
-            )
+            # 清空并重新添加班级列表
+            self.class_comboBox.clear()
+            self.class_comboBox.addItems(class_list)
 
-        # logger.debug(f"班级列表已刷新，共 {len(class_list)} 个班级")
-        # 只有在表格已经创建时才刷新数据
-        if hasattr(self, "table"):
-            self.refresh_data()
+            # 尝试恢复之前选中的班级
+            if current_class_name and current_class_name in class_list:
+                index = class_list.index(current_class_name)
+                self.class_comboBox.setCurrentIndex(index)
+            elif not class_list:
+                self.class_comboBox.setCurrentIndex(-1)
+                self.class_comboBox.setPlaceholderText(
+                    get_content_name_async("roll_call_list", "select_class_name")
+                )
+
+            # logger.debug(f"班级列表已刷新，共 {len(class_list)} 个班级")
+            # 只有在表格已经创建时才刷新数据
+            if hasattr(self, "table") and self.table is not None:
+                self.refresh_data()
+        except RuntimeError as e:
+            logger.error(f"刷新班级列表时发生错误: {e}")
+        except Exception as e:
+            logger.error(f"刷新班级列表时发生未知错误: {e}")
 
     def refresh_data(self):
         """刷新表格数据"""
         # 确保表格已经创建
-        if not hasattr(self, "table"):
+        if not hasattr(self, "table") or self.table is None:
             return
 
-        class_name = self.class_comboBox.currentText()
+        # 确保班级下拉框仍然有效
+        if not hasattr(self, "class_comboBox") or self.class_comboBox is None:
+            return
+
+        try:
+            class_name = self.class_comboBox.currentText()
+        except RuntimeError:
+            logger.error("班级下拉框已被销毁")
+            return
+
         if not class_name:
             self.table.setRowCount(0)
             return
@@ -355,3 +374,10 @@ class roll_call_table(GroupHeaderCardWidget):
                 self._shared_watcher.remove_watcher(
                     str(roll_call_list_dir), self.on_directory_changed
                 )
+
+    def __del__(self):
+        """析构函数，确保清理文件监视器"""
+        try:
+            self.cleanup_file_watcher()
+        except Exception:
+            pass
