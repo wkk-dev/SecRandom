@@ -348,6 +348,7 @@ DEFAULT_SETTINGS = {
         "floating_window_long_press_duration": {"default_value": 100},
         "floating_window_stick_to_edge_display_style": {"default_value": 1},
         "floating_window_draggable": {"default_value": True},
+        "floating_window_size": {"default_value": 3},
     },
     "sidebar_tray_management": {"title": {"default_value": None}},
     "sidebar_management_window": {

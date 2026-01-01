@@ -141,7 +141,13 @@ class SharedFileWatcherManager(QObject):
         if path_str in self._callbacks:
             for callback in list(self._callbacks[path_str]):
                 try:
-                    callback(path_str)
+                    # 对于 WeakMethod，需要先解引用
+                    if isinstance(callback, weakref.WeakMethod):
+                        actual_callback = callback()
+                        if actual_callback is not None:
+                            actual_callback(path_str)
+                    else:
+                        callback(path_str)
                 except Exception as e:
                     import logging
 

@@ -72,6 +72,11 @@ floating_window_management = {
             "name": "抽",
             "description": "设置浮窗贴边时箭头按钮显示的文字",
         },
+        "floating_window_size": {
+            "name": "浮窗大小",
+            "description": "设置浮窗按钮和图标的大小",
+            "combo_items": ["超级小", "超小", "小", "中", "大", "超大", "超级大"],
+        },
     },
     "EN_US": {
         "title": {
@@ -151,6 +156,19 @@ floating_window_management = {
         "floating_window_stick_to_edge_arrow_text": {
             "name": "Pick",
             "description": "Set the text to show on arrow button when the floating window is docked",
+        },
+        "floating_window_size": {
+            "name": "Floating window size",
+            "description": "Set the size of buttons and icons in floating window",
+            "combo_items": {
+                "0": "Extra Small",
+                "1": "Very Small",
+                "2": "Small",
+                "3": "Medium",
+                "4": "Large",
+                "5": "Extra Large",
+                "6": "Extra Extra Large",
+            },
         },
     },
 }

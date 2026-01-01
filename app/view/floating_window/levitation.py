@@ -42,8 +42,8 @@ class LevitationWindow(QWidget):
     DEFAULT_EDGE_THRESHOLD = 5
     DEFAULT_RETRACT_SECONDS = 5
     DEFAULT_LONG_PRESS_MS = 150  # 默认长按时间，稍微增加避免误触发
-    DEFAULT_BUTTON_SIZE = QSize(60, 60)
-    DEFAULT_ICON_SIZE = QSize(24, 24)
+    DEFAULT_BUTTON_SIZE = QSize(50, 50)  # 按钮大小
+    DEFAULT_ICON_SIZE = QSize(24, 24)  # 图标大小
     DEFAULT_SPACING = 6
     DEFAULT_MARGINS = 6  # 贴边隐藏时的最小间距
     DRAG_THRESHOLD = 8  # 拖拽触发阈值，增加阈值避免误识别按钮点击为拖动
@@ -131,6 +131,10 @@ class LevitationWindow(QWidget):
         self._layout = None
         self._btn_size = self.DEFAULT_BUTTON_SIZE
         self._icon_size = self.DEFAULT_ICON_SIZE
+        self._font_size = 10
+        self._storage_btn_size = QSize(30, 30)
+        self._storage_icon_size = QSize(18, 18)
+        self._storage_font_size = 10
         self._spacing = self.DEFAULT_SPACING
         self._margins = self.DEFAULT_MARGINS
         self._placement = self.DEFAULT_PLACEMENT
@@ -305,6 +309,12 @@ class LevitationWindow(QWidget):
         )
         self._buttons_spec = self._map_button_control(button_control_idx)
 
+        # 浮窗大小设置
+        size_idx = self._get_int_setting(
+            "floating_window_management", "floating_window_size", 1
+        )
+        self._apply_size_setting(size_idx)
+
         # 贴边隐藏功能配置
         self._init_edge_hide_settings()
 
@@ -335,6 +345,69 @@ class LevitationWindow(QWidget):
         self._retracted = False
 
         logger.debug(f"贴边隐藏功能配置: {self.floating_window_stick_to_edge}")
+
+    def _apply_size_setting(self, size_idx: int):
+        """应用浮窗大小设置
+
+        Args:
+            size_idx: 大小索引，0=超级小，1=超小，2=小，3=中，4=大，5=超大，6=超级大
+        """
+        if size_idx == 0:
+            # 超级小
+            self._btn_size = QSize(20, 20)
+            self._icon_size = QSize(6, 6)
+            self._font_size = 4
+            self._storage_btn_size = QSize(20, 20)
+            self._storage_icon_size = QSize(12, 12)
+            self._storage_font_size = 6
+        elif size_idx == 1:
+            # 超小
+            self._btn_size = QSize(30, 30)
+            self._icon_size = QSize(12, 12)
+            self._font_size = 6
+            self._storage_btn_size = QSize(25, 25)
+            self._storage_icon_size = QSize(15, 15)
+            self._storage_font_size = 8
+        elif size_idx == 2:
+            # 小
+            self._btn_size = QSize(40, 40)
+            self._icon_size = QSize(18, 18)
+            self._font_size = 8
+            self._storage_btn_size = QSize(28, 28)
+            self._storage_icon_size = QSize(16, 16)
+            self._storage_font_size = 9
+        elif size_idx == 3:
+            # 中
+            self._btn_size = QSize(50, 50)
+            self._icon_size = QSize(22, 22)
+            self._font_size = 10
+            self._storage_btn_size = QSize(30, 30)
+            self._storage_icon_size = QSize(18, 18)
+            self._storage_font_size = 10
+        elif size_idx == 4:
+            # 大
+            self._btn_size = QSize(60, 60)
+            self._icon_size = QSize(28, 28)
+            self._font_size = 12
+            self._storage_btn_size = QSize(35, 35)
+            self._storage_icon_size = QSize(20, 20)
+            self._storage_font_size = 11
+        elif size_idx == 5:
+            # 超大
+            self._btn_size = QSize(70, 70)
+            self._icon_size = QSize(34, 34)
+            self._font_size = 14
+            self._storage_btn_size = QSize(40, 40)
+            self._storage_icon_size = QSize(22, 22)
+            self._storage_font_size = 12
+        elif size_idx == 6:
+            # 超级大
+            self._btn_size = QSize(80, 80)
+            self._icon_size = QSize(40, 40)
+            self._font_size = 16
+            self._storage_btn_size = QSize(45, 45)
+            self._storage_icon_size = QSize(24, 24)
+            self._storage_font_size = 13
 
     def _build_ui(self):
         # 两行布局按索引分配，避免 3+ 个按钮全部落到底部
@@ -584,7 +657,7 @@ class LevitationWindow(QWidget):
         btn = PushButton(text)
         btn.setFixedSize(self._btn_size)
         btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        btn.setFont(self._font(12))
+        btn.setFont(self._font(self._font_size))
         btn.setAttribute(Qt.WA_TranslucentBackground)
         btn.setStyleSheet("background: transparent; border: none;")
         return btn
@@ -633,7 +706,7 @@ class LevitationWindow(QWidget):
         """创建文本标签（用于复合按钮）"""
         label = BodyLabel(text)
         label.setAlignment(Qt.AlignCenter)
-        label.setFont(self._font(10))
+        label.setFont(self._font(self._font_size))
         label.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # 忽略鼠标事件
         label.setFocusPolicy(Qt.NoFocus)  # 无焦点
         # 标签样式：居中对齐、无背景、无边框
@@ -955,7 +1028,11 @@ class LevitationWindow(QWidget):
                 )
                 logger.debug("创建DraggableWidget箭头按钮")
                 self._create_arrow_button(
-                    "right", 0, window_pos.y() + window_height // 2 - 15
+                    "right",
+                    0,
+                    window_pos.y()
+                    + window_height // 2
+                    - self._storage_btn_size.height() // 2,
                 )
                 # 标记为已收纳状态，但保持原始坐标不变
                 self._retracted = True
@@ -1000,8 +1077,10 @@ class LevitationWindow(QWidget):
                 logger.debug("创建DraggableWidget箭头按钮")
                 self._create_arrow_button(
                     "left",
-                    screen.width() - 30,
-                    window_pos.y() + window_height // 2 - 15,
+                    screen.width() - self._storage_btn_size.width(),
+                    window_pos.y()
+                    + window_height // 2
+                    - self._storage_btn_size.height() // 2,
                 )
                 # 标记为已收纳状态，但保持原始坐标不变
                 self._retracted = True
@@ -1333,7 +1412,7 @@ class LevitationWindow(QWidget):
             f"创建DraggableWidget箭头按钮，方向: {direction}, 位置: ({x}, {y})"
         )
         self.arrow_widget = DraggableWidget()
-        self.arrow_widget.setFixedSize(30, 30)
+        self.arrow_widget.setFixedSize(self._storage_btn_size)
         self.arrow_widget.move(x, y)
         self.arrow_widget.setFixedX(x)
         self.arrow_widget.setWindowFlags(
@@ -1353,7 +1432,7 @@ class LevitationWindow(QWidget):
         layout.setSpacing(0)
 
         self.arrow_button = TransparentToolButton()
-        self.arrow_button.setFixedSize(30, 30)
+        self.arrow_button.setFixedSize(self._storage_btn_size)
         self.arrow_button.setAttribute(Qt.WA_TranslucentBackground)
         # 设置收纳浮窗背景样式，使用主浮窗的透明度
         dark = is_dark_theme(qconfig)
@@ -1369,11 +1448,12 @@ class LevitationWindow(QWidget):
         # 根据指示器样式设置按钮内容
         if self._stick_indicator_style == 1:  # 文字模式
             self.arrow_button.setText("抽")
+            self.arrow_button.setFont(self._font(self._storage_font_size))
         elif self._stick_indicator_style == 0:  # 图标模式
             try:
                 icon = get_theme_icon("ic_fluent_people_20_filled")
                 self.arrow_button.setIcon(icon)
-                self.arrow_button.setIconSize(QSize(20, 20))
+                self.arrow_button.setIconSize(self._storage_icon_size)
             except Exception as e:
                 logger.error(f"加载图标失败: {e}")
                 # 回退到箭头模式
@@ -1381,11 +1461,13 @@ class LevitationWindow(QWidget):
                     self.arrow_button.setText(">")
                 else:
                     self.arrow_button.setText("<")
+                self.arrow_button.setFont(self._font(self._storage_font_size))
         else:  # 箭头模式（默认）
             if direction == "right":
                 self.arrow_button.setText(">")
             else:
                 self.arrow_button.setText("<")
+            self.arrow_button.setFont(self._font(self._storage_font_size))
 
         # 设置按钮点击事件
         self.arrow_button.clicked.connect(lambda: self._show_hidden_window(direction))
@@ -1566,6 +1648,9 @@ class LevitationWindow(QWidget):
             elif second == "floating_window_stick_to_edge_display_style":
                 self._stick_indicator_style = int(value or 0)
                 self.custom_display_mode = int(value or 1)
+            elif second == "floating_window_size":
+                self._apply_size_setting(int(value or 1))
+                self.rebuild_ui()
             elif second == "floating_window_button_control":
                 self._buttons_spec = self._map_button_control(int(value or 0))
                 self.rebuild_ui()

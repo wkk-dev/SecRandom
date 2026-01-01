@@ -292,6 +292,20 @@ class floating_window_appearance_settings(GroupHeaderCardWidget):
             self.floating_window_display_style_combo_box_changed
         )
 
+        # 浮窗大小下拉框
+        self.floating_window_size_combo_box = ComboBox()
+        self.floating_window_size_combo_box.addItems(
+            get_content_combo_name_async(
+                "floating_window_management", "floating_window_size"
+            )
+        )
+        self.floating_window_size_combo_box.setCurrentIndex(
+            readme_settings_async("floating_window_management", "floating_window_size")
+        )
+        self.floating_window_size_combo_box.currentIndexChanged.connect(
+            self.floating_window_size_combo_box_changed
+        )
+
         # 添加设置项到分组
         self.addGroup(
             get_theme_icon("ic_fluent_button_20_filled"),
@@ -323,6 +337,16 @@ class floating_window_appearance_settings(GroupHeaderCardWidget):
             ),
             self.floating_window_display_style_combo_box,
         )
+        self.addGroup(
+            get_theme_icon("ic_fluent_resize_20_filled"),
+            get_content_name_async(
+                "floating_window_management", "floating_window_size"
+            ),
+            get_content_description_async(
+                "floating_window_management", "floating_window_size"
+            ),
+            self.floating_window_size_combo_box,
+        )
 
     def floating_window_button_control_combo_box_changed(self, index):
         update_settings(
@@ -340,6 +364,10 @@ class floating_window_appearance_settings(GroupHeaderCardWidget):
         update_settings(
             "floating_window_management", "floating_window_display_style", index
         )
+        self.appearance_settings_changed.emit()
+
+    def floating_window_size_combo_box_changed(self, index):
+        update_settings("floating_window_management", "floating_window_size", index)
         self.appearance_settings_changed.emit()
 
 
