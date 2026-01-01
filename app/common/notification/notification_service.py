@@ -328,10 +328,15 @@ class FloatingNotificationWindow(CardWidget):
             self.auto_close_timer.setInterval(auto_close_time * 1000)  # 转换为毫秒
             # 初始化倒计时并启动更新定时器
             self.countdown_timer.stop()
-            self.remaining_time = auto_close_time
-            self.update_countdown_display()
-            self.auto_close_timer.start()
+            self.remaining_time = auto_close_time  # 初始化为设定的自动关闭时间
+            # 先显示初始倒计时
+            self.countdown_label.setText(
+                get_any_position_value("notification_common", "auto_close_hint").format(
+                    self.remaining_time  # 显示当前设定的值
+                )
+            )
             self.countdown_timer.start(1000)  # 每秒更新一次
+            self.auto_close_timer.start()  # 启动自动关闭定时器作为备用
         else:
             # 停止倒计时更新定时器并显示手动关闭提示
             self.countdown_timer.stop()
@@ -343,18 +348,17 @@ class FloatingNotificationWindow(CardWidget):
         """更新倒计时显示"""
         self.remaining_time -= 1
         # 动画完成时显示倒计时
-        if self.remaining_time >= 0:
+        if self.remaining_time > 0:
             self.countdown_label.setText(
                 get_any_position_value("notification_common", "auto_close_hint").format(
-                    self.remaining_time + 1
+                    self.remaining_time
                 )
             )
         else:
-            # 当倒计时结束时停止定时器
+            # 当倒计时减到0或以下时立即关闭窗口
             self.countdown_timer.stop()
-            self.countdown_label.setText(
-                get_any_position_value("notification_common", "manual_close_hint")
-            )
+            self.auto_close_timer.stop()  # 停止自动关闭定时器，防止重复关闭
+            self.start_hide_animation()
 
     def _on_theme_changed(self):
         """主题切换时更新浮窗内文字和背景颜色"""
