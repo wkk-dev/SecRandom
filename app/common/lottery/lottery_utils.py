@@ -43,13 +43,18 @@ class LotteryUtils:
             int: 总人数
         """
         if range_combobox_index == 0:  # 全班
-            total_count = len(get_student_list(list_combobox_text))
+            students = get_student_list(list_combobox_text)
+            total_count = len([s for s in students if s.get("exist", True)])
         elif range_combobox_index == 1:  # 小组模式 - 计算小组数量
             total_count = len(get_group_list(list_combobox_text))
         else:  # 特定小组 - 计算该小组的学生数量
             students = get_student_list(list_combobox_text)
             total_count = len(
-                [s for s in students if s["group"] == range_combobox_text]
+                [
+                    s
+                    for s in students
+                    if s["group"] == range_combobox_text and s.get("exist", True)
+                ]
             )
         return total_count
 
@@ -256,7 +261,8 @@ class LotteryUtils:
         try:
             from app.common.data.list import get_pool_list
 
-            return len(get_pool_list(pool_name))
+            items = get_pool_list(pool_name)
+            return len([item for item in items if item.get("exist", True)])
         except Exception:
             return 0
 
@@ -362,13 +368,16 @@ class LotteryUtils:
             from app.common.data.list import get_pool_list
 
             threshold = LotteryUtils._get_prize_draw_threshold()
-            total = len(get_pool_list(pool_name))
+            items = [
+                item for item in get_pool_list(pool_name) if item.get("exist", True)
+            ]
+            total = len(items)
             if threshold is None:
                 return total
             drawn_records = read_drawn_record_simple(pool_name)
             drawn_counts = {name: cnt for name, cnt in drawn_records}
             remain = 0
-            for i in get_pool_list(pool_name):
+            for i in items:
                 name = i.get("name", "")
                 cnt = int(drawn_counts.get(name, 0))
                 if cnt < threshold:

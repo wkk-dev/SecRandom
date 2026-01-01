@@ -37,13 +37,18 @@ class RollCallUtils:
             int: 总人数
         """
         if range_combobox_index == 0:  # 全班
-            total_count = len(get_student_list(list_combobox_text))
+            students = get_student_list(list_combobox_text)
+            total_count = len([s for s in students if s.get("exist", True)])
         elif range_combobox_index == 1:  # 小组模式 - 计算小组数量
             total_count = len(get_group_list(list_combobox_text))
         else:  # 特定小组 - 计算该小组的学生数量
             students = get_student_list(list_combobox_text)
             total_count = len(
-                [s for s in students if s["group"] == range_combobox_text]
+                [
+                    s
+                    for s in students
+                    if s["group"] == range_combobox_text and s.get("exist", True)
+                ]
             )
         return total_count
 

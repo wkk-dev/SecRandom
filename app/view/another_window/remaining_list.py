@@ -100,13 +100,16 @@ class StudentLoader(QThread):
 
         students: List[Dict[str, Any]] = []
         for name, payload in raw_data.items():
+            exist = payload.get("exist", True)
+            if not exist:
+                continue
             students.append(
                 {
                     "id": payload.get("id", ""),
                     "name": name,
                     "gender": payload.get("gender", ""),
                     "group": payload.get("group", ""),
-                    "exist": payload.get("exist", True),
+                    "exist": exist,
                 }
             )
         students.sort(key=lambda item: item.get("name", ""))
