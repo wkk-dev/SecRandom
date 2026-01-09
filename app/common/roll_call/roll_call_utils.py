@@ -24,6 +24,10 @@ system_random = SystemRandom()
 class RollCallUtils:
     """点名工具类，提供通用的点名相关功能"""
 
+    _student_data_cache = {}
+    _drawn_record_cache = {}
+    _behind_scenes_cache = {}
+
     @staticmethod
     def get_total_count(list_combobox_text, range_combobox_index, range_combobox_text):
         """
@@ -132,19 +136,26 @@ class RollCallUtils:
         Returns:
             dict: 包含抽取结果的字典
         """
-        student_file = get_data_path("list/roll_call_list", f"{class_name}.json")
-        with open_file(student_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        students_data = filter_students_data(
-            data, group_index, group_filter, gender_index, gender_filter
+        cache_key = (
+            f"{class_name}_{group_index}_{group_filter}_{gender_index}_{gender_filter}"
         )
 
-        if group_index == 1:
-            # 小组模式下，按小组名称排序
-            students_data = sorted(students_data, key=lambda x: x[3])  # x[3]是小组名称
+        if cache_key not in RollCallUtils._student_data_cache:
+            student_file = get_data_path("list/roll_call_list", f"{class_name}.json")
+            with open_file(student_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
 
-            # 首先将学生数据转换为字典列表
+            students_data = filter_students_data(
+                data, group_index, group_filter, gender_index, gender_filter
+            )
+
+            RollCallUtils._student_data_cache[cache_key] = students_data
+        else:
+            students_data = RollCallUtils._student_data_cache[cache_key]
+
+        if group_index == 1:
+            students_data = sorted(students_data, key=lambda x: x[3])
+
             students_dict_list = []
             for student_tuple in students_data:
                 student_dict = {
@@ -156,7 +167,6 @@ class RollCallUtils:
                 }
                 students_dict_list.append(student_dict)
 
-            # 处理小组模式下的特殊逻辑
             draw_type = readme_settings_async("roll_call_settings", "draw_type")
             selected_groups = RollCallUtils.draw_random_groups(
                 students_dict_list, current_count, draw_type
@@ -165,12 +175,11 @@ class RollCallUtils:
             return {
                 "selected_students": selected_groups,
                 "class_name": class_name,
-                "selected_students_dict": [],  # 小组模式下不存储学生字典
+                "selected_students_dict": [],
                 "group_filter": group_filter,
                 "gender_filter": gender_filter,
             }
 
-        # 首先将学生数据转换为字典列表
         students_dict_list = []
         for student_tuple in students_data:
             student_dict = {
@@ -183,7 +192,15 @@ class RollCallUtils:
             students_dict_list.append(student_dict)
 
         if half_repeat > 0:
-            drawn_records = read_drawn_record(class_name, gender_filter, group_filter)
+            record_key = f"{class_name}_{gender_filter}_{group_filter}"
+            if record_key not in RollCallUtils._drawn_record_cache:
+                drawn_records = read_drawn_record(
+                    class_name, gender_filter, group_filter
+                )
+                RollCallUtils._drawn_record_cache[record_key] = drawn_records
+            else:
+                drawn_records = RollCallUtils._drawn_record_cache[record_key]
+
             drawn_counts = {name: count for name, count in drawn_records}
 
             filtered_students = []
@@ -198,15 +215,12 @@ class RollCallUtils:
             students_dict_list = filtered_students
 
         if not students_dict_list:
-            # 注意：这里我们返回一个特殊的标记，让调用者处理
             return {"reset_required": True}
 
-        # 应用平均值差值保护
         students_dict_list = apply_avg_gap_protection(
             students_dict_list, current_count, class_name, "roll_call"
         )
 
-        # 应用内幕设置
         students_dict_list, behind_scenes_weights = (
             BehindScenesUtils.apply_probability_weights(
                 students_dict_list, 0, class_name

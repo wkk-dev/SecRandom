@@ -31,7 +31,7 @@ def get_font_weight_file(weight_value: int) -> str:
         7: "HarmonyOS_Sans_SC_Bold.ttf",
         8: "HarmonyOS_Sans_SC_Bold.ttf",
     }
-    return font_file_map.get(weight_value, "HarmonyOS_Sans_SC_Regular.ttf")
+    return font_file_map.get(weight_value, "HarmonyOS_Sans_SC_Medium.ttf")
 
 
 def load_font_by_weight(font_family: str, font_weight: int) -> str:

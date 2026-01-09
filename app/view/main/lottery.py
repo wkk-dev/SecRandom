@@ -56,6 +56,10 @@ class Lottery(QWidget):
         # 初始化TTS处理器
         self.tts_handler = TTSHandler()
 
+        self.animation_labels_cache = []
+        self.is_animation_running = False
+        self.animation_cache = {}
+
         self.initUI()
         self.setupSettingsListener()
 
@@ -561,6 +565,23 @@ class Lottery(QWidget):
             logger.exception(
                 "Error disconnecting start_button clicked (ignored): {}", e
             )
+
+        pool_name = self.pool_list_combobox.currentText()
+        group_index = self.range_combobox.currentIndex()
+        group_filter = self.range_combobox.currentText()
+        gender_index = self.gender_combobox.currentIndex()
+        gender_filter = self.gender_combobox.currentText()
+        half_repeat = readme_settings_async("lottery_settings", "half_repeat")
+
+        self.animation_cache = {
+            "pool_name": pool_name,
+            "group_index": group_index,
+            "group_filter": group_filter,
+            "gender_index": gender_index,
+            "gender_filter": gender_filter,
+            "half_repeat": half_repeat,
+        }
+
         self.draw_random()
         animation = readme_settings_async("lottery_settings", "animation")
         autoplay_count = readme_settings_async("lottery_settings", "autoplay_count")
@@ -599,19 +620,13 @@ class Lottery(QWidget):
                     fade_in=True,
                 )
 
+            self.animation_count = 0
+            self.target_animation_count = autoplay_count
             self.is_animating = True
             self.animation_timer = QTimer()
             self.animation_timer.timeout.connect(self.animate_result)
             self.animation_timer.start(animation_interval)
             self.start_button.setEnabled(False)
-            QTimer.singleShot(
-                autoplay_count * animation_interval,
-                lambda: [
-                    self.animation_timer.stop(),
-                    self.stop_animation(),
-                    self.start_button.setEnabled(True),
-                ],
-            )
             self.start_button.clicked.connect(lambda: self.start_draw())
         elif animation == 2:
             if hasattr(self, "final_selected_students_dict") and hasattr(
@@ -649,7 +664,11 @@ class Lottery(QWidget):
         self.start_button.setText(
             get_content_pushbutton_name_async("lottery", "start_button")
         )
+        self.start_button.setEnabled(True)
         self.is_animating = False
+        self.is_animation_running = False
+        self.animation_labels_cache.clear()
+        self.animation_cache.clear()
         try:
             self.start_button.clicked.disconnect()
         except Exception as e:
@@ -789,13 +808,20 @@ class Lottery(QWidget):
 
     def draw_random(self):
         """抽取随机结果"""
-        pool_name = self.pool_list_combobox.currentText()
-        group_index = self.range_combobox.currentIndex()
-        group_filter = self.range_combobox.currentText()
-        gender_index = self.gender_combobox.currentIndex()
-        gender_filter = self.gender_combobox.currentText()
-
-        half_repeat = readme_settings_async("lottery_settings", "half_repeat")
+        if self.is_animation_running and self.animation_cache:
+            pool_name = self.animation_cache["pool_name"]
+            group_index = self.animation_cache["group_index"]
+            group_filter = self.animation_cache["group_filter"]
+            gender_index = self.animation_cache["gender_index"]
+            gender_filter = self.animation_cache["gender_filter"]
+            half_repeat = self.animation_cache["half_repeat"]
+        else:
+            pool_name = self.pool_list_combobox.currentText()
+            group_index = self.range_combobox.currentIndex()
+            group_filter = self.range_combobox.currentText()
+            gender_index = self.gender_combobox.currentIndex()
+            gender_filter = self.gender_combobox.currentText()
+            half_repeat = readme_settings_async("lottery_settings", "half_repeat")
 
         result = LotteryUtils.draw_random_prizes(
             pool_name,
@@ -853,7 +879,12 @@ class Lottery(QWidget):
             except Exception as e:
                 logger.error(f"奖池跟随学生拼接失败: {e}")
 
-        self.display_result(self.final_selected_students, self.final_pool_name)
+        if self.is_animation_running:
+            self.display_result_animated(
+                self.final_selected_students, self.final_pool_name
+            )
+        else:
+            self.display_result(self.final_selected_students, self.final_pool_name)
 
         # 检查是否启用了通知服务
         call_notification_service = readme_settings_async(
@@ -910,6 +941,42 @@ class Lottery(QWidget):
             settings_group="lottery_settings",
         )
         ResultDisplayUtils.display_results_in_grid(self.result_grid, student_labels)
+
+    def display_result_animated(self, selected_students, pool_name):
+        """动画过程中显示结果（优化版，复用控件）
+
+        Args:
+            selected_students: 选中的学生列表
+            pool_name: 奖池名称
+        """
+        font_size = get_safe_font_size("lottery_settings", "font_size")
+        animation_color = readme_settings_async(
+            "lottery_settings", "animation_color_theme"
+        )
+        display_format = readme_settings_async("lottery_settings", "display_format")
+        show_student_image = readme_settings_async("lottery_settings", "student_image")
+        show_random = readme_settings_async("lottery_settings", "show_random")
+
+        student_labels = ResultDisplayUtils.create_student_label(
+            pool_name=pool_name,
+            selected_students=selected_students,
+            draw_count=self.current_count,
+            font_size=font_size,
+            animation_color=animation_color,
+            display_format=display_format,
+            show_student_image=show_student_image,
+            group_index=0,
+            show_random=show_random,
+            settings_group="lottery_settings",
+        )
+
+        if not self.animation_labels_cache:
+            ResultDisplayUtils.display_results_in_grid(self.result_grid, student_labels)
+            self.animation_labels_cache = student_labels
+        else:
+            ResultDisplayUtils.update_grid_labels(
+                self.result_grid, student_labels, self.animation_labels_cache
+            )
 
     def _do_reset_count(self):
         """实际执行重置奖数的逻辑"""

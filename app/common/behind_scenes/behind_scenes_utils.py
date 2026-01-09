@@ -1,6 +1,7 @@
 # ==================================================
 # 内幕工具类
 # ==================================================
+import time
 from loguru import logger
 
 from app.common.safety.secure_store import read_behind_scenes_settings
@@ -9,18 +10,43 @@ from app.common.safety.secure_store import read_behind_scenes_settings
 class BehindScenesUtils:
     """内幕工具类，提供内幕设置相关功能"""
 
+    _settings_cache = None
+    _cache_timestamp = 0
+    _cache_ttl = 5.0
+
     @staticmethod
-    def get_behind_scenes_settings():
+    def get_behind_scenes_settings(use_cache=True):
         """获取内幕设置数据
+
+        Args:
+            use_cache: 是否使用缓存（默认为True）
 
         Returns:
             dict: 内幕设置数据字典
         """
+        current_time = time.time()
+
+        if use_cache and BehindScenesUtils._settings_cache is not None:
+            if (
+                current_time - BehindScenesUtils._cache_timestamp
+                < BehindScenesUtils._cache_ttl
+            ):
+                return BehindScenesUtils._settings_cache
+
         try:
-            return read_behind_scenes_settings()
+            settings = read_behind_scenes_settings()
+            BehindScenesUtils._settings_cache = settings
+            BehindScenesUtils._cache_timestamp = current_time
+            return settings
         except Exception as e:
             logger.error(f"读取内幕设置失败: {e}")
             return {}
+
+    @staticmethod
+    def clear_cache():
+        """清除缓存"""
+        BehindScenesUtils._settings_cache = None
+        BehindScenesUtils._cache_timestamp = 0
 
     @staticmethod
     def get_probability_settings(name, mode, pool_name=None):

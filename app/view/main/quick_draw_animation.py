@@ -37,6 +37,8 @@ class QuickDrawAnimation(QObject):
         self.final_selected_students_dict = None
         self.final_group_filter = None
         self.final_gender_filter = None
+        self.animation_labels_cache = []
+        self.animation_cache = {}
 
     def start_animation(self, quick_draw_settings):
         """开始闪抽动画
@@ -48,15 +50,34 @@ class QuickDrawAnimation(QObject):
 
         self.is_animating = True
 
-        # 设置闪抽模式标志，避免stop_animation方法覆盖闪抽结果
         self.roll_call_widget.is_quick_draw = True
 
-        # 获取动画音乐设置
+        class_name = readme_settings_async("quick_draw_settings", "default_class")
+        group_index = 0
+        group_filter = get_content_combo_name_async("roll_call", "range_combobox")[
+            group_index
+        ]
+        gender_index = 0
+        gender_filter = get_content_combo_name_async("roll_call", "gender_combobox")[
+            gender_index
+        ]
+        current_count = readme_settings_async("quick_draw_settings", "draw_count")
+        half_repeat = readme_settings_async("quick_draw_settings", "half_repeat")
+
+        self.animation_cache = {
+            "class_name": class_name,
+            "group_index": group_index,
+            "group_filter": group_filter,
+            "gender_index": gender_index,
+            "gender_filter": gender_filter,
+            "current_count": current_count,
+            "half_repeat": half_repeat,
+        }
+
         animation_music = readme_settings_async(
             "quick_draw_settings", "animation_music"
         )
         if animation_music:
-            # 播放动画音乐
             music_player.play_music(
                 music_file=animation_music,
                 settings_group="quick_draw_settings",
@@ -64,31 +85,26 @@ class QuickDrawAnimation(QObject):
                 fade_in=True,
             )
 
-        # 根据动画模式选择不同的实现方式
         animation_mode = quick_draw_settings["animation"]
         animation_interval = quick_draw_settings["animation_interval"]
         autoplay_count = quick_draw_settings["autoplay_count"]
 
-        # 创建动画定时器
         self.animation_timer = QTimer()
         self.animation_timer.timeout.connect(self._animate_result)
         self.animation_timer.start(animation_interval)
 
-        if animation_mode == 0:  # 手动停止模式（虽然也没有这个了）
-            # 这种模式下，动画会一直运行，直到调用stop_animation
+        if animation_mode == 0:
             logger.debug(
                 f"start_animation: 手动停止模式，动画间隔: {animation_interval}ms"
             )
-        elif animation_mode == 1:  # 自动停止模式
-            # 这种模式下，动画会运行指定次数后自动停止
+        elif animation_mode == 1:
             logger.debug(
                 f"start_animation: 自动停止模式，动画间隔: {animation_interval}ms, 运行次数: {autoplay_count}"
             )
             QTimer.singleShot(
                 autoplay_count * animation_interval, lambda: self.stop_animation()
             )
-        elif animation_mode == 2:  # 无动画模式
-            # 这种模式下，直接停止动画
+        elif animation_mode == 2:
             logger.debug("start_animation: 无动画模式，直接停止动画")
             self.stop_animation()
 
@@ -103,11 +119,15 @@ class QuickDrawAnimation(QObject):
         ):
             self.animation_timer.stop()
             self.is_animating = False
+            self.animation_labels_cache.clear()
+            self.animation_cache.clear()
 
-            # 停止动画音乐
+            from app.common.behind_scenes.behind_scenes_utils import BehindScenesUtils
+
+            BehindScenesUtils.clear_cache()
+
             music_player.stop_music(fade_out=True)
 
-            # 播放结果音乐
             result_music = readme_settings_async("quick_draw_settings", "result_music")
             if result_music:
                 music_player.play_music(
@@ -117,27 +137,21 @@ class QuickDrawAnimation(QObject):
                     fade_in=True,
                 )
 
-            # 移除闪抽模式标志
             self.roll_call_widget.is_quick_draw = False
-
-            # 发出动画完成信号
             self.animation_finished.emit()
 
     def _animate_result(self):
         """动画过程中更新显示"""
         if self.is_animating:
-            # 使用独立的抽取逻辑更新结果
             self.draw_random_students()
 
-            # 使用闪抽设置更新显示结果
             if self.final_selected_students and self.final_class_name:
-                self.roll_call_widget.display_result(
+                self.display_result_animated(
                     self.final_selected_students,
                     self.final_class_name,
                     self.quick_draw_settings,
                 )
 
-            # 同时更新浮窗通知内容
             self._update_floating_notification()
 
     def is_animation_active(self):
@@ -150,35 +164,35 @@ class QuickDrawAnimation(QObject):
 
     def draw_random_students(self):
         """独立的随机学生抽取逻辑，不依赖roll_call_widget的状态"""
-        # 从设置中读取默认抽取名单
-        class_name = readme_settings_async("quick_draw_settings", "default_class")
-        if not class_name:
-            logger.error("draw_random_students: 未设置默认抽取名单")
-            return False
+        if self.animation_cache:
+            class_name = self.animation_cache["class_name"]
+            group_index = self.animation_cache["group_index"]
+            group_filter = self.animation_cache["group_filter"]
+            gender_index = self.animation_cache["gender_index"]
+            gender_filter = self.animation_cache["gender_filter"]
+            current_count = self.animation_cache["current_count"]
+            half_repeat = self.animation_cache["half_repeat"]
+        else:
+            class_name = readme_settings_async("quick_draw_settings", "default_class")
+            if not class_name:
+                logger.error("draw_random_students: 未设置默认抽取名单")
+                return False
 
-        # 设置范围为"抽取全部学生"（索引0）
-        group_index = 0
-        group_filter = get_content_combo_name_async("roll_call", "range_combobox")[
-            group_index
-        ]
-
-        # 设置性别为"抽取全部性别"（索引0）
-        gender_index = 0
-        gender_filter = get_content_combo_name_async("roll_call", "gender_combobox")[
-            gender_index
-        ]
-
-        # 从闪抽设置中读取抽取人数
-        current_count = readme_settings_async("quick_draw_settings", "draw_count")
-
-        # 从闪抽设置中读取半重复设置
-        half_repeat = readme_settings_async("quick_draw_settings", "half_repeat")
+            group_index = 0
+            group_filter = get_content_combo_name_async("roll_call", "range_combobox")[
+                group_index
+            ]
+            gender_index = 0
+            gender_filter = get_content_combo_name_async(
+                "roll_call", "gender_combobox"
+            )[gender_index]
+            current_count = readme_settings_async("quick_draw_settings", "draw_count")
+            half_repeat = readme_settings_async("quick_draw_settings", "half_repeat")
 
         logger.debug(
             f"draw_random_students: 班级={class_name}, 范围={group_filter}, 性别={gender_filter}, 数量={current_count}"
         )
 
-        # 使用工具类抽取随机学生
         result = RollCallUtils.draw_random_students(
             class_name,
             group_index,
@@ -189,7 +203,6 @@ class QuickDrawAnimation(QObject):
             half_repeat,
         )
 
-        # 处理需要重置的情况
         if "reset_required" in result and result["reset_required"]:
             RollCallUtils.reset_drawn_records(
                 self.roll_call_widget, class_name, gender_filter, group_filter
@@ -468,3 +481,42 @@ class QuickDrawAnimation(QObject):
 
         except Exception as e:
             logger.error(f"_update_floating_notification: 更新浮窗通知失败: {e}")
+
+    def display_result_animated(self, selected_students, class_name, display_settings):
+        """动画过程中显示结果（优化版，复用控件）
+
+        Args:
+            selected_students: 选中的学生列表
+            class_name: 班级名称
+            display_settings: 显示设置字典
+        """
+        font_size = display_settings["font_size"]
+        animation_color = display_settings["animation_color_theme"]
+        display_format = display_settings["display_format"]
+        show_student_image = display_settings["student_image"]
+        show_random = display_settings["show_random"]
+
+        student_labels = ResultDisplayUtils.create_student_label(
+            class_name=class_name,
+            selected_students=selected_students,
+            draw_count=len(selected_students),
+            font_size=font_size,
+            animation_color=animation_color,
+            display_format=display_format,
+            show_student_image=show_student_image,
+            group_index=0,
+            show_random=show_random,
+            settings_group="quick_draw_settings",
+        )
+
+        if not self.animation_labels_cache:
+            ResultDisplayUtils.display_results_in_grid(
+                self.roll_call_widget.result_grid, student_labels
+            )
+            self.animation_labels_cache = student_labels
+        else:
+            ResultDisplayUtils.update_grid_labels(
+                self.roll_call_widget.result_grid,
+                student_labels,
+                self.animation_labels_cache,
+            )

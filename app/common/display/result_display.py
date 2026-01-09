@@ -636,16 +636,13 @@ class ResultDisplayUtils:
             alignment = Qt.AlignmentFlag.AlignCenter
         result_grid.setAlignment(alignment)
 
-        # 清除现有的所有控件
         ResultDisplayUtils.clear_grid(result_grid)
 
         if not student_labels:
             return
 
-        # 内存优化：使用生成器表达式减少内存分配
         label_count = len(student_labels)
 
-        # 计算网格布局参数
         parent_widget = result_grid.parentWidget()
         available_width = (
             (parent_widget.width() - GRID_ITEM_MARGIN)
@@ -653,7 +650,6 @@ class ResultDisplayUtils:
             else DEFAULT_AVAILABLE_WIDTH
         )
 
-        # 内存优化：避免创建大型临时列表
         total_width = 0
         for label in student_labels:
             total_width += label.sizeHint().width()
@@ -665,49 +661,81 @@ class ResultDisplayUtils:
         else:
             max_columns = label_count if label_count > 0 else 1
 
-        # 内存优化：使用迭代器而非枚举，减少内存占用
         for i in range(label_count):
             row = i // max_columns
             col = i % max_columns
             result_grid.addWidget(student_labels[i], row, col)
 
-        # 确保父级滚动区域能够正确计算内容大小
         if parent_widget:
             parent_widget.updateGeometry()
 
     @staticmethod
-    def clear_grid(result_grid):
+    def update_grid_labels(result_grid, new_labels, cached_labels):
+        """
+        更新网格布局中的标签内容（优化动画性能）
+
+        参数:
+            result_grid: QGridLayout 网格布局
+            new_labels: 新的学生标签列表
+            cached_labels: 缓存的旧标签列表
+        """
+        if not new_labels:
+            return
+
+        count = result_grid.count()
+        min_count = min(len(new_labels), len(cached_labels))
+
+        for i in range(min_count):
+            old_widget = cached_labels[i]
+            new_widget = new_labels[i]
+
+            if old_widget and new_widget:
+                old_layout = old_widget.layout()
+                new_layout = new_widget.layout()
+
+                if old_layout and new_layout:
+                    for j in range(min(old_layout.count(), new_layout.count())):
+                        old_item = old_layout.itemAt(j)
+                        new_item = new_layout.itemAt(j)
+
+                        if old_item and new_item:
+                            old_label = old_item.widget()
+                            new_label = new_item.widget()
+
+                            if isinstance(old_label, BodyLabel) and isinstance(
+                                new_label, BodyLabel
+                            ):
+                                old_label.setText(new_label.text())
+                                old_label.setStyleSheet(new_label.styleSheet())
+
+        cached_labels[:] = new_labels
+
+    @staticmethod
+    def clear_grid(result_grid, log_debug=False):
         """
         清空网格布局中的所有小部件
 
         参数:
             result_grid: QGridLayout 网格布局
+            log_debug: 是否输出调试日志（默认为False）
         """
-        # 内存优化：批量处理减少循环开销
         count = result_grid.count()
         if count == 0:
             return
 
-        # 批量移除和清理widget
         items_to_delete = []
         for i in range(count):
             item = result_grid.takeAt(0)
             if item and item.widget():
                 widget = item.widget()
-                widget.hide()  # 先隐藏
-                widget.deleteLater()  # 异步删除
+                widget.hide()
+                widget.deleteLater()
                 items_to_delete.append(item)
 
-        # 内存优化：只在有组件被删除时记录日志
-        if count > 0:
+        if log_debug and count > 0:
             logger.debug(f"本次销毁了{count}个组件")
 
-        # 清理缓存引用
         ResultDisplayUtils._color_cache.clear()
-
-        # 强制进行垃圾回收（可选，根据内存压力决定）
-        # import gc
-        # gc.collect()
 
     @staticmethod
     def show_notification_if_enabled(

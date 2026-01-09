@@ -45,16 +45,18 @@ class roll_call(QWidget):
         self.file_watcher = QFileSystemWatcher()
         self.setup_file_watcher()
 
-        # 长按功能相关变量
         self.press_timer = QTimer()
         self.press_timer.timeout.connect(self.handle_long_press)
-        self.long_press_interval = 100  # 长按时连续触发的间隔时间(毫秒)
-        self.long_press_delay = 500  # 开始长按前的延迟时间(毫秒)
-        self.is_long_pressing = False  # 是否正在长按
-        self.long_press_direction = 0  # 长按方向：1为增加，-1为减少
+        self.long_press_interval = 100
+        self.long_press_delay = 500
+        self.is_long_pressing = False
+        self.long_press_direction = 0
 
-        # 初始化TTS处理器
         self.tts_handler = TTSHandler()
+
+        self.animation_labels_cache = []
+        self.is_animation_running = False
+        self.animation_cache = {}
 
         self.initUI()
         self.setupSettingsListener()
@@ -547,12 +549,27 @@ class roll_call(QWidget):
             logger.exception(
                 "Error disconnecting start_button clicked (ignored): {}", e
             )
+
+        class_name = self.list_combobox.currentText()
+        group_index = self.range_combobox.currentIndex()
+        group_filter = self.range_combobox.currentText()
+        gender_index = self.gender_combobox.currentIndex()
+        gender_filter = self.gender_combobox.currentText()
+        half_repeat = readme_settings_async("roll_call_settings", "half_repeat")
+
+        self.animation_cache = {
+            "class_name": class_name,
+            "group_index": group_index,
+            "group_filter": group_filter,
+            "gender_index": gender_index,
+            "gender_filter": gender_filter,
+            "half_repeat": half_repeat,
+        }
+
         self.draw_random()
 
-        # 获取动画音乐设置
         animation_music = readme_settings_async("roll_call_settings", "animation_music")
         if animation_music:
-            # 播放动画音乐
             music_player.play_music(
                 music_file=animation_music,
                 settings_group="roll_call_settings",
@@ -590,7 +607,6 @@ class roll_call(QWidget):
             )
             self.start_button.clicked.connect(lambda: self.start_draw())
         elif animation == 2:
-            # 调用stop_animation()方法更新剩余人数
             self.stop_animation()
             self.start_button.clicked.connect(lambda: self.start_draw())
 
@@ -613,7 +629,6 @@ class roll_call(QWidget):
 
     def stop_animation(self):
         """停止动画"""
-        # 检查是否是闪抽模式
         is_quick_draw = hasattr(self, "is_quick_draw") and self.is_quick_draw
 
         if hasattr(self, "animation_timer") and self.animation_timer.isActive():
@@ -622,6 +637,14 @@ class roll_call(QWidget):
             get_content_pushbutton_name_async("roll_call", "start_button")
         )
         self.is_animating = False
+        self.is_animation_running = False
+        self.animation_labels_cache.clear()
+        self.animation_cache.clear()
+
+        from app.common.behind_scenes.behind_scenes_utils import BehindScenesUtils
+
+        BehindScenesUtils.clear_cache()
+
         try:
             self.start_button.clicked.disconnect()
         except Exception as e:
@@ -649,7 +672,6 @@ class roll_call(QWidget):
             ):
                 self.remaining_list_page.count_changed.emit(self.remaining_count)
 
-            # 更新剩余名单窗口
             QTimer.singleShot(APP_INIT_DELAY, self._update_remaining_list_delayed)
 
         if hasattr(self, "final_selected_students") and hasattr(
@@ -663,31 +685,23 @@ class roll_call(QWidget):
             )
 
         if hasattr(self, "final_selected_students"):
-            # 如果是闪抽模式，不调用display_result，避免覆盖闪抽结果
             if not is_quick_draw:
                 self.display_result(self.final_selected_students, self.final_class_name)
 
-                # 检查是否启用了通知服务
                 call_notification_service = readme_settings_async(
                     "roll_call_notification_settings", "call_notification_service"
                 )
-                # 检查是否启用了最大浮窗通知人数功能
                 use_main_window_when_exceed_threshold = readme_settings_async(
                     "roll_call_notification_settings",
                     "use_main_window_when_exceed_threshold",
                 )
-                # 检查人数是否超过最大浮窗通知人数
                 max_notify_count = readme_settings_async(
                     "roll_call_notification_settings", "main_window_display_threshold"
                 )
                 if call_notification_service:
-                    # 准备通知设置
                     settings = RollCallUtils.prepare_notification_settings()
-                    # 只有当没有启用阈值功能，或者启用了但抽取人数没有超过阈值时，才显示通知
                     if use_main_window_when_exceed_threshold:
-                        # 如果启用了阈值功能，检查抽取人数是否超过阈值
                         if self.current_count <= max_notify_count:
-                            # 使用ResultDisplayUtils显示通知
                             ResultDisplayUtils.show_notification_if_enabled(
                                 self.final_class_name,
                                 self.final_selected_students,
@@ -696,7 +710,6 @@ class roll_call(QWidget):
                                 settings_group="roll_call_notification_settings",
                             )
                     else:
-                        # 如果没有启用阈值功能，直接显示通知
                         ResultDisplayUtils.show_notification_if_enabled(
                             self.final_class_name,
                             self.final_selected_students,
@@ -705,13 +718,10 @@ class roll_call(QWidget):
                             settings_group="roll_call_notification_settings",
                         )
 
-            # 播放语音
             self.play_voice_result()
 
-            # 停止动画音乐
             music_player.stop_music(fade_out=True)
 
-            # 播放结果音乐
             result_music = readme_settings_async("roll_call_settings", "result_music")
             if result_music:
                 music_player.play_music(
@@ -766,15 +776,21 @@ class roll_call(QWidget):
 
     def draw_random(self):
         """抽取随机结果"""
-        class_name = self.list_combobox.currentText()
-        group_index = self.range_combobox.currentIndex()
-        group_filter = self.range_combobox.currentText()
-        gender_index = self.gender_combobox.currentIndex()
-        gender_filter = self.gender_combobox.currentText()
+        if self.is_animation_running and self.animation_cache:
+            class_name = self.animation_cache["class_name"]
+            group_index = self.animation_cache["group_index"]
+            group_filter = self.animation_cache["group_filter"]
+            gender_index = self.animation_cache["gender_index"]
+            gender_filter = self.animation_cache["gender_filter"]
+            half_repeat = self.animation_cache["half_repeat"]
+        else:
+            class_name = self.list_combobox.currentText()
+            group_index = self.range_combobox.currentIndex()
+            group_filter = self.range_combobox.currentText()
+            gender_index = self.gender_combobox.currentIndex()
+            gender_filter = self.gender_combobox.currentText()
+            half_repeat = readme_settings_async("roll_call_settings", "half_repeat")
 
-        half_repeat = readme_settings_async("roll_call_settings", "half_repeat")
-
-        # 使用工具类抽取随机学生
         result = RollCallUtils.draw_random_students(
             class_name,
             group_index,
@@ -785,7 +801,6 @@ class roll_call(QWidget):
             half_repeat,
         )
 
-        # 处理需要重置的情况
         if "reset_required" in result and result["reset_required"]:
             RollCallUtils.reset_drawn_records(
                 self, class_name, gender_filter, group_filter
@@ -798,7 +813,12 @@ class roll_call(QWidget):
         self.final_group_filter = result["group_filter"]
         self.final_gender_filter = result["gender_filter"]
 
-        self.display_result(result["selected_students"], result["class_name"])
+        if self.is_animation_running:
+            self.display_result_animated(
+                result["selected_students"], result["class_name"]
+            )
+        else:
+            self.display_result(result["selected_students"], result["class_name"])
 
         # 检查是否启用了通知服务
         call_notification_service = readme_settings_async(
@@ -897,6 +917,45 @@ class roll_call(QWidget):
         )
         ResultDisplayUtils.display_results_in_grid(self.result_grid, student_labels)
 
+    def display_result_animated(self, selected_students, class_name):
+        """动画过程中显示结果（优化版，复用控件）
+
+        Args:
+            selected_students: 选中的学生列表
+            class_name: 班级名称
+        """
+        group_index = self.range_combobox.currentIndex()
+        font_size = get_safe_font_size("roll_call_settings", "font_size")
+        animation_color = readme_settings_async(
+            "roll_call_settings", "animation_color_theme"
+        )
+        display_format = readme_settings_async("roll_call_settings", "display_format")
+        show_student_image = readme_settings_async(
+            "roll_call_settings", "student_image"
+        )
+        show_random = readme_settings_async("roll_call_settings", "show_random")
+
+        student_labels = ResultDisplayUtils.create_student_label(
+            class_name=class_name,
+            selected_students=selected_students,
+            draw_count=self.current_count,
+            font_size=font_size,
+            animation_color=animation_color,
+            display_format=display_format,
+            show_student_image=show_student_image,
+            group_index=group_index,
+            show_random=show_random,
+            settings_group="roll_call_settings",
+        )
+
+        if not self.animation_labels_cache:
+            ResultDisplayUtils.display_results_in_grid(self.result_grid, student_labels)
+            self.animation_labels_cache = student_labels
+        else:
+            ResultDisplayUtils.update_grid_labels(
+                self.result_grid, student_labels, self.animation_labels_cache
+            )
+
     def _do_reset_count(self):
         """实际执行重置人数的逻辑"""
         self.current_count = 1
@@ -944,6 +1003,8 @@ class roll_call(QWidget):
     def clear_result(self):
         """清空结果显示"""
         ResultDisplayUtils.clear_grid(self.result_grid)
+        self.animation_labels_cache.clear()
+        self.animation_cache.clear()
 
     def update_count(self, change):
         """更新人数
