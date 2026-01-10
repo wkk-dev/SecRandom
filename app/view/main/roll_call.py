@@ -54,9 +54,7 @@ class roll_call(QWidget):
 
         self.tts_handler = TTSHandler()
 
-        self.animation_labels_cache = []
-        self.is_animation_running = False
-        self.animation_cache = {}
+        self.is_animating = False
 
         self.initUI()
         self.setupSettingsListener()
@@ -108,159 +106,43 @@ class roll_call(QWidget):
         self.result_widget = QWidget()
         self.result_layout = QVBoxLayout(self.result_widget)
         self.result_grid = QGridLayout()
-        # 移除拉伸，让内容可以自由扩展，确保滚动正常
         self.result_layout.addLayout(self.result_grid)
         roll_call_container.addWidget(self.result_widget)
 
-        self.reset_button = PushButton(
-            get_content_pushbutton_name_async("roll_call", "reset_button")
+        self.reset_button = self._create_button(
+            "roll_call", "reset_button", 15, self.reset_count
         )
-        self._set_widget_font(self.reset_button, 15)
-        self.reset_button.setFixedHeight(45)
-        self.reset_button.clicked.connect(lambda: self.reset_count())
 
-        # 自定义的鼠标事件处理方法，将右键事件转换为左键事件
-        def custom_mouse_press_event(widget, event):
-            if event.button() == Qt.MouseButton.RightButton:
-                # 将右键按下事件转换为左键按下事件
-                new_event = QMouseEvent(
-                    QEvent.Type.MouseButtonPress,
-                    event.position(),
-                    Qt.MouseButton.LeftButton,
-                    Qt.MouseButton.LeftButton,
-                    Qt.KeyboardModifier.NoModifier,
-                )
-                QApplication.sendEvent(widget, new_event)
-            else:
-                # 其他事件正常处理
-                PushButton.mousePressEvent(widget, event)
-
-        def custom_mouse_release_event(widget, event):
-            if event.button() == Qt.MouseButton.RightButton:
-                # 将右键释放事件转换为左键释放事件
-                new_event = QMouseEvent(
-                    QEvent.Type.MouseButtonRelease,
-                    event.position(),
-                    Qt.MouseButton.LeftButton,
-                    Qt.MouseButton.NoButton,
-                    Qt.KeyboardModifier.NoModifier,
-                )
-                QApplication.sendEvent(widget, new_event)
-            else:
-                # 其他事件正常处理
-                PushButton.mouseReleaseEvent(widget, event)
-
-        self.minus_button = PushButton("-")
-        self._set_widget_font(self.minus_button, 20)
-        self.minus_button.setFixedSize(45, 45)
-        self.minus_button.clicked.connect(lambda: self.update_count(-1))
-        # 禁用右键菜单，兼容触屏
-        self.minus_button.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
-
-        # 动态替换按钮的鼠标事件处理方法
-        original_minus_press = self.minus_button.mousePressEvent
-        original_minus_release = self.minus_button.mouseReleaseEvent
-
-        def minus_press_wrapper(event):
-            custom_mouse_press_event(self.minus_button, event)
-
-        def minus_release_wrapper(event):
-            custom_mouse_release_event(self.minus_button, event)
-
-        self.minus_button.mousePressEvent = minus_press_wrapper
-        self.minus_button.mouseReleaseEvent = minus_release_wrapper
-
-        # 添加长按连续减功能
-        self.minus_button.pressed.connect(lambda: self.start_long_press(-1))
-        self.minus_button.released.connect(self.stop_long_press)
-
-        self.count_label = BodyLabel("1")
-        self.count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._set_widget_font(self.count_label, 20)
-        self.count_label.setFixedSize(65, 45)
-        self.current_count = 1
-
-        self.plus_button = PushButton("+")
-        self._set_widget_font(self.plus_button, 20)
-        self.plus_button.setFixedSize(45, 45)
-        self.plus_button.clicked.connect(lambda: self.update_count(1))
-        # 禁用右键菜单，兼容触屏
-        self.plus_button.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
-
-        # 动态替换按钮的鼠标事件处理方法
-        original_plus_press = self.plus_button.mousePressEvent
-        original_plus_release = self.plus_button.mouseReleaseEvent
-
-        def plus_press_wrapper(event):
-            custom_mouse_press_event(self.plus_button, event)
-
-        def plus_release_wrapper(event):
-            custom_mouse_release_event(self.plus_button, event)
-
-        self.plus_button.mousePressEvent = plus_press_wrapper
-        self.plus_button.mouseReleaseEvent = plus_release_wrapper
-
-        # 添加长按连续加功能
-        self.plus_button.pressed.connect(lambda: self.start_long_press(1))
-        self.plus_button.released.connect(self.stop_long_press)
-
-        self.minus_button.setEnabled(False)
-        self.plus_button.setEnabled(True)
-
-        self.count_widget = QWidget()
-        horizontal_layout = QHBoxLayout()
-        horizontal_layout.setContentsMargins(0, 0, 0, 0)
-        horizontal_layout.setSpacing(0)
-        horizontal_layout.addWidget(self.minus_button)
-        horizontal_layout.addStretch()
-        horizontal_layout.addWidget(self.count_label)
-        horizontal_layout.addStretch()
-        horizontal_layout.addWidget(self.plus_button)
-        self.count_widget.setLayout(horizontal_layout)
-
-        self.start_button = PrimaryPushButton(
-            get_content_pushbutton_name_async("roll_call", "start_button")
+        self.minus_button, self.plus_button, self.count_widget = (
+            self._create_count_control_widget()
         )
-        self._set_widget_font(self.start_button, 15)
-        self.start_button.setFixedHeight(45)
-        self.start_button.clicked.connect(lambda: self.start_draw())
 
-        self.list_combobox = ComboBox()
-        self._set_widget_font(self.list_combobox, 12)
-        self.list_combobox.setFixedHeight(45)
-        self.list_combobox.setPlaceholderText(
-            get_content_name_async("roll_call", "default_empty_item")
+        self.start_button = self._create_button(
+            "roll_call", "start_button", 15, self.start_draw, is_primary=True
         )
-        # 延迟填充班级列表，避免启动时进行文件IO
-        self.list_combobox.currentTextChanged.connect(self.on_class_changed)
 
-        self.range_combobox = ComboBox()
-        self._set_widget_font(self.range_combobox, 12)
-        self.range_combobox.setFixedHeight(45)
-        # 延迟填充范围选项
-        self.range_combobox.currentTextChanged.connect(self.on_filter_changed)
-
-        self.gender_combobox = ComboBox()
-        self._set_widget_font(self.gender_combobox, 12)
-        self.gender_combobox.setFixedHeight(45)
-        # 延迟填充性别选项
-        self.gender_combobox.currentTextChanged.connect(self.on_filter_changed)
-
-        self.remaining_button = PushButton(
-            get_content_pushbutton_name_async("roll_call", "remaining_button")
+        self.list_combobox = self._create_combobox(
+            "roll_call", "default_empty_item", 12, self.on_class_changed
         )
-        self._set_widget_font(self.remaining_button, 12)
-        self.remaining_button.setFixedHeight(45)
-        self.remaining_button.clicked.connect(lambda: self.show_remaining_list())
 
-        # 初始时不进行昂贵的数据加载，改为延迟填充
+        self.range_combobox = self._create_combobox(
+            "roll_call", None, 12, self.on_filter_changed
+        )
+
+        self.gender_combobox = self._create_combobox(
+            "roll_call", None, 12, self.on_filter_changed
+        )
+
+        self.remaining_button = self._create_button(
+            "roll_call", "remaining_button", 12, self.show_remaining_list
+        )
+
         self.total_count = 0
         self.remaining_count = 0
 
         text_template = get_any_position_value(
             "roll_call", "many_count_label", "text_0"
         )
-        # 使用占位值，实际文本将在 populate_lists 中更新
         formatted_text = text_template.format(total_count=0, remaining_count=0)
         self.many_count_label = BodyLabel(formatted_text)
         self.many_count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -271,59 +153,7 @@ class roll_call(QWidget):
         self.control_layout.setContentsMargins(0, 0, 0, 0)
         self.control_layout.addStretch()
 
-        # 根据页面管理设置决定是否添加控件
-        self.add_control_widget_if_enabled(
-            self.control_layout,
-            self.reset_button,
-            "page_management",
-            "roll_call_reset_button",
-        )
-
-        self.add_control_widget_if_enabled(
-            self.control_layout,
-            self.count_widget,
-            "page_management",
-            "roll_call_quantity_control",
-        )
-
-        self.add_control_widget_if_enabled(
-            self.control_layout,
-            self.start_button,
-            "page_management",
-            "roll_call_start_button",
-        )
-
-        self.add_control_widget_if_enabled(
-            self.control_layout, self.list_combobox, "page_management", "roll_call_list"
-        )
-
-        self.add_control_widget_if_enabled(
-            self.control_layout,
-            self.range_combobox,
-            "page_management",
-            "roll_call_range",
-        )
-
-        self.add_control_widget_if_enabled(
-            self.control_layout,
-            self.gender_combobox,
-            "page_management",
-            "roll_call_gender",
-        )
-
-        self.add_control_widget_if_enabled(
-            self.control_layout,
-            self.remaining_button,
-            "page_management",
-            "roll_call_remaining_button",
-        )
-
-        self.add_control_widget_if_enabled(
-            self.control_layout,
-            self.many_count_label,
-            "page_management",
-            "roll_call_quantity_label",
-        )
+        self._add_control_widgets()
 
         scroll = SmoothScrollArea()
         scroll.setWidget(container)
@@ -332,21 +162,184 @@ class roll_call(QWidget):
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # 根据页面管理设置决定控制面板位置
         roll_call_method = readme_settings_async("page_management", "roll_call_method")
 
-        if roll_call_method == 0:  # 左侧
+        if roll_call_method == 0:
             main_layout.addWidget(self.control_widget)
             main_layout.addWidget(scroll, 1)
-        else:  # 右侧
+        else:
             main_layout.addWidget(scroll, 1)
             main_layout.addWidget(self.control_widget)
 
-        # 统一调整控件宽度以适应文本内容
         self._adjustControlWidgetWidths()
 
-        # 在事件循环中延迟填充下拉框和初始统计，减少启动阻塞
         QTimer.singleShot(0, self.populate_lists)
+
+    def _create_button(
+        self, content_key, button_key, font_size, callback, is_primary=False
+    ):
+        """创建按钮
+
+        Args:
+            content_key: 内容键
+            button_key: 按钮键
+            font_size: 字体大小
+            callback: 回调函数
+            is_primary: 是否为主按钮
+
+        Returns:
+            创建的按钮
+        """
+        if is_primary:
+            button = PrimaryPushButton(
+                get_content_pushbutton_name_async(content_key, button_key)
+            )
+        else:
+            button = PushButton(
+                get_content_pushbutton_name_async(content_key, button_key)
+            )
+        self._set_widget_font(button, font_size)
+        button.setFixedHeight(45)
+        button.clicked.connect(lambda: callback())
+        return button
+
+    def _create_combobox(self, content_key, placeholder_key, font_size, callback):
+        """创建下拉框
+
+        Args:
+            content_key: 内容键
+            placeholder_key: 占位符键
+            font_size: 字体大小
+            callback: 回调函数
+
+        Returns:
+            创建的下拉框
+        """
+        combobox = ComboBox()
+        self._set_widget_font(combobox, font_size)
+        combobox.setFixedHeight(45)
+        if placeholder_key:
+            combobox.setPlaceholderText(
+                get_content_name_async(content_key, placeholder_key)
+            )
+        combobox.currentTextChanged.connect(callback)
+        return combobox
+
+    def _create_count_control_widget(self):
+        """创建计数控制控件
+
+        Returns:
+            tuple: (minus_button, plus_button, count_widget)
+        """
+        minus_button = self._create_button_with_long_press("-", 20, -1)
+        plus_button = self._create_button_with_long_press("+", 20, 1)
+
+        minus_button.setEnabled(False)
+        plus_button.setEnabled(True)
+
+        self.count_label = BodyLabel("1")
+        self.count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._set_widget_font(self.count_label, 20)
+        self.count_label.setFixedSize(65, 45)
+        self.current_count = 1
+
+        count_widget = QWidget()
+        horizontal_layout = QHBoxLayout()
+        horizontal_layout.setContentsMargins(0, 0, 0, 0)
+        horizontal_layout.setSpacing(0)
+        horizontal_layout.addWidget(minus_button)
+        horizontal_layout.addStretch()
+        horizontal_layout.addWidget(self.count_label)
+        horizontal_layout.addStretch()
+        horizontal_layout.addWidget(plus_button)
+        count_widget.setLayout(horizontal_layout)
+
+        return minus_button, plus_button, count_widget
+
+    def _create_button_with_long_press(self, text, font_size, direction):
+        """创建带长按功能的按钮
+
+        Args:
+            text: 按钮文本
+            font_size: 字体大小
+            direction: 长按方向（1为增加，-1为减少）
+
+        Returns:
+            创建的按钮
+        """
+        button = PushButton(text)
+        self._set_widget_font(button, font_size)
+        button.setFixedSize(45, 45)
+        button.clicked.connect(lambda: self.update_count(direction))
+        button.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+
+        button.mousePressEvent = lambda event: self._custom_mouse_press_event(
+            button, event
+        )
+        button.mouseReleaseEvent = lambda event: self._custom_mouse_release_event(
+            button, event
+        )
+
+        button.pressed.connect(lambda: self.start_long_press(direction))
+        button.released.connect(self.stop_long_press)
+
+        return button
+
+    def _custom_mouse_press_event(self, widget, event):
+        """自定义鼠标按下事件，将右键转换为左键
+
+        Args:
+            widget: 控件
+            event: 鼠标事件
+        """
+        if event.button() == Qt.MouseButton.RightButton:
+            new_event = QMouseEvent(
+                QEvent.Type.MouseButtonPress,
+                event.position(),
+                Qt.MouseButton.LeftButton,
+                Qt.MouseButton.LeftButton,
+                Qt.KeyboardModifier.NoModifier,
+            )
+            QApplication.sendEvent(widget, new_event)
+        else:
+            PushButton.mousePressEvent(widget, event)
+
+    def _custom_mouse_release_event(self, widget, event):
+        """自定义鼠标释放事件，将右键转换为左键
+
+        Args:
+            widget: 控件
+            event: 鼠标事件
+        """
+        if event.button() == Qt.MouseButton.RightButton:
+            new_event = QMouseEvent(
+                QEvent.Type.MouseButtonRelease,
+                event.position(),
+                Qt.MouseButton.LeftButton,
+                Qt.MouseButton.NoButton,
+                Qt.KeyboardModifier.NoModifier,
+            )
+            QApplication.sendEvent(widget, new_event)
+        else:
+            PushButton.mouseReleaseEvent(widget, event)
+
+    def _add_control_widgets(self):
+        """添加控制控件到布局"""
+        widgets_config = [
+            (self.reset_button, "page_management", "roll_call_reset_button"),
+            (self.count_widget, "page_management", "roll_call_quantity_control"),
+            (self.start_button, "page_management", "roll_call_start_button"),
+            (self.list_combobox, "page_management", "roll_call_list"),
+            (self.range_combobox, "page_management", "roll_call_range"),
+            (self.gender_combobox, "page_management", "roll_call_gender"),
+            (self.remaining_button, "page_management", "roll_call_remaining_button"),
+            (self.many_count_label, "page_management", "roll_call_quantity_label"),
+        ]
+
+        for widget, settings_group, setting_name in widgets_config:
+            self.add_control_widget_if_enabled(
+                self.control_layout, widget, settings_group, setting_name
+            )
 
     def add_control_widget_if_enabled(
         self, layout, widget, settings_group, setting_name
@@ -550,22 +543,6 @@ class roll_call(QWidget):
                 "Error disconnecting start_button clicked (ignored): {}", e
             )
 
-        class_name = self.list_combobox.currentText()
-        group_index = self.range_combobox.currentIndex()
-        group_filter = self.range_combobox.currentText()
-        gender_index = self.gender_combobox.currentIndex()
-        gender_filter = self.gender_combobox.currentText()
-        half_repeat = readme_settings_async("roll_call_settings", "half_repeat")
-
-        self.animation_cache = {
-            "class_name": class_name,
-            "group_index": group_index,
-            "group_filter": group_filter,
-            "gender_index": gender_index,
-            "gender_filter": gender_filter,
-            "half_repeat": half_repeat,
-        }
-
         self.draw_random()
 
         animation_music = readme_settings_async("roll_call_settings", "animation_music")
@@ -637,9 +614,6 @@ class roll_call(QWidget):
             get_content_pushbutton_name_async("roll_call", "start_button")
         )
         self.is_animating = False
-        self.is_animation_running = False
-        self.animation_labels_cache.clear()
-        self.animation_cache.clear()
 
         from app.common.behind_scenes.behind_scenes_utils import BehindScenesUtils
 
@@ -655,14 +629,16 @@ class roll_call(QWidget):
         self.start_button.clicked.connect(lambda: self.start_draw())
 
         half_repeat = readme_settings_async("roll_call_settings", "half_repeat")
-        if half_repeat > 0:
-            record_drawn_student(
-                class_name=self.final_class_name,
-                gender=self.final_gender_filter,
-                group=self.final_group_filter,
-                student_name=self.final_selected_students,
-            )
+        RollCallUtils.record_drawn_students(
+            class_name=self.final_class_name,
+            selected_students=self.final_selected_students,
+            selected_students_dict=self.final_selected_students_dict,
+            gender_filter=self.final_gender_filter,
+            group_filter=self.final_group_filter,
+            half_repeat=half_repeat,
+        )
 
+        if half_repeat > 0:
             self.update_many_count_label()
 
             if (
@@ -674,49 +650,15 @@ class roll_call(QWidget):
 
             QTimer.singleShot(APP_INIT_DELAY, self._update_remaining_list_delayed)
 
-        if hasattr(self, "final_selected_students") and hasattr(
-            self, "final_class_name"
-        ):
-            save_roll_call_history(
-                class_name=self.final_class_name,
-                selected_students=self.final_selected_students_dict,
-                group_filter=self.final_group_filter,
-                gender_filter=self.final_gender_filter,
-            )
-
         if hasattr(self, "final_selected_students"):
             if not is_quick_draw:
                 self.display_result(self.final_selected_students, self.final_class_name)
-
-                call_notification_service = readme_settings_async(
-                    "roll_call_notification_settings", "call_notification_service"
+                RollCallUtils.show_notification_if_enabled(
+                    class_name=self.final_class_name,
+                    selected_students=self.final_selected_students,
+                    draw_count=self.current_count,
+                    settings_group="roll_call_notification_settings",
                 )
-                use_main_window_when_exceed_threshold = readme_settings_async(
-                    "roll_call_notification_settings",
-                    "use_main_window_when_exceed_threshold",
-                )
-                max_notify_count = readme_settings_async(
-                    "roll_call_notification_settings", "main_window_display_threshold"
-                )
-                if call_notification_service:
-                    settings = RollCallUtils.prepare_notification_settings()
-                    if use_main_window_when_exceed_threshold:
-                        if self.current_count <= max_notify_count:
-                            ResultDisplayUtils.show_notification_if_enabled(
-                                self.final_class_name,
-                                self.final_selected_students,
-                                self.current_count,
-                                settings,
-                                settings_group="roll_call_notification_settings",
-                            )
-                    else:
-                        ResultDisplayUtils.show_notification_if_enabled(
-                            self.final_class_name,
-                            self.final_selected_students,
-                            self.current_count,
-                            settings,
-                            settings_group="roll_call_notification_settings",
-                        )
 
             self.play_voice_result()
 
@@ -776,20 +718,12 @@ class roll_call(QWidget):
 
     def draw_random(self):
         """抽取随机结果"""
-        if self.is_animation_running and self.animation_cache:
-            class_name = self.animation_cache["class_name"]
-            group_index = self.animation_cache["group_index"]
-            group_filter = self.animation_cache["group_filter"]
-            gender_index = self.animation_cache["gender_index"]
-            gender_filter = self.animation_cache["gender_filter"]
-            half_repeat = self.animation_cache["half_repeat"]
-        else:
-            class_name = self.list_combobox.currentText()
-            group_index = self.range_combobox.currentIndex()
-            group_filter = self.range_combobox.currentText()
-            gender_index = self.gender_combobox.currentIndex()
-            gender_filter = self.gender_combobox.currentText()
-            half_repeat = readme_settings_async("roll_call_settings", "half_repeat")
+        class_name = self.list_combobox.currentText()
+        group_index = self.range_combobox.currentIndex()
+        group_filter = self.range_combobox.currentText()
+        gender_index = self.gender_combobox.currentIndex()
+        gender_filter = self.gender_combobox.currentText()
+        half_repeat = readme_settings_async("roll_call_settings", "half_repeat")
 
         result = RollCallUtils.draw_random_students(
             class_name,
@@ -813,7 +747,7 @@ class roll_call(QWidget):
         self.final_group_filter = result["group_filter"]
         self.final_gender_filter = result["gender_filter"]
 
-        if self.is_animation_running:
+        if self.is_animating:
             self.display_result_animated(
                 result["selected_students"], result["class_name"]
             )
@@ -866,95 +800,44 @@ class roll_call(QWidget):
             display_settings: 显示设置字典，如果提供则使用这些设置，否则使用默认的点名设置
         """
         group_index = self.range_combobox.currentIndex()
+        settings_group = (
+            "quick_draw_settings" if display_settings else "roll_call_settings"
+        )
 
-        # 如果提供了显示设置，则使用这些设置，否则使用默认的点名设置
-        if display_settings:
-            font_size = display_settings.get(
-                "font_size", get_safe_font_size("roll_call_settings", "font_size")
-            )
-            animation_color = display_settings.get(
-                "animation_color_theme",
-                readme_settings_async("roll_call_settings", "animation_color_theme"),
-            )
-            display_format = display_settings.get(
-                "display_format",
-                readme_settings_async("roll_call_settings", "display_format"),
-            )
-            show_student_image = display_settings.get(
-                "student_image",
-                readme_settings_async("roll_call_settings", "student_image"),
-            )
-            show_random = display_settings.get(
-                "show_random",
-                readme_settings_async("roll_call_settings", "show_random"),
-            )
-            settings_group = "quick_draw_settings"
-        else:
-            font_size = get_safe_font_size("roll_call_settings", "font_size")
-            animation_color = readme_settings_async(
-                "roll_call_settings", "animation_color_theme"
-            )
-            display_format = readme_settings_async(
-                "roll_call_settings", "display_format"
-            )
-            show_student_image = readme_settings_async(
-                "roll_call_settings", "student_image"
-            )
-            show_random = readme_settings_async("roll_call_settings", "show_random")
-            settings_group = "roll_call_settings"
-
-        student_labels = ResultDisplayUtils.create_student_label(
+        RollCallUtils.display_result(
+            result_grid=self.result_grid,
             class_name=class_name,
             selected_students=selected_students,
             draw_count=self.current_count,
-            font_size=font_size,
-            animation_color=animation_color,
-            display_format=display_format,
-            show_student_image=show_student_image,
             group_index=group_index,
-            show_random=show_random,
             settings_group=settings_group,
+            display_settings=display_settings,
         )
-        ResultDisplayUtils.display_results_in_grid(self.result_grid, student_labels)
 
     def display_result_animated(self, selected_students, class_name):
-        """动画过程中显示结果（优化版，复用控件）
+        """动画过程中显示结果
 
         Args:
             selected_students: 选中的学生列表
             class_name: 班级名称
         """
         group_index = self.range_combobox.currentIndex()
-        font_size = get_safe_font_size("roll_call_settings", "font_size")
-        animation_color = readme_settings_async(
-            "roll_call_settings", "animation_color_theme"
-        )
-        display_format = readme_settings_async("roll_call_settings", "display_format")
-        show_student_image = readme_settings_async(
-            "roll_call_settings", "student_image"
-        )
-        show_random = readme_settings_async("roll_call_settings", "show_random")
+        display_dict = RollCallUtils.create_display_settings("roll_call_settings")
 
         student_labels = ResultDisplayUtils.create_student_label(
             class_name=class_name,
             selected_students=selected_students,
             draw_count=self.current_count,
-            font_size=font_size,
-            animation_color=animation_color,
-            display_format=display_format,
-            show_student_image=show_student_image,
+            font_size=display_dict["font_size"],
+            animation_color=display_dict["animation_color_theme"],
+            display_format=display_dict["display_format"],
+            show_student_image=display_dict["student_image"],
             group_index=group_index,
-            show_random=show_random,
+            show_random=display_dict["show_random"],
             settings_group="roll_call_settings",
         )
 
-        if not self.animation_labels_cache:
-            ResultDisplayUtils.display_results_in_grid(self.result_grid, student_labels)
-            self.animation_labels_cache = student_labels
-        else:
-            ResultDisplayUtils.update_grid_labels(
-                self.result_grid, student_labels, self.animation_labels_cache
-            )
+        ResultDisplayUtils.display_results_in_grid(self.result_grid, student_labels)
 
     def _do_reset_count(self):
         """实际执行重置人数的逻辑"""
@@ -1003,8 +886,6 @@ class roll_call(QWidget):
     def clear_result(self):
         """清空结果显示"""
         ResultDisplayUtils.clear_grid(self.result_grid)
-        self.animation_labels_cache.clear()
-        self.animation_cache.clear()
 
     def update_count(self, change):
         """更新人数
@@ -1193,74 +1074,71 @@ class roll_call(QWidget):
     def populate_lists(self):
         """在后台填充班级/范围/性别下拉框并更新人数统计"""
         try:
-            # 填充班级列表
-            class_list = get_class_name_list()
-            self.list_combobox.blockSignals(True)
-            self.list_combobox.clear()
-            if class_list:
-                self.list_combobox.addItems(class_list)
-                # 应用默认抽取名单设置
-                default_class = readme_settings_async(
-                    "roll_call_settings", "default_class"
-                )
-                if default_class and default_class in class_list:
-                    index = class_list.index(default_class)
-                    self.list_combobox.setCurrentIndex(index)
-                    logger.debug(f"应用默认抽取名单: {default_class}")
-                else:
-                    self.list_combobox.setCurrentIndex(0)
-            self.list_combobox.blockSignals(False)
-
-            # 填充范围和性别选项
-            self.range_combobox.blockSignals(True)
-            self.range_combobox.clear()
-
-            # 获取基础选项
-            base_options = get_content_combo_name_async("roll_call", "range_combobox")
-
-            # 获取小组列表
-            group_list = get_group_list(self.list_combobox.currentText())
-
-            # 如果有小组，才添加"抽取全部小组"选项
-            if group_list:
-                # 添加基础选项和小组列表
-                self.range_combobox.addItems(base_options + group_list)
-            else:
-                # 只添加基础选项，跳过"抽取全部小组"
-                self.range_combobox.addItems(base_options[:1])  # 只添加"抽取全部学生"
-
-            self.range_combobox.blockSignals(False)
-
-            self.gender_combobox.blockSignals(True)
-            self.gender_combobox.clear()
-            self.gender_combobox.addItems(
-                get_content_combo_name_async("roll_call", "gender_combobox")
-                + get_gender_list(self.list_combobox.currentText())
-            )
-            self.gender_combobox.blockSignals(False)
-
-            # 使用工具函数更新标签文本
-            total_count, remaining_count, formatted_text = (
-                RollCallUtils.update_many_count_label_text(
-                    self.list_combobox.currentText(),
-                    self.range_combobox.currentIndex(),
-                    self.range_combobox.currentText(),
-                    self.gender_combobox.currentText(),
-                    readme_settings("roll_call_settings", "half_repeat"),
-                )
-            )
-
-            self.remaining_count = remaining_count
-            self.many_count_label.setText(formatted_text)
-
-            # 根据总人数是否为0，启用或禁用开始按钮
-            RollCallUtils.update_start_button_state(self.start_button, total_count)
-
-            # 重新调整控件宽度以适应下拉框内容
+            self._populate_class_list()
+            self._populate_range_combobox()
+            self._populate_gender_combobox()
+            self._update_count_label()
             self._adjustControlWidgetWidths()
 
         except Exception as e:
             logger.error(f"延迟填充列表失败: {e}")
+
+    def _populate_class_list(self):
+        """填充班级列表"""
+        class_list = get_class_name_list()
+        self.list_combobox.blockSignals(True)
+        self.list_combobox.clear()
+        if class_list:
+            self.list_combobox.addItems(class_list)
+            default_class = readme_settings_async("roll_call_settings", "default_class")
+            if default_class and default_class in class_list:
+                index = class_list.index(default_class)
+                self.list_combobox.setCurrentIndex(index)
+                logger.debug(f"应用默认抽取名单: {default_class}")
+            else:
+                self.list_combobox.setCurrentIndex(0)
+        self.list_combobox.blockSignals(False)
+
+    def _populate_range_combobox(self):
+        """填充范围下拉框"""
+        self.range_combobox.blockSignals(True)
+        self.range_combobox.clear()
+
+        base_options = get_content_combo_name_async("roll_call", "range_combobox")
+        group_list = get_group_list(self.list_combobox.currentText())
+
+        if group_list:
+            self.range_combobox.addItems(base_options + group_list)
+        else:
+            self.range_combobox.addItems(base_options[:1])
+
+        self.range_combobox.blockSignals(False)
+
+    def _populate_gender_combobox(self):
+        """填充性别下拉框"""
+        self.gender_combobox.blockSignals(True)
+        self.gender_combobox.clear()
+        self.gender_combobox.addItems(
+            get_content_combo_name_async("roll_call", "gender_combobox")
+            + get_gender_list(self.list_combobox.currentText())
+        )
+        self.gender_combobox.blockSignals(False)
+
+    def _update_count_label(self):
+        """更新人数统计标签"""
+        total_count, remaining_count, formatted_text = (
+            RollCallUtils.update_many_count_label_text(
+                self.list_combobox.currentText(),
+                self.range_combobox.currentIndex(),
+                self.range_combobox.currentText(),
+                self.gender_combobox.currentText(),
+                readme_settings("roll_call_settings", "half_repeat"),
+            )
+        )
+
+        self.remaining_count = remaining_count
+        self.many_count_label.setText(formatted_text)
+        RollCallUtils.update_start_button_state(self.start_button, total_count)
 
     def setupSettingsListener(self):
         """设置设置监听器，监听页面管理设置变化"""

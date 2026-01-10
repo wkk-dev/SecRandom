@@ -699,14 +699,57 @@ class ResultDisplayUtils:
                         new_item = new_layout.itemAt(j)
 
                         if old_item and new_item:
-                            old_label = old_item.widget()
-                            new_label = new_item.widget()
+                            old_content = old_item.widget()
+                            new_content = new_item.widget()
 
-                            if isinstance(old_label, BodyLabel) and isinstance(
-                                new_label, BodyLabel
+                            # 如果内容是容器（带头像的情况），更新其内部组件
+                            if old_content.layout() and new_content.layout():
+                                old_inner_layout = old_content.layout()
+                                new_inner_layout = new_content.layout()
+
+                                for k in range(
+                                    min(
+                                        old_inner_layout.count(),
+                                        new_inner_layout.count(),
+                                    )
+                                ):
+                                    old_inner_item = old_inner_layout.itemAt(k)
+                                    new_inner_item = new_inner_layout.itemAt(k)
+
+                                    if old_inner_item and new_inner_item:
+                                        old_inner_widget = old_inner_item.widget()
+                                        new_inner_widget = new_inner_item.widget()
+
+                                        # 更新文本标签
+                                        if isinstance(
+                                            old_inner_widget, BodyLabel
+                                        ) and isinstance(new_inner_widget, BodyLabel):
+                                            old_inner_widget.setText(
+                                                new_inner_widget.text()
+                                            )
+                                            old_inner_widget.setStyleSheet(
+                                                new_inner_widget.styleSheet()
+                                            )
+
+                                        # 更新头像组件
+                                        from qfluentwidgets import AvatarWidget
+
+                                        if isinstance(
+                                            old_inner_widget, AvatarWidget
+                                        ) and isinstance(
+                                            new_inner_widget, AvatarWidget
+                                        ):
+                                            old_image = old_inner_widget.getImage()
+                                            new_image = new_inner_widget.getImage()
+                                            if old_image != new_image:
+                                                old_inner_widget.setImage(new_image)
+
+                            # 如果内容是直接标签（不带头像的情况）
+                            elif isinstance(old_content, BodyLabel) and isinstance(
+                                new_content, BodyLabel
                             ):
-                                old_label.setText(new_label.text())
-                                old_label.setStyleSheet(new_label.styleSheet())
+                                old_content.setText(new_content.text())
+                                old_content.setStyleSheet(new_content.styleSheet())
 
         cached_labels[:] = new_labels
 
@@ -739,7 +782,12 @@ class ResultDisplayUtils:
 
     @staticmethod
     def show_notification_if_enabled(
-        class_name, selected_students, draw_count=1, settings=None, settings_group=None
+        class_name,
+        selected_students,
+        draw_count=1,
+        settings=None,
+        settings_group=None,
+        is_animating=False,
     ):
         """
         如果启用了通知服务，则显示抽取结果通知
@@ -749,6 +797,8 @@ class ResultDisplayUtils:
             selected_students: 选中的学生列表
             draw_count: 抽取人数
             settings: 通知设置参数
+            settings_group: 设置组名称
+            is_animating: 是否在动画过程中，如果是则不启动自动关闭定时器
         """
         # 检查是否启用了通知服务（这个检查应该由调用方完成）
         from app.common.notification.notification_service import (
@@ -756,7 +806,12 @@ class ResultDisplayUtils:
         )
 
         show_roll_call_notification(
-            class_name, selected_students, draw_count, settings, settings_group
+            class_name,
+            selected_students,
+            draw_count,
+            settings,
+            settings_group,
+            is_animating,
         )
 
     @staticmethod
