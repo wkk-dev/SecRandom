@@ -427,6 +427,8 @@ DEFAULT_SETTINGS = {
         "class_island_source_enabled": {"default_value": False},
         "pre_class_reset_enabled": {"default_value": False},
         "pre_class_reset_time": {"default_value": 120},
+        "subject_history_filter_enabled": {"default_value": False},
+        "break_record_assignment": {"default_value": 0},
     },
     "fair_draw_settings": {
         "title": {"default_value": None},

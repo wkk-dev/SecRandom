@@ -341,12 +341,15 @@ def format_weight_for_display(weights_data: list, weight_key: str = "weight") ->
 # ==================================================
 # 公平抽取权重计算函数
 # ==================================================
-def calculate_weight(students_data: list, class_name: str) -> list:
+def calculate_weight(
+    students_data: list, class_name: str, subject_filter: str = ""
+) -> list:
     """计算学生权重
 
     Args:
         students_data: 学生数据列表
         class_name: 班级名称
+        subject_filter: 课程过滤，如果指定则只计算该课程的历史记录
 
     Returns:
         list: 更新后的学生数据列表，包含权重信息
@@ -400,7 +403,40 @@ def calculate_weight(students_data: list, class_name: str) -> list:
             "advanced_settings", "shield_time_unit"
         )
         or 0,
+        "subject_history_filter_enabled": readme_settings_async(
+            "course_settings", "subject_history_filter_enabled"
+        )
+        or False,
     }
+
+    # 获取当前课程信息（用于科目过滤）
+    current_class_info = None
+    if settings["subject_history_filter_enabled"] or subject_filter:
+        # 如果指定了 subject_filter，优先使用它
+        if subject_filter:
+            current_class_info = {"name": subject_filter}
+        else:
+            use_class_island_source = readme_settings_async(
+                "course_settings", "class_island_source_enabled"
+            )
+            if use_class_island_source:
+                from app.common.IPC_URL.csharp_ipc_handler import CSharpIPCHandler
+
+                current_class_info = (
+                    CSharpIPCHandler.instance().get_current_class_info()
+                )
+            else:
+                current_class_info = _get_current_class_info()
+
+            # 如果当前没有课程信息（课间时段），则使用课间归属的课程信息
+            if not current_class_info:
+                from app.common.extraction.extract import (
+                    _is_non_class_time,
+                    _get_break_assignment_class_info,
+                )
+
+                if _is_non_class_time():
+                    current_class_info = _get_break_assignment_class_info()
 
     # 加载历史记录数据
     history_data = load_history_data("roll_call", class_name)
@@ -429,10 +465,95 @@ def calculate_weight(students_data: list, class_name: str) -> list:
         if isinstance(students_history, dict):
             for student_name, student_info in students_history.items():
                 if student_name in weight_data and isinstance(student_info, dict):
-                    # 更新总计数和最后抽取时间
-                    weight_data[student_name]["total_count"] = student_info.get(
-                        "total_count", 0
-                    )
+                    # 如果有科目过滤，需要重新计算所有计数
+                    if current_class_info:
+                        current_class_name = current_class_info.get("name", "")
+
+                        # 优先使用 subject_stats 中的数据
+                        subject_stats = student_info.get("subject_stats", {})
+                        if current_class_name in subject_stats:
+                            subject_stat = subject_stats[current_class_name]
+                            weight_data[student_name]["total_count"] = subject_stat.get(
+                                "total_count", 0
+                            )
+                            weight_data[student_name]["group_gender_count"] = (
+                                subject_stat.get("group_gender_count", 0)
+                            )
+                            # group_count 和 gender_count 从 subject_stats 的 total_count 获取
+                            weight_data[student_name]["group_count"] = subject_stat.get(
+                                "total_count", 0
+                            )
+                            weight_data[student_name]["gender_count"] = (
+                                subject_stat.get("total_count", 0)
+                            )
+                        else:
+                            # 如果 subject_stats 中没有该科目的数据，则遍历历史记录计算
+                            filtered_total_count = 0
+                            filtered_group_count = 0
+                            filtered_gender_count = 0
+
+                            history = student_info.get("history", [])
+                            if isinstance(history, list):
+                                for record in history:
+                                    if isinstance(record, dict):
+                                        record_class_name = record.get("class_name", "")
+                                        # 只统计当前科目的记录
+                                        if record_class_name == current_class_name:
+                                            filtered_total_count += 1
+
+                                            # 统计 group_count
+                                            draw_group = record.get("draw_group", "")
+                                            if draw_group:
+                                                filtered_group_count += 1
+
+                                            # 统计 gender_count
+                                            draw_gender = record.get("draw_gender", "")
+                                            if draw_gender:
+                                                filtered_gender_count += 1
+
+                            weight_data[student_name]["total_count"] = (
+                                filtered_total_count
+                            )
+                            weight_data[student_name]["group_count"] = (
+                                filtered_group_count
+                            )
+                            weight_data[student_name]["gender_count"] = (
+                                filtered_gender_count
+                            )
+                            weight_data[student_name]["group_gender_count"] = (
+                                filtered_total_count
+                            )
+                    else:
+                        # 没有科目过滤，使用原始的计数
+                        weight_data[student_name]["total_count"] = student_info.get(
+                            "total_count", 0
+                        )
+                        weight_data[student_name]["group_gender_count"] = (
+                            student_info.get("group_gender_count", 0)
+                        )
+
+                        # 从历史记录中重新计算 group_count 和 gender_count
+                        history = student_info.get("history", [])
+                        if isinstance(history, list):
+                            all_group = get_content_combo_name_async(
+                                "roll_call", "range_combobox"
+                            )[0]
+                            all_gender = get_content_combo_name_async(
+                                "roll_call", "gender_combobox"
+                            )[0]
+
+                            for record in history:
+                                if isinstance(record, dict):
+                                    # 更新小组计数
+                                    draw_group = record.get("draw_group", "")
+                                    if draw_group and draw_group != all_group:
+                                        weight_data[student_name]["group_count"] += 1
+
+                                    # 更新性别计数
+                                    draw_gender = record.get("draw_gender", "")
+                                    if draw_gender and draw_gender != all_gender:
+                                        weight_data[student_name]["gender_count"] += 1
+
                     weight_data[student_name]["rounds_missed"] = student_info.get(
                         "rounds_missed", 0
                     )
@@ -441,36 +562,51 @@ def calculate_weight(students_data: list, class_name: str) -> list:
                     if last_drawn_time:
                         weight_data[student_name]["last_drawn_time"] = last_drawn_time
 
-                    # 从历史记录中获取小组和性别信息
-                    history = student_info.get("history", [])
-                    if isinstance(history, list):
-                        for record in history:
-                            if isinstance(record, dict):
-                                # 更新小组计数
-                                draw_group = record.get("draw_group", "")
-                                if (
-                                    draw_group
-                                    and draw_group
-                                    != get_content_combo_name_async(
-                                        "roll_call", "range_combobox"
-                                    )[0]
-                                ):
-                                    weight_data[student_name]["group_count"] += 1
-
-                                # 更新性别计数
-                                draw_gender = record.get("draw_gender", "")
-                                if (
-                                    draw_gender
-                                    and draw_gender
-                                    != get_content_combo_name_async(
-                                        "roll_call", "gender_combobox"
-                                    )[0]
-                                ):
-                                    weight_data[student_name]["gender_count"] += 1
-
     # 获取小组和性别统计
-    group_stats = history_data.get("group_stats", {})
-    gender_stats = history_data.get("gender_stats", {})
+    # 如果有科目过滤，需要重新计算小组和性别统计
+    if current_class_info:
+        current_class_name = current_class_info.get("name", "")
+
+        # 优先使用顶层的 subject_stats
+        subject_stats = history_data.get("subject_stats", {})
+        if current_class_name in subject_stats:
+            subject_stat = subject_stats[current_class_name]
+            group_stats = subject_stat.get("group_stats", {})
+            gender_stats = subject_stat.get("gender_stats", {})
+        else:
+            # 如果 subject_stats 中没有该科目的数据，则遍历历史记录计算
+            filtered_group_stats = {}
+            filtered_gender_stats = {}
+
+            # 遍历所有学生，重新计算小组和性别统计
+            for student_name, student_info in history_data.get("students", {}).items():
+                history = student_info.get("history", [])
+                if isinstance(history, list):
+                    for record in history:
+                        if isinstance(record, dict):
+                            record_class_name = record.get("class_name", "")
+                            # 只统计当前科目的记录
+                            if record_class_name == current_class_name:
+                                # 更新小组统计
+                                draw_group = record.get("draw_group", "")
+                                if draw_group:
+                                    if draw_group not in filtered_group_stats:
+                                        filtered_group_stats[draw_group] = 0
+                                    filtered_group_stats[draw_group] += 1
+
+                                # 更新性别统计
+                                draw_gender = record.get("draw_gender", "")
+                                if draw_gender:
+                                    if draw_gender not in filtered_gender_stats:
+                                        filtered_gender_stats[draw_gender] = 0
+                                    filtered_gender_stats[draw_gender] += 1
+
+            group_stats = filtered_group_stats
+            gender_stats = filtered_gender_stats
+    else:
+        # 没有科目过滤，使用原始的统计数据
+        group_stats = history_data.get("group_stats", {})
+        gender_stats = history_data.get("gender_stats", {})
 
     # 获取所有学生的总抽取次数，用于计算相对频率
     all_total_counts = [data["total_count"] for data in weight_data.values()]
@@ -722,6 +858,8 @@ def save_roll_call_history(
             history_data["total_rounds"] = 0
         if "total_stats" not in history_data:
             history_data["total_stats"] = 0
+        if "subject_stats" not in history_data:
+            history_data["subject_stats"] = {}
 
         # 获取被选中的学生名称列表
         selected_names = [s.get("name", "") for s in selected_students]
@@ -744,6 +882,7 @@ def save_roll_call_history(
                     "last_drawn_time": "",
                     "rounds_missed": 0,
                     "history": [],
+                    "subject_stats": {},
                 }
 
             # 更新学生的基本信息
@@ -762,7 +901,27 @@ def save_roll_call_history(
                     break
 
             # 获取当前课程信息
-            current_class_info = _get_current_class_info()
+            use_class_island_source = readme_settings_async(
+                "course_settings", "class_island_source_enabled"
+            )
+            if use_class_island_source:
+                from app.common.IPC_URL.csharp_ipc_handler import CSharpIPCHandler
+
+                current_class_info = (
+                    CSharpIPCHandler.instance().get_current_class_info()
+                )
+            else:
+                current_class_info = _get_current_class_info()
+
+            # 如果当前没有课程信息（课间时段），则使用课间归属的课程信息
+            if not current_class_info:
+                from app.common.extraction.extract import (
+                    _is_non_class_time,
+                    _get_break_assignment_class_info,
+                )
+
+                if _is_non_class_time():
+                    current_class_info = _get_break_assignment_class_info()
 
             history_entry = {
                 "draw_method": draw_method,
@@ -773,9 +932,35 @@ def save_roll_call_history(
                 "weight": current_student_weight,
             }
 
-            # 如果能获取到课程信息，则添加到历史记录中
+            # 如果能获取到课程信息，则添加到历史记录中并更新学科统计
             if current_class_info:
-                history_entry["class_name"] = current_class_info.get("name", "")
+                subject_name = current_class_info.get("name", "")
+                history_entry["class_name"] = subject_name
+
+                # 更新学生级别的学科统计
+                if "subject_stats" not in student_data:
+                    student_data["subject_stats"] = {}
+
+                if subject_name not in student_data["subject_stats"]:
+                    student_data["subject_stats"][subject_name] = {
+                        "total_count": 0,
+                        "group_gender_count": 0,
+                    }
+
+                subject_stat = student_data["subject_stats"][subject_name]
+                subject_stat["total_count"] += 1
+
+                # 统计 group_gender_count（小组和性别都有限制）
+                all_group = get_content_combo_name_async("roll_call", "range_combobox")[
+                    0
+                ]
+                all_gender = get_content_combo_name_async(
+                    "roll_call", "gender_combobox"
+                )[0]
+
+                if group_filter and group_filter != all_group:
+                    if gender_filter and gender_filter != all_gender:
+                        subject_stat["group_gender_count"] += 1
 
             student_data["history"].append(history_entry)
 
@@ -798,6 +983,38 @@ def save_roll_call_history(
             if gender not in history_data["gender_stats"]:
                 history_data["gender_stats"][gender] = 0
             history_data["gender_stats"][gender] += 1
+
+        # 更新学科统计（顶层）
+        if current_class_info:
+            subject_name = current_class_info.get("name", "")
+            if subject_name:
+                if subject_name not in history_data["subject_stats"]:
+                    history_data["subject_stats"][subject_name] = {
+                        "group_stats": {},
+                        "gender_stats": {},
+                        "total_rounds": 0,
+                        "total_stats": 0,
+                    }
+
+                subject_stat = history_data["subject_stats"][subject_name]
+                subject_stat["total_rounds"] += 1
+                subject_stat["total_stats"] += len(selected_students)
+
+                for student in selected_students:
+                    group = student.get("group", "")
+                    gender = student.get("gender", "")
+
+                    # 更新学科小组统计
+                    if group:
+                        if group not in subject_stat["group_stats"]:
+                            subject_stat["group_stats"][group] = 0
+                        subject_stat["group_stats"][group] += 1
+
+                    # 更新学科性别统计
+                    if gender:
+                        if gender not in subject_stat["gender_stats"]:
+                            subject_stat["gender_stats"][gender] = 0
+                        subject_stat["gender_stats"][gender] += 1
 
         # 更新总轮数和总统计数
         history_data["total_rounds"] += 1

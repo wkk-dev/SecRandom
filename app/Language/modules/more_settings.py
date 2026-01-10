@@ -95,6 +95,23 @@ course_settings = {
             "6": "周六",
             "7": "周日",
         },
+        "subject_history_filter_settings": {
+            "name": "科目历史记录过滤",
+            "description": "设置科目历史记录过滤功能",
+        },
+        "subject_history_filter_function": {
+            "name": "科目历史记录过滤",
+            "description": "启用后，计算权重时只使用当前科目的历史记录",
+        },
+        "break_record_assignment_settings": {
+            "name": "课间记录归属",
+            "description": "设置课间时段抽取记录的归属",
+        },
+        "break_record_assignment_function": {
+            "name": "课间记录归属",
+            "description": "设置在课间时段抽取时，记录应该归属到哪节课",
+            "combo_items": ["上节课", "下节课"],
+        },
     },
     "EN_US": {
         "title": {"name": "Course Related", "description": "设置课间禁用和课程表导入"},
@@ -185,6 +202,23 @@ course_settings = {
             "5": "周五",
             "6": "周六",
             "7": "周日",
+        },
+        "subject_history_filter_settings": {
+            "name": "Subject History Filter",
+            "description": "Settings for subject history record filtering",
+        },
+        "subject_history_filter_function": {
+            "name": "Subject History Filter",
+            "description": "When enabled, only use current subject's history records for weight calculation",
+        },
+        "break_record_assignment_settings": {
+            "name": "Break Record Assignment",
+            "description": "Settings for break time record assignment",
+        },
+        "break_record_assignment_function": {
+            "name": "Break Record Assignment",
+            "description": "Set which class the record should be assigned to when drawing during break time",
+            "combo_items": ["Previous Class", "Next Class"],
         },
     },
 }

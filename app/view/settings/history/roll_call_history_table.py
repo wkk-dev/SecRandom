@@ -39,11 +39,13 @@ class roll_call_history_table(GroupHeaderCardWidget):
         self.data_loader = None
         self.current_class_name = class_history[0] if class_history else ""
         self.current_mode = 0
+        self.current_subject = ""  # 当前选择的课程
         self.batch_size = 30  # 每次加载的行数
         self.current_row = 0  # 当前加载到的行数
         self.total_rows = 0  # 总行数
         self.is_loading = False  # 是否正在加载数据
         self.has_class_record = False  # 是否有课程记录
+        self.available_subjects = []  # 可用的课程列表
 
         # 创建班级选择区域
         QTimer.singleShot(APPLY_DELAY, self.create_class_selection)
@@ -101,6 +103,14 @@ class roll_call_history_table(GroupHeaderCardWidget):
         self.mode_comboBox.setCurrentIndex(0)
         self.mode_comboBox.currentIndexChanged.connect(self.refresh_data)
 
+        # 选择课程
+        self.subject_comboBox = ComboBox()
+        self.subject_comboBox.addItems(
+            get_content_combo_name_async("roll_call_history_table", "select_subject")
+        )
+        self.subject_comboBox.setCurrentIndex(0)
+        self.subject_comboBox.currentIndexChanged.connect(self.on_subject_changed)
+
         self.addGroup(
             get_theme_icon("ic_fluent_class_20_filled"),
             get_content_name_async("roll_call_history_table", "select_class_name"),
@@ -109,11 +119,20 @@ class roll_call_history_table(GroupHeaderCardWidget):
             ),
             self.class_comboBox,
         )
+
+        # 创建一个容器来放置查看模式和课程选择下拉框
+        self.mode_subject_widget = QWidget()
+        mode_subject_layout = QHBoxLayout(self.mode_subject_widget)
+        mode_subject_layout.setContentsMargins(0, 0, 0, 0)
+        mode_subject_layout.setSpacing(10)
+        mode_subject_layout.addWidget(self.mode_comboBox)
+        mode_subject_layout.addWidget(self.subject_comboBox)
+
         self.addGroup(
             get_theme_icon("ic_fluent_reading_mode_mobile_20_filled"),
             get_content_name_async("roll_call_history_table", "select_mode"),
             get_content_description_async("roll_call_history_table", "select_mode"),
-            self.mode_comboBox,
+            self.mode_subject_widget,
         )
 
     def create_table(self):
@@ -381,6 +400,24 @@ class roll_call_history_table(GroupHeaderCardWidget):
                 except json.JSONDecodeError:
                     pass
 
+            # 如果选择了特定课程，过滤历史数据
+            if self.current_subject:
+                filtered_history_data = {"students": {}}
+                for student_name, student_info in history_data.get(
+                    "students", {}
+                ).items():
+                    filtered_history = []
+                    for record in student_info.get("history", []):
+                        if record.get("class_name", "") == self.current_subject:
+                            filtered_history.append(record)
+                    if filtered_history:
+                        filtered_history_data["students"][student_name] = {
+                            **student_info,
+                            "history": filtered_history,
+                            "total_count": len(filtered_history),
+                        }
+                history_data = filtered_history_data
+
             max_id_length = (
                 max(len(str(student[0])) for student in cleaned_students)
                 if cleaned_students
@@ -403,15 +440,30 @@ class roll_call_history_table(GroupHeaderCardWidget):
 
             students_data = []
             for student_id, name, gender, group in cleaned_students:
-                count = int(
-                    history_data.get("students", {}).get(name, {}).get("total_count", 0)
-                )
-                group_gender_count = int(
-                    history_data.get("students", {})
-                    .get(name, {})
-                    .get("group_gender_count", 0)
-                )
-                total_count = count + group_gender_count
+                # 计算总次数
+                if self.current_subject:
+                    # 如果选择了特定课程，从 subject_stats 中获取统计信息
+                    student_info = history_data.get("students", {}).get(name, {})
+                    subject_stats = student_info.get("subject_stats", {})
+                    if self.current_subject in subject_stats:
+                        subject_stat = subject_stats[self.current_subject]
+                        total_count = subject_stat.get("total_count", 0)
+                    else:
+                        total_count = 0
+                else:
+                    # 统计所有历史记录
+                    count = int(
+                        history_data.get("students", {})
+                        .get(name, {})
+                        .get("total_count", 0)
+                    )
+                    group_gender_count = int(
+                        history_data.get("students", {})
+                        .get(name, {})
+                        .get("group_gender_count", 0)
+                    )
+                    total_count = count + group_gender_count
+
                 students_data.append(
                     {
                         "id": str(student_id).zfill(max_id_length),
@@ -426,7 +478,7 @@ class roll_call_history_table(GroupHeaderCardWidget):
                 )
 
             students_weight_data = calculate_weight(
-                students_data, self.current_class_name
+                students_data, self.current_class_name, self.current_subject
             )
 
             # 使用权重格式化函数
@@ -587,17 +639,32 @@ class roll_call_history_table(GroupHeaderCardWidget):
                 for record in time_records:
                     draw_time = record.get("draw_time", "")
                     if draw_time:
-                        students_data.append(
-                            {
-                                "draw_time": draw_time,
-                                "id": str(student_id).zfill(max_id_length),
-                                "name": name,
-                                "gender": gender,
-                                "group": group,
-                                "class_name": record.get("class_name", ""),
-                                "weight": record.get("weight", ""),
-                            }
-                        )
+                        # 如果选择了特定课程，只显示该课程的记录
+                        if self.current_subject:
+                            if record.get("class_name", "") == self.current_subject:
+                                students_data.append(
+                                    {
+                                        "draw_time": draw_time,
+                                        "id": str(student_id).zfill(max_id_length),
+                                        "name": name,
+                                        "gender": gender,
+                                        "group": group,
+                                        "class_name": record.get("class_name", ""),
+                                        "weight": record.get("weight", ""),
+                                    }
+                                )
+                        else:
+                            students_data.append(
+                                {
+                                    "draw_time": draw_time,
+                                    "id": str(student_id).zfill(max_id_length),
+                                    "name": name,
+                                    "gender": gender,
+                                    "group": group,
+                                    "class_name": record.get("class_name", ""),
+                                    "weight": record.get("weight", ""),
+                                }
+                            )
 
             # 检查是否有课程记录
             self.has_class_record = any(
@@ -755,19 +822,40 @@ class roll_call_history_table(GroupHeaderCardWidget):
                 for record in time_records:
                     draw_time = record.get("draw_time", "")
                     if draw_time:
-                        students_data.append(
-                            {
-                                "draw_time": draw_time,
-                                "draw_method": str(record.get("draw_method", "")),
-                                "draw_people_numbers": str(
-                                    record.get("draw_people_numbers", 0)
-                                ),
-                                "draw_gender": str(record.get("draw_gender", "")),
-                                "draw_group": str(record.get("draw_group", "")),
-                                "class_name": record.get("class_name", ""),
-                                "weight": record.get("weight", ""),
-                            }
-                        )
+                        # 如果选择了特定课程，只显示该课程的记录
+                        if self.current_subject:
+                            if record.get("class_name", "") == self.current_subject:
+                                students_data.append(
+                                    {
+                                        "draw_time": draw_time,
+                                        "draw_method": str(
+                                            record.get("draw_method", "")
+                                        ),
+                                        "draw_people_numbers": str(
+                                            record.get("draw_people_numbers", 0)
+                                        ),
+                                        "draw_gender": str(
+                                            record.get("draw_gender", "")
+                                        ),
+                                        "draw_group": str(record.get("draw_group", "")),
+                                        "class_name": record.get("class_name", ""),
+                                        "weight": record.get("weight", ""),
+                                    }
+                                )
+                        else:
+                            students_data.append(
+                                {
+                                    "draw_time": draw_time,
+                                    "draw_method": str(record.get("draw_method", "")),
+                                    "draw_people_numbers": str(
+                                        record.get("draw_people_numbers", 0)
+                                    ),
+                                    "draw_gender": str(record.get("draw_gender", "")),
+                                    "draw_group": str(record.get("draw_group", "")),
+                                    "class_name": record.get("class_name", ""),
+                                    "weight": record.get("weight", ""),
+                                }
+                            )
 
             # 检查是否有课程记录
             self.has_class_record = any(
@@ -970,8 +1058,92 @@ class roll_call_history_table(GroupHeaderCardWidget):
         # 更新当前班级名称
         self.current_class_name = self.class_comboBox.currentText()
 
+        # 更新课程列表
+        self._update_subject_list()
+
         # 刷新表格数据
         self.refresh_data()
+
+    def on_subject_changed(self, index):
+        """课程选择变化时刷新表格数据"""
+        if not hasattr(self, "subject_comboBox"):
+            return
+
+        # 获取选择的课程
+        if index == 0:
+            self.current_subject = ""
+        else:
+            self.current_subject = self.subject_comboBox.currentText()
+
+        # 刷新表格数据
+        self.refresh_data()
+
+    def _update_subject_list(self):
+        """更新课程列表"""
+        if not self.current_class_name:
+            return
+
+        try:
+            history_file = get_data_path(
+                "history/roll_call_history", f"{self.current_class_name}.json"
+            )
+
+            if not file_exists(history_file):
+                self.available_subjects = []
+                return
+
+            with open_file(history_file, "r", encoding="utf-8") as f:
+                history_data = json.load(f)
+
+            # 收集所有课程名称
+            subjects = set()
+            students = history_data.get("students", {})
+            for student_info in students.values():
+                history = student_info.get("history", [])
+                for record in history:
+                    class_name = record.get("class_name", "")
+                    if class_name:
+                        subjects.add(class_name)
+
+            self.available_subjects = sorted(list(subjects))
+
+            # 更新课程下拉框
+            if hasattr(self, "subject_comboBox"):
+                # 保存当前选择的课程
+                current_subject = self.current_subject
+                current_index = self.subject_comboBox.currentIndex()
+
+                self.subject_comboBox.blockSignals(True)
+                self.subject_comboBox.clear()
+                self.subject_comboBox.addItems(
+                    get_content_combo_name_async(
+                        "roll_call_history_table", "select_subject"
+                    )
+                    + self.available_subjects
+                )
+
+                # 恢复之前选择的课程
+                if current_subject:
+                    # 尝试找到之前选择的课程
+                    items = self.subject_comboBox.count()
+                    for i in range(items):
+                        if self.subject_comboBox.itemText(i) == current_subject:
+                            self.subject_comboBox.setCurrentIndex(i)
+                            break
+                else:
+                    self.subject_comboBox.setCurrentIndex(0)
+
+                self.subject_comboBox.blockSignals(False)
+
+                # 根据是否有课程记录显示或隐藏课程选择框
+                if not self.available_subjects:
+                    self.subject_comboBox.hide()
+                else:
+                    self.subject_comboBox.show()
+
+        except Exception as e:
+            logger.error(f"更新课程列表失败: {e}")
+            self.available_subjects = []
 
     def refresh_data(self):
         """刷新表格数据"""
@@ -984,6 +1156,9 @@ class roll_call_history_table(GroupHeaderCardWidget):
             self.table.setRowCount(0)
             return
         self.current_class_name = class_name
+
+        # 更新课程列表
+        self._update_subject_list()
 
         # 重置课程记录标志
         self.has_class_record = False

@@ -17,6 +17,78 @@ from app.tools.path_utils import *
 from app.tools.settings_access import readme_settings_async
 
 
+def _get_break_assignment_class_info() -> Dict:
+    """获取课间归属的课程信息
+
+    根据设置决定课间时段的记录归属到上节课还是下节课
+
+    Returns:
+        Dict: 课程信息字典，包含 name, start_time, end_time, teacher, location, day_of_week
+              如果无法获取课程信息，返回空字典
+    """
+    try:
+        break_assignment = readme_settings_async(
+            "course_settings", "break_record_assignment"
+        )
+
+        use_class_island_source = readme_settings_async(
+            "course_settings", "class_island_source_enabled"
+        )
+
+        if use_class_island_source:
+            logger.debug("尝试从 ClassIsland 获取课间归属课程信息")
+            if break_assignment == 0:
+                class_info = CSharpIPCHandler.instance().get_previous_class_info()
+            else:
+                class_info = CSharpIPCHandler.instance().get_next_class_info()
+            if class_info:
+                return class_info
+            else:
+                logger.debug(
+                    "从 ClassIsland 获取课间归属课程信息失败，回退到 CSES 文件"
+                )
+
+        parser = _get_cses_parser()
+        if not parser:
+            return {}
+
+        current_day_of_week = _get_current_day_of_week()
+        current_total_seconds = _get_current_time_in_seconds()
+
+        class_info_list = parser.get_class_info()
+
+        if break_assignment == 0:
+            previous_class = None
+            for class_info in class_info_list:
+                if class_info.get("day_of_week") == current_day_of_week:
+                    end_time_str = class_info.get("end_time", "")
+                    if end_time_str:
+                        end_seconds = _parse_time_string_to_seconds(end_time_str)
+                        if end_seconds <= current_total_seconds:
+                            previous_class = class_info
+            if previous_class:
+                class_name = previous_class.get("name", "")
+                logger.info(f"课间归属到上节课: {class_name}")
+                return {"name": class_name}
+        else:
+            for class_info in class_info_list:
+                if class_info.get("day_of_week") == current_day_of_week:
+                    start_time_str = class_info.get("start_time", "")
+                    if start_time_str:
+                        start_seconds = _parse_time_string_to_seconds(start_time_str)
+                        if start_seconds > current_total_seconds:
+                            class_name = class_info.get("name", "")
+                            logger.info(f"课间归属到下节课: {class_name}")
+                            return {"name": class_name}
+
+        logger.debug("无法获取课间归属课程信息")
+        return {}
+
+    except Exception as e:
+        logger.error(f"获取课间归属课程信息失败: {e}")
+        return {}
+
+
 def _is_non_class_time() -> bool:
     """检测当前时间是否在非上课时间段
 

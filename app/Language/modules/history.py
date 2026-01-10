@@ -126,6 +126,11 @@ roll_call_history_table = {
             "description": "选择历史记录的查看方式",
             "combo_items": ["全部记录", "按时间查看"],
         },
+        "select_subject": {
+            "name": "选择课程",
+            "description": "选择要查看的课程",
+            "combo_items": ["全部课程"],
+        },
         "HeaderLabels_all_not_weight": {
             "name": ["学号", "姓名", "性别", "小组", "点名次数"],
             "description": "点名历史记录表格列标题（不包含权重）",
@@ -187,6 +192,11 @@ roll_call_history_table = {
             "name": "View mode",
             "description": "Choose how history is viewed",
             "combo_items": {"0": "All history", "1": "View by time"},
+        },
+        "select_subject": {
+            "name": "Select subject",
+            "description": "Choose a subject to view",
+            "combo_items": {"0": "All subjects"},
         },
         "HeaderLabels_all_not_weight": {
             "name": {

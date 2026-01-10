@@ -37,13 +37,17 @@ class course_settings(QWidget):
         self.class_break_widget = class_break_settings(self)
         self.vBoxLayout.addWidget(self.class_break_widget)
 
+        # 添加CSES导入组件
+        self.cses_import_widget = cses_import_settings(self)
+        self.vBoxLayout.addWidget(self.cses_import_widget)
+
         # 添加课前重置设置组件
         self.pre_class_reset_widget = pre_class_reset_settings(self)
         self.vBoxLayout.addWidget(self.pre_class_reset_widget)
 
-        # 添加CSES导入组件
-        self.cses_import_widget = cses_import_settings(self)
-        self.vBoxLayout.addWidget(self.cses_import_widget)
+        # 添加科目历史记录过滤组件
+        self.subject_history_filter_widget = subject_history_filter_settings(self)
+        self.vBoxLayout.addWidget(self.subject_history_filter_widget)
 
 
 class class_break_settings(GroupHeaderCardWidget):
@@ -134,71 +138,6 @@ class class_break_settings(GroupHeaderCardWidget):
                 "course_settings", "class_island_source_function"
             ),
             self.class_island_source_switch,
-        )
-
-
-class pre_class_reset_settings(GroupHeaderCardWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setTitle(
-            get_content_name_async(
-                "course_settings", "pre_class_reset_settings", "name"
-            )
-        )
-        self.setBorderRadius(8)
-
-        # 课前重置开关
-        self.pre_class_reset_switch = SwitchButton()
-        self.pre_class_reset_switch.setOffText(
-            get_content_name_async("course_settings", "disable")
-        )
-        self.pre_class_reset_switch.setOnText(
-            get_content_name_async("course_settings", "enable")
-        )
-        pre_class_reset_enabled = readme_settings_async(
-            "course_settings", "pre_class_reset_enabled"
-        )
-        self.pre_class_reset_switch.setChecked(pre_class_reset_enabled)
-        self.pre_class_reset_switch.checkedChanged.connect(
-            lambda: update_settings(
-                "course_settings",
-                "pre_class_reset_enabled",
-                self.pre_class_reset_switch.isChecked(),
-            )
-        )
-
-        # 课前重置时间微调框
-        self.pre_class_reset_spinbox = SpinBox()
-        self.pre_class_reset_spinbox.setFixedWidth(WIDTH_SPINBOX)
-        self.pre_class_reset_spinbox.setRange(1, 1440)
-        self.pre_class_reset_spinbox.setSingleStep(1)
-        self.pre_class_reset_spinbox.setSuffix(" s")
-        pre_class_reset_time = readme_settings_async(
-            "course_settings", "pre_class_reset_time"
-        )
-        self.pre_class_reset_spinbox.setValue(pre_class_reset_time)
-        self.pre_class_reset_spinbox.valueChanged.connect(
-            lambda: update_settings(
-                "course_settings",
-                "pre_class_reset_time",
-                self.pre_class_reset_spinbox.value(),
-            )
-        )
-
-        # 添加设置项到分组
-        self.addGroup(
-            get_theme_icon("ic_fluent_timer_20_filled"),
-            get_content_name_async("course_settings", "pre_class_reset_function"),
-            get_content_description_async(
-                "course_settings", "pre_class_reset_function"
-            ),
-            self.pre_class_reset_switch,
-        )
-        self.addGroup(
-            get_theme_icon("ic_fluent_clock_20_filled"),
-            get_content_name_async("course_settings", "pre_class_reset_time"),
-            get_content_description_async("course_settings", "pre_class_reset_time"),
-            self.pre_class_reset_spinbox,
         )
 
 
@@ -400,3 +339,140 @@ class cses_import_settings(GroupHeaderCardWidget):
                 duration=3000,
                 parent=self,
             )
+
+
+class pre_class_reset_settings(GroupHeaderCardWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setTitle(
+            get_content_name_async(
+                "course_settings", "pre_class_reset_settings", "name"
+            )
+        )
+        self.setBorderRadius(8)
+
+        # 课前重置开关
+        self.pre_class_reset_switch = SwitchButton()
+        self.pre_class_reset_switch.setOffText(
+            get_content_name_async("course_settings", "disable")
+        )
+        self.pre_class_reset_switch.setOnText(
+            get_content_name_async("course_settings", "enable")
+        )
+        pre_class_reset_enabled = readme_settings_async(
+            "course_settings", "pre_class_reset_enabled"
+        )
+        self.pre_class_reset_switch.setChecked(pre_class_reset_enabled)
+        self.pre_class_reset_switch.checkedChanged.connect(
+            lambda: update_settings(
+                "course_settings",
+                "pre_class_reset_enabled",
+                self.pre_class_reset_switch.isChecked(),
+            )
+        )
+
+        # 课前重置时间微调框
+        self.pre_class_reset_spinbox = SpinBox()
+        self.pre_class_reset_spinbox.setFixedWidth(WIDTH_SPINBOX)
+        self.pre_class_reset_spinbox.setRange(1, 1440)
+        self.pre_class_reset_spinbox.setSingleStep(1)
+        self.pre_class_reset_spinbox.setSuffix(" s")
+        pre_class_reset_time = readme_settings_async(
+            "course_settings", "pre_class_reset_time"
+        )
+        self.pre_class_reset_spinbox.setValue(pre_class_reset_time)
+        self.pre_class_reset_spinbox.valueChanged.connect(
+            lambda: update_settings(
+                "course_settings",
+                "pre_class_reset_time",
+                self.pre_class_reset_spinbox.value(),
+            )
+        )
+
+        # 添加设置项到分组
+        self.addGroup(
+            get_theme_icon("ic_fluent_timer_20_filled"),
+            get_content_name_async("course_settings", "pre_class_reset_function"),
+            get_content_description_async(
+                "course_settings", "pre_class_reset_function"
+            ),
+            self.pre_class_reset_switch,
+        )
+        self.addGroup(
+            get_theme_icon("ic_fluent_clock_20_filled"),
+            get_content_name_async("course_settings", "pre_class_reset_time"),
+            get_content_description_async("course_settings", "pre_class_reset_time"),
+            self.pre_class_reset_spinbox,
+        )
+
+
+class subject_history_filter_settings(GroupHeaderCardWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setTitle(
+            get_content_name_async(
+                "course_settings", "subject_history_filter_settings", "name"
+            )
+        )
+        self.setBorderRadius(8)
+
+        # 科目历史记录过滤开关
+        self.subject_history_filter_switch = SwitchButton()
+        self.subject_history_filter_switch.setOffText(
+            get_content_name_async("course_settings", "disable")
+        )
+        self.subject_history_filter_switch.setOnText(
+            get_content_name_async("course_settings", "enable")
+        )
+        subject_history_filter_enabled = readme_settings_async(
+            "course_settings", "subject_history_filter_enabled"
+        )
+        self.subject_history_filter_switch.setChecked(subject_history_filter_enabled)
+        self.subject_history_filter_switch.checkedChanged.connect(
+            lambda: update_settings(
+                "course_settings",
+                "subject_history_filter_enabled",
+                self.subject_history_filter_switch.isChecked(),
+            )
+        )
+
+        # 课间记录归属下拉框
+        self.break_record_assignment_combo = ComboBox()
+        self.break_record_assignment_combo.addItems(
+            get_content_combo_name_async(
+                "course_settings", "break_record_assignment_function"
+            )
+        )
+        break_record_assignment = readme_settings_async(
+            "course_settings", "break_record_assignment"
+        )
+        self.break_record_assignment_combo.setCurrentIndex(break_record_assignment)
+        self.break_record_assignment_combo.currentIndexChanged.connect(
+            lambda: update_settings(
+                "course_settings",
+                "break_record_assignment",
+                self.break_record_assignment_combo.currentIndex(),
+            )
+        )
+
+        # 添加设置项到分组
+        self.addGroup(
+            get_theme_icon("ic_fluent_filter_20_filled"),
+            get_content_name_async(
+                "course_settings", "subject_history_filter_function"
+            ),
+            get_content_description_async(
+                "course_settings", "subject_history_filter_function"
+            ),
+            self.subject_history_filter_switch,
+        )
+        self.addGroup(
+            get_theme_icon("ic_fluent_arrow_swap_20_filled"),
+            get_content_name_async(
+                "course_settings", "break_record_assignment_function"
+            ),
+            get_content_description_async(
+                "course_settings", "break_record_assignment_function"
+            ),
+            self.break_record_assignment_combo,
+        )
