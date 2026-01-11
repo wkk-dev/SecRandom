@@ -218,6 +218,7 @@ APP_QUIT_ON_LAST_WINDOW_CLOSED = False  # 最后一个窗口关闭时是否退�
 APP_INIT_DELAY = 100  # 应用程序初始化延迟时间(毫秒)
 FONT_APPLY_DELAY = 0  # 字体应用延迟时间(毫秒)
 APPLY_DELAY = 0  # 应用延迟时间(毫秒)
+EXIT_CODE_RESTART = 1000  # 重启应用程序的退出代码
 
 # -------------------- 设置页面预热配置 --------------------
 SETTINGS_WARMUP_INTERVAL_MS = 800  # 后台预热设置页面的默认时间间隔（毫秒）

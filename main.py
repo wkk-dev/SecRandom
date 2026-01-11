@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import gc
+import subprocess
 
 import sentry_sdk
 from sentry_sdk.integrations.loguru import LoguruIntegration, LoggingLevels
@@ -12,7 +13,7 @@ from loguru import logger
 from app.tools.path_utils import get_app_root
 from app.tools.config import configure_logging
 from app.tools.settings_access import readme_settings_async
-from app.tools.variable import APP_QUIT_ON_LAST_WINDOW_CLOSED, VERSION
+from app.tools.variable import APP_QUIT_ON_LAST_WINDOW_CLOSED, VERSION, EXIT_CODE_RESTART
 from app.core.single_instance import (
     check_single_instance,
     setup_local_server,
@@ -171,7 +172,7 @@ def main():
         app.notify = new_notify
 
     try:
-        app.exec()
+        exit_code = app.exec()
         logger.debug("Qt 事件循环已结束")
 
         # 尝试停止所有后台服务
@@ -203,6 +204,50 @@ def main():
         logger.info("程序退出流程已完成，正在结束进程")
         sys.stdout.flush()
         sys.stderr.flush()
+
+        if exit_code == EXIT_CODE_RESTART:
+            logger.info("检测到重启信号，正在重启应用程序...")
+            # 过滤掉 --url 等参数
+            filtered_args = [arg for arg in sys.argv if not arg.startswith("--")]
+
+            # 获取可执行文件路径
+            if getattr(sys, "frozen", False):
+                # 打包后的可执行文件
+                executable = sys.executable
+            else:
+                # 开发环境
+                executable = sys.executable
+
+            if not os.path.exists(executable):
+                logger.critical(f"重启失败：无法找到可执行文件: {executable}")
+                os._exit(1)
+
+            try:
+                # 跨平台启动新进程
+                if sys.platform.startswith("win"):
+                    # Windows 特定参数
+                    startup_info = subprocess.STARTUPINFO()
+                    startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    # 使用 CREATE_NO_WINDOW (0x08000000) 来防止创建新的控制台窗口
+                    CREATE_NO_WINDOW = 0x08000000
+                    subprocess.Popen(
+                        [executable] + filtered_args,
+                        cwd=program_dir,
+                        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+                        | CREATE_NO_WINDOW,
+                        startupinfo=startup_info,
+                    )
+                else:
+                    # Linux/macOS
+                    subprocess.Popen(
+                        [executable] + filtered_args,
+                        cwd=program_dir,
+                        start_new_session=True,
+                    )
+                logger.info("新的应用程序实例已启动")
+            except Exception as e:
+                logger.exception(f"重启应用程序失败: {e}")
+
         os._exit(0)
     except Exception as e:
         logger.exception(f"程序退出过程中发生异常: {e}")

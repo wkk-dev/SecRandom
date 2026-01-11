@@ -41,6 +41,8 @@ class Worker(QObject):
 class update(QWidget):
     """创建更新页面"""
 
+    update_check_finished = Signal(bool, str)  # 信号：(是否成功, 状态文本)
+
     def __init__(self, parent=None):
         """初始化更新页面"""
         super().__init__(parent)
@@ -80,6 +82,9 @@ class update(QWidget):
 
         # 连接全局状态管理器的信号
         self._connect_global_status_signals()
+
+        # 连接内部信号
+        self.update_check_finished.connect(self._on_update_check_finished)
 
     def setup_header_info(self):
         """设置头部信息区域"""
@@ -297,6 +302,7 @@ class update(QWidget):
         # 使用异步方式检查更新
         def check_update_task():
             status_text = ""
+            is_success = False
             try:
                 # 获取最新版本信息
                 latest_version_info = get_latest_version()
@@ -318,6 +324,7 @@ class update(QWidget):
                         self.download_install_button.setVisible(True)
                         # 更新全局状态
                         update_status_manager.set_new_version(latest_version)
+                        is_success = True
                     elif compare_result == 0:
                         # 当前是最新版本
                         status_text = get_content_name_async(
@@ -327,6 +334,7 @@ class update(QWidget):
                         self.download_install_button.setVisible(False)
                         # 更新全局状态
                         update_status_manager.set_latest_version()
+                        is_success = True
                     else:
                         # 比较失败或版本号异常
                         status_text = get_content_name_async(
@@ -346,39 +354,61 @@ class update(QWidget):
                     # 更新全局状态
                     update_status_manager.set_check_failed()
             except Exception as e:
+                logger.exception(f"检查更新时发生错误: {e}")
                 # 处理异常
                 status_text = get_content_name_async("update", "check_update_failed")
                 # 隐藏下载并安装按钮
-                self.download_install_button.setVisible(False)
+                QMetaObject.invokeMethod(
+                    self.download_install_button,
+                    "setVisible",
+                    Qt.QueuedConnection,
+                    Q_ARG(bool, False),
+                )
                 # 更新全局状态
                 update_status_manager.set_check_failed()
             finally:
-                # 使用QMetaObject.invokeMethod确保UI更新在主线程执行
-                QMetaObject.invokeMethod(
-                    self,
-                    "_update_check_status",
-                    Qt.QueuedConnection,
-                    Q_ARG(str, status_text),
-                )
+                # 发送信号，通知主线程检查完成
+                # 信号是线程安全的，可以直接 emit
+                self.update_check_finished.emit(is_success, status_text)
 
         # 创建并启动异步任务
         runnable = QRunnable.create(check_update_task)
         QThreadPool.globalInstance().start(runnable)
 
+    @Slot(bool, str)
+    def _on_update_check_finished(self, is_success: bool, status_text: str):
+        """处理更新检查完成信号（主线程执行）"""
+        self.status_label.setText(status_text)
+        self.indeterminate_ring.setVisible(False)  # 隐藏不确定进度环
+        self.check_update_button.setEnabled(True)
+
+        if is_success:
+            logger.debug("收到更新检查成功信号，更新最后检查时间")
+            self.update_last_check_time()
+        else:
+            logger.debug("收到更新检查失败信号")
+
+    @Slot()
     def _load_last_check_time(self):
         """加载上次检查更新时间"""
         last_check_time = readme_settings("update", "last_check_time")
+        if last_check_time == "1970-01-01 08:00:00" or last_check_time is None:
+            display_time = get_content_name_async("update", "never_checked")
+        else:
+            display_time = last_check_time
+
         self.last_check_label.setText(
-            f"{get_content_name_async('update', 'last_check_time')}: {last_check_time}"
+            f"{get_content_name_async('update', 'last_check_time')}: {display_time}"
         )
 
-    def _update_last_check_time(self):
+    @Slot()
+    def update_last_check_time(self):
         """更新上次检查更新时间为当前时间"""
         from datetime import datetime
 
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         update_settings("update", "last_check_time", current_time)
-        self._load_last_check_time()
+        QMetaObject.invokeMethod(self, "_load_last_check_time", Qt.QueuedConnection)
 
     def download_and_install(self):
         """下载并安装更新"""
@@ -968,9 +998,7 @@ class update(QWidget):
             Q_ARG(str, get_content_name_async("update", "update_cancelled")),
         )
 
-    def update_last_check_time(self):
-        """更新上次检查时间（公共方法，供外部调用）"""
-        self._update_last_check_time()
+
 
     def _restore_from_global_status(self):
         """从全局状态管理器恢复状态"""

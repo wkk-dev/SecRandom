@@ -643,6 +643,10 @@ class SettingsWindow(FluentWindow):
                 is_preview=False: settings_window_page.about_page(
                     p, is_preview=is_preview
                 ),
+                "courseSettingsInterface": lambda p=container,
+                is_preview=False: settings_window_page.linkage_settings_page(
+                    p, is_preview=is_preview
+                ),
             }
 
             if page_name in factory_mapping:

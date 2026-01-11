@@ -14,7 +14,7 @@ from qfluentwidgets import FluentWindow, NavigationItemPosition
 
 from app.common.IPC_URL.csharp_ipc_handler import CSharpIPCHandler
 from app.common.shortcut import ShortcutManager
-from app.tools.variable import MINIMUM_WINDOW_SIZE, APP_INIT_DELAY
+from app.tools.variable import MINIMUM_WINDOW_SIZE, APP_INIT_DELAY, EXIT_CODE_RESTART
 from app.tools.path_utils import get_data_path, get_app_root
 from app.tools.personalised import get_theme_icon
 from app.tools.settings_access import get_safe_font_size
@@ -816,43 +816,7 @@ class MainWindow(FluentWindow):
     def restart_app(self):
         """重启应用程序（跨平台支持）
         执行安全验证后重启程序，清理所有资源"""
-        try:
-            working_dir = get_app_root()
-
-            # 过滤掉 --url 等参数
-            filtered_args = [arg for arg in sys.argv if not arg.startswith("--")]
-
-            # 获取可执行文件路径
-            if getattr(sys, "frozen", False):
-                # 打包后的可执行文件
-                executable = sys.executable
-            else:
-                # 开发环境
-                executable = sys.executable
-
-            # 跨平台启动新进程
-            if sys.platform.startswith("win"):
-                # Windows 特定参数
-                startup_info = subprocess.STARTUPINFO()
-                startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                subprocess.Popen(
-                    [executable] + filtered_args,
-                    cwd=working_dir,
-                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
-                    | subprocess.DETACHED_PROCESS,
-                    startupinfo=startup_info,
-                )
-            else:
-                # Linux/macOS
-                subprocess.Popen(
-                    [executable] + filtered_args,
-                    cwd=working_dir,
-                    start_new_session=True,
-                )
-
-        except Exception as e:
-            logger.exception(f"启动新进程失败: {e}")
-            return
+        logger.info("正在发起重启请求...")
 
         # 停止课前重置定时器
         if self.pre_class_reset_timer.isActive():
@@ -861,10 +825,8 @@ class MainWindow(FluentWindow):
         # 快速清理快捷键
         self.cleanup_shortcuts()
 
-        # 完全退出当前应用程序
-        QApplication.quit()
-        CSharpIPCHandler.instance().stop_ipc_client()
-        sys.exit(0)
+        # 请求重启
+        QApplication.exit(EXIT_CODE_RESTART)
 
     def _check_pre_class_reset(self):
         """每秒检测课前重置条件"""
