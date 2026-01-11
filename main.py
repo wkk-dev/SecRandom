@@ -38,26 +38,28 @@ def main():
     logger.remove()
     configure_logging()
 
-    if VERSION != "v0.0.0":
+    # Sentry 环境与版本号自动识别
+    environment = "development" if "0.0.0" in VERSION else "production"
 
-        def before_send(event, hint):
-            # 如果事件中不包含异常信息（即没有堆栈），则不上传
-            if "exception" not in event:
-                return None
-            return event
+    def before_send(event, hint):
+        # 如果事件中不包含异常信息（即没有堆栈），则不上传
+        if "exception" not in event:
+            return None
+        return event
 
-        sentry_sdk.init(
-            dsn="https://f48074b49e319f7b952583c283046259@o4510289605296128.ingest.de.sentry.io/4510681366659152",
-            integrations=[
-                LoguruIntegration(
-                    level=LoggingLevels.INFO.value,
-                    event_level=LoggingLevels.ERROR.value,
-                ),
-            ],
-            before_send=before_send,
-            send_default_pii=True,
-            enable_logs=True,
-        )
+    sentry_sdk.init(
+        dsn="https://f48074b49e319f7b952583c283046259@o4510289605296128.ingest.de.sentry.io/4510681366659152",
+        integrations=[
+            LoguruIntegration(
+                level=LoggingLevels.INFO.value,
+                event_level=LoggingLevels.ERROR.value,
+            ),
+        ],
+        before_send=before_send,
+        environment=environment,
+        release=VERSION,
+        send_default_pii=True,
+    )
 
     wm.app_start_time = time.perf_counter()
 
