@@ -1,4 +1,4 @@
-<img width="1800" height="766" alt="新版本" src="https://github.com/SECTL/SecRandom/blob/master/data/assets/icon/secrandom-version.png" />
+<img width="1800" height="766" alt="新版本" src="https://github.com/SECTL/SecRandom/blob/master/data/assets/icon/secrandom-release.png" />
 v2.0 - Koharu（小鸟游星野） release 3
 
 ## 🚀 主要更新
@@ -18,6 +18,9 @@ v2.0 - Koharu（小鸟游星野） release 3
 
 ## 💡 功能优化
 
+- 优化 **更新流程**，改为下载 exe 安装程序并自动运行
+- 优化 **构建流程**，仅提供 Windows exe 安装程序
+- 优化 **更新工具**，去除 zip 相关的更新流程，仅支持 exe 安装程序
 - 优化 **退出流程**，确保资源释放完整与快速响应
 - 优化 **动画流畅性**，新增控件复用减少重绘开销
 - 优化 **闪抽动画日志**，减少不必要的日志输出
