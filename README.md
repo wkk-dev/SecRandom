@@ -194,4 +194,4 @@
 </picture>
 
 
-**Copyright © 2025 SECTL**
+**Copyright © 2025-2026 SECTL**
