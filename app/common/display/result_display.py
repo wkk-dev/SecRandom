@@ -397,7 +397,6 @@ class ResultDisplayUtils:
                                 )
                                 style_sheet += f"color: {default_color} !important;"
                             except Exception:
-                                # 兜底使用黑色
                                 style_sheet += "color: #000000 !important;"
 
                         widget.setStyleSheet(style_sheet)
@@ -410,7 +409,6 @@ class ResultDisplayUtils:
             else:
                 style_sheet = f"font-size: {font_size}pt; "
 
-            fixed_color = readme_settings_async(settings_group, "animation_fixed_color")
             if animation_color == 1:
                 style_sheet += (
                     f"color: {ResultDisplayUtils._generate_vibrant_color()} !important;"

@@ -439,10 +439,6 @@ quick_draw_settings = {
             "name": "Animation fixed color",
             "description": "Set the animation/result color of Quick Pick",
         },
-        "result_fixed_color": {
-            "name": "Results fixed color",
-            "description": "Configure fixed color for Quick Pick result display",
-        },
         "student_image": {
             "name": "Show student images",
             "description": "Set whether to show student images",
@@ -656,10 +652,6 @@ lottery_settings = {
         "animation_fixed_color": {
             "name": "Animation fixed color",
             "description": "Set the animation/result color",
-        },
-        "result_fixed_color": {
-            "name": "Results fixed color",
-            "description": "Configure fixed color for lottery result display",
         },
         "lottery_image": {
             "name": "Show prize images",

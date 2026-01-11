@@ -1036,7 +1036,7 @@ class FloatingNotificationManager:
             animation_color=animation_color,
             display_format=display_format,
             show_student_image=show_student_image,
-            settings_group=settings_group,
+            settings_group=font_settings_group,
             custom_font_family=font_settings_group,
         )
 
@@ -1177,7 +1177,7 @@ class FloatingNotificationManager:
             animation_color=animation_color,
             display_format=display_format,
             show_student_image=show_student_image,
-            settings_group=settings_group,
+            settings_group=font_settings_group,
             custom_font_family=font_settings_group,
         )
 
