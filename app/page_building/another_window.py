@@ -14,6 +14,7 @@ from app.view.another_window.prize.prize_name_setting import PrizeNameSettingWin
 from app.view.another_window.prize.prize_weight_setting import PrizeWeightSettingWindow
 from app.view.another_window.remaining_list import RemainingListPage
 from app.view.another_window.current_config_viewer import CurrentConfigViewerWindow
+from app.view.another_window.log_viewer import LogViewerWindow
 from app.Language.obtain_language import *
 from app.tools.variable import *
 
@@ -565,5 +566,33 @@ def create_current_config_viewer_window():
     window.windowClosed.connect(
         lambda: _window_instances.pop("current_config_viewer", None)
     )
+    window.show()
+    return
+
+
+# ==================================================
+# 日志查看窗口
+# ==================================================
+class log_viewer_window_template(PageTemplate):
+    """日志查看窗口类
+    使用PageTemplate创建日志查看页面"""
+
+    def __init__(self, parent=None):
+        super().__init__(content_widget_class=LogViewerWindow, parent=parent)
+
+
+def create_log_viewer_window():
+    """
+    创建日志查看窗口
+
+    Returns:
+        创建的窗口实例
+    """
+    title = get_content_name_async("log_viewer", "name")
+    window = SimpleWindowTemplate(title, width=900, height=600)
+    window.add_page_from_template("log_viewer", log_viewer_window_template)
+    window.switch_to_page("log_viewer")
+    _window_instances["log_viewer"] = window
+    window.windowClosed.connect(lambda: _window_instances.pop("log_viewer", None))
     window.show()
     return

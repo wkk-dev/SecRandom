@@ -38,7 +38,6 @@ from app.tools.variable import (
     LOG_FILENAME_FORMAT,
     LOG_ROTATION_SIZE,
     LOG_RETENTION_DAYS,
-    LOG_COMPRESSION,
     APPLY_NAME,
 )
 from app.Language.obtain_language import (
@@ -54,19 +53,15 @@ def configure_logging():
     log_dir = get_path(LOG_DIR)
     log_dir.mkdir(exist_ok=True)
 
-    # 获取日志等级设置，默认为INFO
-    log_level = (
-        readme_settings_async("basic_settings", "log_level")
-        if readme_settings_async("basic_settings", "log_level")
-        else "INFO"
-    )
+    # 默认日志等级为DEBUG
+    log_level = "DEBUG"
 
     # 配置日志格式 - 文件输出（包含详细的调试信息）
     logger.add(
         log_dir / LOG_FILENAME_FORMAT,
         rotation=LOG_ROTATION_SIZE,
         retention=LOG_RETENTION_DAYS,
-        compression=LOG_COMPRESSION,
+        compression=None,
         backtrace=True,
         diagnose=True,
         level=log_level,

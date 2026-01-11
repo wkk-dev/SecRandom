@@ -41,7 +41,6 @@ DEFAULT_SETTINGS = {
         "import_settings": {"default_value": None},
         "export_all_data": {"default_value": None},
         "import_all_data": {"default_value": None},
-        "log_level": {"default_value": "INFO"},
         "dpiScale": {"default_value": "Auto"},
         "font": {"default_value": DEFAULT_FONT_NAME_PRIMARY},
         "font_weight": {"default_value": "3"},

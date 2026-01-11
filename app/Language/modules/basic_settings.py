@@ -97,10 +97,10 @@ basic_settings = {
             "description": "启动软件时从备份文件恢复全部数据",
             "pushbutton_name": "导入所有数据",
         },
-        "log_level": {
-            "name": "日志等级",
-            "description": "设置日志记录详细程度",
-            "combo_items": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        "log_viewer": {
+            "name": "查看日志",
+            "description": "查看和管理程序日志文件",
+            "pushbutton_name": "查看日志",
         },
         "dpiScale": {
             "name": "DPI缩放",
@@ -265,6 +265,11 @@ basic_settings = {
             "description": "Restore all data from backup file when software starts",
             "pushbutton_name": "Import all data",
         },
+        "log_viewer": {
+            "name": "Viewer Log",
+            "description": "View and manage program log files",
+            "pushbutton_name": "Viewer Log",
+        },
         "dpiScale": {
             "name": "DPI scale settings",
             "description": "Resize the app interface (restart required)",
@@ -333,17 +338,6 @@ basic_settings = {
         "ipc_port": {
             "name": "IPC port setting",
             "description": "Set IPC communication port (0 means dynamic allocation)",
-        },
-        "log_level": {
-            "name": "Log level",
-            "description": "Set the level of detail for log entries",
-            "combo_items": {
-                "0": "DEBUG",
-                "1": "INFO",
-                "2": "WARNING",
-                "3": "ERROR",
-                "4": "CRITICAL",
-            },
         },
         "settings_import_export": {
             "export_success_title": {"name": "Export settings"},

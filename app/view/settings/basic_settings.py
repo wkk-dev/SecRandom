@@ -36,7 +36,6 @@ from app.tools.config import (
     import_settings,
     export_all_data,
     import_all_data,
-    configure_logging,
     set_autostart,
     show_notification,
     NotificationType,
@@ -44,6 +43,7 @@ from app.tools.config import (
 )
 from app.common.IPC_URL import URLIPCHandler
 from app.tools.variable import WIDTH_SPINBOX
+from app.page_building.another_window import create_log_viewer_window
 
 
 # ==================================================
@@ -664,18 +664,6 @@ class basic_settings_personalised(GroupHeaderCardWidget):
             lambda scale: self.update_dpi_scale_setting(scale, dpi_scale_items)
         )
 
-        # 日志等级设置卡片
-        self.logLevel = ComboBox()
-        log_level_items = get_content_combo_name_async("basic_settings", "log_level")
-        self.logLevel.addItems(log_level_items)
-        current_log_level = readme_settings_async("basic_settings", "log_level")
-        if current_log_level in log_level_items:
-            self.logLevel.setCurrentText(current_log_level)
-        self.logLevel.currentTextChanged.connect(
-            lambda level: update_settings("basic_settings", "log_level", level)
-        )
-        self.logLevel.currentTextChanged.connect(lambda: configure_logging())
-
         # 主题色设置卡片
         self.themeColorCard = ColorSettingCard(
             self.themeColor,
@@ -714,12 +702,6 @@ class basic_settings_personalised(GroupHeaderCardWidget):
             get_content_name_async("basic_settings", "dpiScale"),
             get_content_description_async("basic_settings", "dpiScale"),
             self.dpiScale,
-        )
-        self.addGroup(
-            get_theme_icon("ic_fluent_bug_20_filled"),
-            get_content_name_async("basic_settings", "log_level"),
-            get_content_description_async("basic_settings", "log_level"),
-            self.logLevel,
         )
         # 添加卡片到布局
         self.vBoxLayout.addWidget(self.themeColorCard)
@@ -782,7 +764,19 @@ class basic_settings_data_management(GroupHeaderCardWidget):
             lambda: import_all_data(self.window())
         )
 
+        # 日志查看按钮
+        self.log_viewer_button = PushButton(
+            get_content_pushbutton_name_async("basic_settings", "log_viewer")
+        )
+        self.log_viewer_button.clicked.connect(self.open_log_viewer)
+
         # 添加设置项到分组
+        self.addGroup(
+            get_theme_icon("ic_fluent_document_20_filled"),
+            get_content_name_async("basic_settings", "log_viewer"),
+            get_content_description_async("basic_settings", "log_viewer"),
+            self.log_viewer_button,
+        )
         self.addGroup(
             get_theme_icon("ic_fluent_database_arrow_down_20_filled"),
             get_content_name_async("basic_settings", "export_diagnostic_data"),
@@ -813,3 +807,18 @@ class basic_settings_data_management(GroupHeaderCardWidget):
             get_content_description_async("basic_settings", "import_all_data"),
             self.import_all_data_button,
         )
+
+    def open_log_viewer(self):
+        """打开日志查看窗口"""
+        try:
+            create_log_viewer_window()
+        except Exception as e:
+            logger.exception(f"打开日志查看窗口失败: {e}")
+            show_notification(
+                NotificationType.ERROR,
+                NotificationConfig(
+                    title=get_content_name_async("basic_settings", "log_viewer"),
+                    content=f"打开日志查看窗口失败: {str(e)}",
+                ),
+                parent=self.window(),
+            )

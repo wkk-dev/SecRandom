@@ -46,7 +46,9 @@ DEFAULT_FILE_ENCODING = "utf-8"  # 默认文件编码
 # -------------------- 路径常量 --------------------
 # 日志路径
 LOG_DIR = "logs"  # 日志目录名
-LOG_FILENAME_FORMAT = "SecRandom_{time:YYYY-MM-DD}.log"  # 日志文件名格式
+LOG_FILENAME_FORMAT = (
+    f"SecRandom_{NEXT_VERSION}_{{time:YYYY-MM-DD}}.log"  # 日志文件名格式
+)
 
 # 资源文件夹路径
 STUDENT_IMAGE_FOLDER = "images/student_images"  # 学生图片文件夹名
@@ -127,7 +129,6 @@ DEFAULT_NAME_FORMAT = (
 # -------------------- 日志模块配置 --------------------
 LOG_ROTATION_SIZE = "1 MB"  # 日志文件轮转大小
 LOG_RETENTION_DAYS = "30 days"  # 日志保留天数
-LOG_COMPRESSION = "tar.gz"  # 日志压缩格式
 
 # -------------------- 语言模块配置 --------------------
 LANGUAGE_ZH_CN = "ZH_CN"  # 中文
