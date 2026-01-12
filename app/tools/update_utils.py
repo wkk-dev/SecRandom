@@ -2,13 +2,8 @@
 # 导入模块
 # ==================================================
 import asyncio
-import shutil
-import subprocess
-import sys
-from tempfile import NamedTemporaryFile
 import time
 from typing import Any, Tuple, Callable, Optional
-import zipfile
 import aiohttp
 from loguru import logger
 import yaml
@@ -54,111 +49,46 @@ def _run_async_func(async_func: Any, *args: Any, **kwargs: Any) -> Any:
         return None
 
 
-def check_zip_integrity(zip_path: str) -> bool:
-    """检查ZIP文件的完整性
+def check_exe_integrity(exe_path: str) -> bool:
+    """检查EXE安装程序的完整性
 
     Args:
-        zip_path (str): zip文件路径
+        exe_path (str): exe文件路径
 
     Returns:
         bool: 文件完整返回True，否则返回False
     """
     try:
-        logger.debug(f"检查ZIP文件完整性: {zip_path}")
+        logger.debug(f"检查EXE安装程序完整性: {exe_path}")
 
         # 检查文件是否存在
-        if not Path(zip_path).exists():
-            logger.exception(f"ZIP文件不存在: {zip_path}")
+        if not Path(exe_path).exists():
+            logger.exception(f"EXE文件不存在: {exe_path}")
             return False
 
         # 检查文件大小
-        file_size = Path(zip_path).stat().st_size
+        file_size = Path(exe_path).stat().st_size
         if file_size == 0:
-            logger.exception(f"ZIP文件大小为0: {zip_path}")
+            logger.exception(f"EXE文件大小为0: {exe_path}")
             return False
 
-        # 尝试打开并测试ZIP文件
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            # 测试ZIP文件的完整性
-            bad_file = zip_ref.testzip()
-            if bad_file is not None:
-                logger.exception(f"ZIP文件损坏，损坏的文件: {bad_file}")
+        # 检查PE文件头（Windows可执行文件）
+        with open(exe_path, "rb") as f:
+            # 读取前两个字节，检查MZ签名
+            magic = f.read(2)
+            if magic != b"MZ":
+                logger.exception(f"EXE文件格式错误，不是有效的PE文件: {exe_path}")
                 return False
 
-            # 检查ZIP文件是否为空
-            file_list = zip_ref.namelist()
-            if not file_list:
-                logger.exception(f"ZIP文件为空: {zip_path}")
-                return False
-
-        logger.debug(f"ZIP文件完整性检查通过: {zip_path}")
-        return True
-    except zipfile.BadZipFile as e:
-        logger.exception(f"ZIP文件格式错误: {e}")
-        return False
-    except Exception as e:
-        logger.exception(f"检查ZIP文件完整性失败: {e}")
-        return False
-
-
-def check_deb_integrity(deb_path: str) -> bool:
-    """检查DEB包的完整性
-
-    Args:
-        deb_path (str): deb文件路径
-
-    Returns:
-        bool: 文件完整返回True，否则返回False
-    """
-    try:
-        logger.debug(f"检查DEB包完整性: {deb_path}")
-
-        # 检查文件是否存在
-        if not Path(deb_path).exists():
-            logger.exception(f"DEB文件不存在: {deb_path}")
-            return False
-
-        # 检查文件大小
-        file_size = Path(deb_path).stat().st_size
-        if file_size == 0:
-            logger.exception(f"DEB文件大小为0: {deb_path}")
-            return False
-
-        # DEB包实际上是ar归档格式
-        # 检查ar文件头
-        with open(deb_path, "rb") as f:
-            # 检查ar文件签名
-            magic = f.read(8)
-            if not magic.startswith(b"!<arch>"):
-                logger.exception(f"DEB文件格式错误，不是有效的ar归档: {deb_path}")
-                return False
-
-            # 读取ar文件内容
-            f.seek(0)
-            content = f.read()
-
-            # 检查是否包含必要的文件（debian-binary, control.tar.gz, data.tar.gz）
-            if b"debian-binary" not in content:
-                logger.exception(f"DEB文件缺少debian-binary: {deb_path}")
-                return False
-
-            if b"control.tar" not in content:
-                logger.exception(f"DEB文件缺少control.tar: {deb_path}")
-                return False
-
-            if b"data.tar" not in content:
-                logger.exception(f"DEB文件缺少data.tar: {deb_path}")
-                return False
-
-        logger.debug(f"DEB包完整性检查通过: {deb_path}")
+        logger.debug(f"EXE安装程序完整性检查通过: {exe_path}")
         return True
     except Exception as e:
-        logger.exception(f"检查DEB包完整性失败: {e}")
+        logger.exception(f"检查EXE安装程序完整性失败: {e}")
         return False
 
 
 def check_update_file_integrity(file_path: str, file_type: str = None) -> bool:
-    """检查更新文件的完整性（自动检测文件类型）
+    """检查更新文件的完整性（仅支持 EXE）
 
     Args:
         file_path (str): 更新文件路径
@@ -171,74 +101,77 @@ def check_update_file_integrity(file_path: str, file_type: str = None) -> bool:
         # 自动检测文件类型
         if file_type is None:
             file_ext = Path(file_path).suffix.lower()
-            if file_ext == ".zip":
-                file_type = "zip"
-            elif file_ext == ".deb":
-                file_type = "deb"
+            if file_ext == ".exe":
+                file_type = "exe"
             else:
-                logger.exception(f"不支持的更新文件类型: {file_ext}")
+                logger.exception(
+                    f"不支持的更新文件类型: {file_ext}，仅支持 EXE 安装程序"
+                )
                 return False
 
         # 根据文件类型调用相应的检查函数
-        if file_type == "zip":
-            return check_zip_integrity(file_path)
-        elif file_type == "deb":
-            return check_deb_integrity(file_path)
+        if file_type == "exe":
+            return check_exe_integrity(file_path)
         else:
-            logger.exception(f"不支持的文件类型: {file_type}")
+            logger.exception(f"不支持的文件类型: {file_type}，仅支持 EXE 安装程序")
             return False
     except Exception as e:
         logger.exception(f"检查更新文件完整性失败: {e}")
         return False
 
 
-def extract_zip(zip_path: str, target_dir: str | Path, overwrite: bool = True) -> bool:
-    """解压zip文件到指定目录
+async def run_installer_and_exit(exe_path: str) -> bool:
+    """
+    运行 EXE 安装程序并退出应用程序
 
     Args:
-        zip_path (str): zip文件路径
-        target_dir (str | Path): 目标目录
-        overwrite (bool, optional): 是否覆盖现有文件. Defaults to True.
+        exe_path (str): exe 安装程序路径
 
     Returns:
-        bool: 解压成功返回True，否则返回False
+        bool: 启动成功返回 True，否则返回 False
     """
     try:
-        logger.debug(f"开始解压文件: {zip_path} 到 {target_dir}")
+        logger.info(f"准备运行安装程序: {exe_path}")
 
-        # 确保目标目录存在
-        ensure_dir(target_dir)
+        # 验证安装程序存在
+        if not Path(exe_path).exists():
+            logger.exception(f"安装程序不存在: {exe_path}")
+            return False
 
-        # 打开zip文件
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            # 获取所有文件列表
-            file_list = zip_ref.namelist()
-            # 创建已解压文件列表
-            extracted_files = set()
+        # 检查安装程序完整性
+        if not check_exe_integrity(exe_path):
+            logger.exception(f"安装程序不完整或已损坏: {exe_path}")
+            return False
 
-            for file in file_list:
-                # 构建目标文件路径
-                target_file = Path(target_dir) / file
+        # 使用 subprocess 启动安装程序
+        import subprocess
 
-                # 确保父目录存在
-                ensure_dir(target_file.parent)
+        # Windows 系统
+        if os.name == "nt":
+            logger.info("Windows 系统，启动安装程序")
 
-                # 如果文件已存在且不允许覆盖，跳过
-                if target_file.exists() and not overwrite:
-                    logger.debug(f"文件已存在，跳过: {target_file}")
-                    continue
+            # 使用 start 命令启动安装程序，不等待安装完成
+            # 使用 DETACHED_PROCESS 标志创建新进程
+            DETACHED_PROCESS = 0x00000008
+            subprocess.Popen(
+                [exe_path],
+                creationflags=DETACHED_PROCESS,
+                close_fds=True,
+            )
+        else:
+            logger.warning("非 Windows 系统，不支持运行 EXE 安装程序")
+            return False
 
-                # 解压文件
-                zip_ref.extract(file, target_dir)
-                # 添加到已解压文件列表
-                extracted_files.add(file)
+        logger.info("安装程序已启动，准备退出应用程序")
 
-        logger.debug(f"成功解压以下文件: {extracted_files}")
+        # 退出应用程序
+        import sys
 
-        logger.debug(f"文件解压完成: {zip_path} 到 {target_dir}")
+        sys.exit(0)
+
         return True
     except Exception as e:
-        logger.exception(f"解压文件失败: {e}")
+        logger.exception(f"运行安装程序失败: {e}")
         return False
 
 
@@ -974,9 +907,6 @@ async def install_update_async(file_path: str) -> bool:
     Returns:
         bool: 安装成功返回 True，否则返回 False
     """
-    temp_script_path = (
-        get_path("TEMP") / "installer_temp_script.py"
-    )  # 初始化为临时脚本路径，便于后续清理
     try:
         logger.debug(f"开始安装更新文件: {file_path}")
 
@@ -985,300 +915,31 @@ async def install_update_async(file_path: str) -> bool:
             logger.exception(f"更新文件不存在: {file_path}")
             return False
 
-        # 检查更新文件完整性
-        if not check_update_file_integrity(file_path):
-            logger.exception(f"更新文件不完整或已损坏: {file_path}")
+        # 检查文件类型
+        file_ext = Path(file_path).suffix.lower()
+
+        # 只支持 exe 安装程序
+        if file_ext != ".exe":
+            logger.exception(f"不支持的更新文件类型: {file_ext}，仅支持 EXE 安装程序")
+            return False
+
+        # 检查安装程序完整性
+        if not check_exe_integrity(file_path):
+            logger.exception(f"安装程序不完整或已损坏: {file_path}")
             # 删除损坏的文件
             try:
                 Path(file_path).unlink()
-                logger.info(f"已删除损坏的更新文件: {file_path}")
+                logger.info(f"已删除损坏的安装程序: {file_path}")
             except Exception as e:
-                logger.exception(f"删除损坏的更新文件失败: {e}")
+                logger.exception(f"删除损坏的安装程序失败: {e}")
             return False
 
-        # 判断是否是开发环境
-        is_dev_env = False
-        try:
-            # 检查是否存在 .git 目录
-            git_dir = get_path(".git")
-            is_dev_env = git_dir.exists()
-        except Exception as e:
-            logger.debug(f"检查开发环境失败: {e}")
-
-        if is_dev_env:
-            # 开发环境：安装到 TEMP 文件夹
-            logger.info("开发环境，安装到 TEMP 文件夹")
-            temp_dir = get_path("TEMP")
-            ensure_dir(temp_dir)
-
-            # 解压更新文件到 TEMP 目录
-            success = extract_zip(file_path, temp_dir, overwrite=True)
-            if success:
-                # 开发环境：删除旧版本文件
-                old_version_dir = get_path("SecRandom")
-                if old_version_dir.exists():
-                    shutil.rmtree(old_version_dir)
-                    logger.info(f"删除旧版本目录: {old_version_dir}")
-
-                # 删除下载的更新文件
-                logger.info(f"准备删除更新文件: {file_path}")
-                try:
-                    Path(file_path).unlink()
-                    logger.info(f"更新文件已删除: {file_path}")
-                except Exception as e:
-                    logger.exception(f"删除更新文件失败: {e}")
-
-                logger.info(f"开发环境更新文件安装成功: {file_path}")
-                return True
-            else:
-                logger.exception(f"开发环境更新文件安装失败: {file_path}")
-                return False
-        else:
-            # 生产环境：新开进程安装，主进程关闭
-            logger.info("生产环境，准备启动独立更新进程")
-
-            # 获取根目录
-            root_dir = get_app_root()
-            if not Path(root_dir).exists():
-                logger.exception(f"应用根目录不存在: {root_dir}")
-                return False
-
-            # 创建临时安装脚本
-            installer_script = """
-import zipfile
-import os
-import sys
-import shutil
-import time
-from pathlib import Path
-
-# 配置日志
-from loguru import logger
-
-# 确保日志目录存在
-log_dir = Path('logs')
-log_dir.mkdir(exist_ok=True)
-
-# 配置日志格式 - 文件输出
-logger.add(
-    log_dir / 'update_install_{time:YYYY-MM-DD}.log',
-    rotation='1 MB',
-    retention='30 days',
-    compression='tar.gz',
-    backtrace=True,
-    diagnose=True,
-    level='INFO',
-    format='<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>'
-)
-
-# 配置日志格式 - 终端输出
-if sys.stdout is not None:
-    logger.add(
-        sys.stdout,
-        format='<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>',
-        level='INFO',
-        colorize=True
-    )
-
-
-def ensure_dir(path):
-    # 确保目录存在
-    Path(path).mkdir(parents=True, exist_ok=True)
-
-
-def extract_zip(zip_path, target_dir, overwrite=True):
-    # 解压zip文件
-    try:
-        logger.info(f"开始解压文件: {zip_path} 到 {target_dir}")
-        ensure_dir(target_dir)
-
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            for file in zip_ref.namelist():
-                target_file = Path(target_dir) / file
-                ensure_dir(target_file.parent)
-
-                if target_file.exists() and not overwrite:
-                    logger.info(f"文件已存在，跳过: {target_file}")
-                    continue
-
-                # 解压文件
-                try:
-                    zip_ref.extract(file, target_dir)
-                    logger.info(f"解压文件成功: {target_file}")
-                except PermissionError:
-                    # Windows 上可能需要删除旧文件
-                    if target_file.exists():
-                        try:
-                            target_file.unlink()
-                            zip_ref.extract(file, target_dir)
-                            logger.info(f"重新解压文件成功: {target_file}")
-                        except Exception as e:
-                            logger.warning(f"覆盖文件失败，跳过: {target_file}, 错误: {e}")
-                            continue
-                    else:
-                        raise
-
-                # Linux系统下设置可执行权限
-                if os.name != 'nt' and file.endswith(('.py', '.sh')):
-                    try:
-                        # 获取文件的当前权限
-                        current_mode = os.stat(target_file).st_mode
-                        # 添加执行权限
-                        os.chmod(target_file, current_mode | 0o111)
-                        logger.info(f"已设置文件执行权限: {target_file}")
-                    except Exception as e:
-                        logger.warning(f"设置文件执行权限失败: {e}")
-
-        logger.info(f"文件解压完成: {zip_path} 到 {target_dir}")
-        return True
-    except Exception as e:
-        logger.exception(f"解压文件失败: {e}")
-        return False
-
-
-def restart_application(root_dir):
-    try:
-        logger.info("准备重启应用程序")
-
-        # 确定主程序文件
-        main_program = None
-        possible_main_files = ['main.py', 'SecRandom', 'SecRandom.exe']
-
-        for main_file in possible_main_files:
-            main_path = Path(root_dir) / main_file
-            if main_path.exists():
-                main_program = main_path
-                break
-
-        if not main_program:
-            logger.exception("未找到主程序文件")
-            return False
-
-        logger.info(f"找到主程序文件: {main_program}")
-
-        # 根据系统类型选择重启方式
-        if os.name == 'nt':
-            # Windows系统 - 使用引号保护路径中的空格
-            logger.info("Windows系统，使用start命令重启")
-            import subprocess
-            subprocess.Popen(
-                ['start', '""', f'"{main_program}"'],
-                shell=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
-        else:
-            # Linux系统
-            logger.info("Linux系统，使用nohup命令后台重启")
-            import subprocess
-            subprocess.Popen(
-                [sys.executable, str(main_program)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True
-            )
-
-        logger.info("应用程序重启成功")
-        return True
-    except Exception as e:
-        logger.exception(f"重启应用程序失败: {e}")
-        return False
-
-
-if __name__ == '__main__':
-    try:
-        # 获取参数
-        update_file = sys.argv[1]
-        root_dir = sys.argv[2]
-
-        logger.info(f"更新安装脚本启动")
-        logger.info(f"更新文件: {update_file}")
-        logger.info(f"根目录: {root_dir}")
-
-        # 验证参数
-        if not Path(update_file).exists():
-            logger.exception(f"更新文件不存在: {update_file}")
-            sys.exit(1)
-
-        if not Path(root_dir).exists():
-            logger.exception(f"根目录不存在: {root_dir}")
-            sys.exit(1)
-
-        # 等待一段时间，确保主进程已关闭（可配置）
-        wait_time = 2
-        logger.info(f"等待主进程关闭... ({wait_time}秒)")
-        time.sleep(wait_time)
-
-        # 解压更新文件到根目录
-        success = extract_zip(update_file, root_dir, overwrite=True)
-        if success:
-            logger.info("更新安装成功")
-
-            # 重启应用程序
-            restart_application(root_dir)
-
-            # 删除下载的更新文件
-            logger.info(f"准备删除更新文件: {update_file}")
-            try:
-                time.sleep(1)  # 给文件系统一点时间
-                Path(update_file).unlink()
-                logger.info(f"更新文件已删除: {update_file}")
-            except Exception as e:
-                logger.exception(f"删除更新文件失败: {e}")
-        else:
-            logger.exception("更新安装失败")
-            sys.exit(1)
-
-    except Exception as e:
-        logger.exception(f"更新安装脚本执行失败: {e}")
-        sys.exit(1)
-"""
-
-            # 写入临时脚本文件
-            try:
-                with NamedTemporaryFile(
-                    mode="w", encoding="utf-8", delete=False, suffix=".py"
-                ) as temp_script:
-                    temp_script.write(installer_script)
-                    temp_script_path = temp_script.name
-                    logger.debug(f"临时脚本已创建: {temp_script_path}")
-            except Exception as e:
-                logger.exception(f"创建临时脚本失败: {e}")
-                return False
-
-            try:
-                # 启动独立更新进程
-                logger.info("启动独立更新进程")
-                subprocess.Popen(
-                    [sys.executable, temp_script_path, file_path, str(root_dir)],
-                    close_fds=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    creationflags=subprocess.CREATE_NO_WINDOW
-                    if sys.platform == "win32"
-                    else 0,
-                )
-
-                # 给子进程足够的时间启动
-                time.sleep(1)
-
-                # 关闭主进程
-                logger.info("生产环境更新进程已启动，主进程将关闭")
-                sys.exit(0)
-            except Exception as e:
-                logger.exception(f"启动更新进程失败: {e}")
-                return False
-
-            return True
+        # 运行安装程序并退出应用程序
+        logger.info("准备运行 EXE 安装程序")
+        return await run_installer_and_exit(file_path)
     except Exception as e:
         logger.exception(f"安装更新文件失败: {e}")
         return False
-    finally:
-        # 说明：
-        # - 生产环境中，临时安装脚本会在子进程内部自删除；
-        # - 开发环境中，不会创建临时安装脚本（temp_script_path 为空）。
-        # 因此，此处不再尝试在主进程中清理临时脚本文件，以避免无效的清理逻辑。
-        pass
 
 
 def install_update(file_path: str) -> bool:
