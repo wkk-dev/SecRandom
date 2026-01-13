@@ -14,6 +14,6 @@ subchannels:
   arch:
     - x64
   struct:
-    - dir
+    - exe
 
-name_format: SecRandom-setup-[version]-[arch]-[struct].exe
+name_format: SecRandom-setup-[version]-[arch]-.exe
