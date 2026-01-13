@@ -155,7 +155,7 @@ class LogViewerWindow(QWidget):
                 )
 
         except Exception as e:
-            logger.exception(f"加载日志文件列表失败: {e}")
+            logger.warning(f"加载日志文件列表失败: {e}")
             self.status_label.setText(
                 get_content_name_async("log_viewer", "load_failed").format(str(e))
             )
@@ -195,7 +195,7 @@ class LogViewerWindow(QWidget):
             )
 
         except Exception as e:
-            logger.exception(f"加载日志内容失败: {e}")
+            logger.warning(f"加载日志内容失败: {e}")
             self.status_label.setText(
                 get_content_name_async("log_viewer", "load_failed").format(str(e))
             )
@@ -263,7 +263,7 @@ class LogViewerWindow(QWidget):
             self.display_colored_logs(filtered_lines)
 
         except Exception as e:
-            logger.exception(f"过滤日志失败: {e}")
+            logger.warning(f"过滤日志失败: {e}")
 
     def display_colored_logs(self, lines):
         """显示带颜色的日志"""
@@ -297,7 +297,7 @@ class LogViewerWindow(QWidget):
             self.log_text.setHtml(html_content)
 
         except Exception as e:
-            logger.exception(f"显示带颜色日志失败: {e}")
+            logger.warning(f"显示带颜色日志失败: {e}")
 
     def clear_current_log(self):
         """清空当前日志文件"""
@@ -331,7 +331,7 @@ class LogViewerWindow(QWidget):
             )
 
         except Exception as e:
-            logger.exception(f"清空日志文件失败: {e}")
+            logger.warning(f"清空日志文件失败: {e}")
             self.status_label.setText(
                 get_content_name_async("log_viewer", "clear_failed").format(str(e))
             )
@@ -383,7 +383,7 @@ class LogViewerWindow(QWidget):
             )
 
         except Exception as e:
-            logger.exception(f"清空全部日志文件失败: {e}")
+            logger.warning(f"清空全部日志文件失败: {e}")
             self.status_label.setText(
                 get_content_name_async("log_viewer", "clear_all_failed").format(str(e))
             )
@@ -402,7 +402,7 @@ class LogViewerWindow(QWidget):
             os.startfile(log_dir)
 
         except Exception as e:
-            logger.exception(f"打开日志文件夹失败: {e}")
+            logger.warning(f"打开日志文件夹失败: {e}")
             self.status_label.setText(
                 get_content_name_async("log_viewer", "open_folder_failed").format(
                     str(e)

@@ -407,7 +407,7 @@ def send_system_notification(title: str, content: str, url: str = None) -> bool:
                 else:
                     logger.warning("通知未配置URL，无法打开链接")
             except Exception as e:
-                logger.exception(f"打开通知链接失败: {e}")
+                logger.warning(f"打开通知链接失败: {e}")
 
         if sys.platform == "win32":
             # Windows平台
@@ -494,7 +494,7 @@ def send_system_notification(title: str, content: str, url: str = None) -> bool:
             logger.warning(f"当前平台不支持系统通知: {sys.platform}")
             return False
     except Exception as e:
-        logger.exception(f"发送系统通知时发生意外错误: {e}")
+        logger.warning(f"发送系统通知时发生意外错误: {e}")
         return False
 
 
@@ -560,9 +560,9 @@ def restore_volume(volume_value):
                                     f"Windows音量设置为: {volume_value}%，实际设置值: {actual_volume:.1f}%"
                                 )
                             else:
-                                logger.exception("音频设备没有Activate方法")
+                                logger.warning("音频设备没有Activate方法")
                         else:
-                            logger.exception("无法获取音频设备接口")
+                            logger.warning("无法获取音频设备接口")
                 except Exception as e:
                     logger.exception(f"获取系统主音量控制器失败: {e}")
                     # 作为最后尝试，遍历所有会话并设置音量
@@ -669,7 +669,7 @@ def export_settings(parent: Optional[QWidget] = None) -> None:
             dialog.exec()
 
     except Exception as e:
-        logger.exception(f"导出设置失败: {e}")
+        logger.warning(f"导出设置失败: {e}")
         # 显示错误消息
         dialog = MessageBox(
             get_any_position_value_async(
@@ -789,7 +789,7 @@ def import_settings(parent: Optional[QWidget] = None) -> None:
                 success_dialog.exec()
 
     except Exception as e:
-        logger.exception(f"导入设置失败: {e}")
+        logger.warning(f"导入设置失败: {e}")
         # 显示错误消息
         dialog = MessageBox(
             get_any_position_value_async(
@@ -1172,7 +1172,7 @@ def export_diagnostic_data(parent: Optional[QWidget] = None) -> None:
                         json.dumps(system_info, ensure_ascii=False, indent=2),
                     )
                 except Exception as e:
-                    logger.exception(f"写入诊断信息文件失败: {e}")
+                    logger.warning"写入诊断信息文件失败: {e}")
 
                     # 尝试将所有Path对象转换为字符串
                     class PathEncoder(json.JSONEncoder):
@@ -1217,7 +1217,7 @@ def export_diagnostic_data(parent: Optional[QWidget] = None) -> None:
             dialog.exec()
 
     except Exception as e:
-        logger.exception(f"导出诊断数据失败: {e}")
+        logger.warning(f"导出诊断数据失败: {e}")
         # 显示错误消息
         dialog = MessageBox(
             get_any_position_value_async(
@@ -1346,7 +1346,7 @@ def export_all_data(parent: Optional[QWidget] = None) -> None:
         dialog.buttonLayout.insertStretch(1)
         dialog.exec()
     except Exception as e:
-        logger.exception(f"导出所有数据失败: {e}")
+        logger.warning(f"导出所有数据失败: {e}")
         dialog = MessageBox(
             get_any_position_value_async(
                 "basic_settings", "data_import_export", "export_failure_title", "name"
@@ -1623,7 +1623,7 @@ def import_all_data(parent: Optional[QWidget] = None) -> None:
                 success_dialog.exec()
 
     except Exception as e:
-        logger.exception(f"导入所有数据失败: {e}")
+        logger.warning入所有数据失败: {e}")
         # 显示错误消息
         dialog = MessageBox(
             get_any_position_value_async(
@@ -1779,7 +1779,7 @@ def _load_drawn_records(file_path: str) -> dict:
 
         return drawn_records
     except (json.JSONDecodeError, IOError) as e:
-        logger.exception(f"读取已抽取记录失败: {e}")
+        logger.warning{e}")
         return {}
 
 
@@ -1824,7 +1824,7 @@ def _save_drawn_records(file_path: str, drawn_records: dict) -> None:
         with open(file_path, "w", encoding="utf-8") as file:
             json.dump(drawn_records, file, ensure_ascii=False, indent=2)
     except IOError as e:
-        logger.exception(f"保存已抽取记录失败: {e}")
+        logger.warning(f"保存已抽取记录失败: {e}")
 
 
 # ======= 读取已抽取记录 =======
@@ -1866,7 +1866,7 @@ def read_drawn_record(class_name: str, gender: str, group: str):
             logger.debug(f"已读取{class_name}_{gender}_{group}已抽取记录")
             return drawn_records
         except (json.JSONDecodeError, IOError) as e:
-            logger.exception(f"读取已抽取记录失败: {e}")
+            logger.warning(f"读取已抽取记录失败: {e}")
             return []
     else:
         logger.debug(f"文件 {file_path} 不存在")
@@ -1898,7 +1898,7 @@ def remove_record(class_name: str, gender: str, group: str, _prefix: str = "0"):
                 file_name = os.path.basename(os.path.dirname(file_path))
                 logger.info(f"已删除记录文件夹: {file_name}")
             except OSError as e:
-                logger.exception(f"删除文件{file_path}失败: {e}")
+                logger.warning(f"删除文件{file_path}失败: {e}")
     elif prefix == "until":
         # 只删除特定前缀的文件
         file_path = get_data_path(
@@ -1910,7 +1910,7 @@ def remove_record(class_name: str, gender: str, group: str, _prefix: str = "0"):
                 file_name = os.path.basename(os.path.dirname(file_path))
                 logger.info(f"已删除记录文件夹: {file_name}")
         except OSError as e:
-            logger.exception(f"删除文件{file_path}失败: {e}")
+            logger.warning(f"删除文件{file_path}失败: {e}")
     elif prefix == "restart":  # 重启后清除
         # 构建搜索模式，匹配所有前缀的文件夹
         search_pattern = os.path.join("data", "TEMP", "draw_*.json")
@@ -1923,7 +1923,7 @@ def remove_record(class_name: str, gender: str, group: str, _prefix: str = "0"):
                 file_name = os.path.basename(os.path.dirname(file_path))
                 logger.info(f"已删除记录文件夹: {file_name}")
             except OSError as e:
-                logger.exception(f"删除文件{file_path}失败: {e}")
+                logger.warning(f"删除文件{file_path}失败: {e}")
 
 
 def reset_drawn_record(self, class_name: str, gender: str, group: str):
@@ -2071,7 +2071,7 @@ def read_drawn_record_simple(pool_name: str):
                         res.append((item["name"], int(item.get("count", 1))))
                 return res
         except Exception as e:
-            logger.exception(f"读取奖池已抽取记录失败: {e}")
+            logger.warning(f"读取奖池已抽取记录失败: {e}")
             return []
     return []
 
@@ -2083,7 +2083,7 @@ def reset_drawn_prize_record(self, pool_name: str):
             try:
                 os.remove(fp)
             except OSError as e:
-                logger.exception(f"删除文件{fp}失败: {e}")
+                logger.warning(f"删除文件{fp}失败: {e}")
         show_notification(
             NotificationType.INFO,
             NotificationConfig(
@@ -2094,7 +2094,7 @@ def reset_drawn_prize_record(self, pool_name: str):
             parent=self,
         )
     except Exception as e:
-        logger.exception(f"重置奖池抽取记录失败: {e}")
+        logger.warning(f"重置奖池抽取记录失败: {e}")
 
 
 def set_autostart(enabled: bool) -> bool:
@@ -2145,5 +2145,5 @@ def set_autostart(enabled: bool) -> bool:
         else:
             return False
     except Exception as e:
-        logger.exception(f"设置开机自启动失败: {e}")
+        logger.warning(f"设置开机自启动失败: {e}")
         return False

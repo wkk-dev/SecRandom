@@ -45,7 +45,7 @@ def _run_async_func(async_func: Any, *args: Any, **kwargs: Any) -> Any:
     try:
         return asyncio.run(async_func(*args, **kwargs))
     except Exception as e:
-        logger.exception(f"运行异步函数失败: {e}")
+        logger.warning(f"运行异步函数失败: {e}")
         return None
 
 
@@ -63,13 +63,13 @@ def check_exe_integrity(exe_path: str) -> bool:
 
         # 检查文件是否存在
         if not Path(exe_path).exists():
-            logger.exception(f"EXE文件不存在: {exe_path}")
+            logger.warning(f"EXE文件不存在: {exe_path}")
             return False
 
         # 检查文件大小
         file_size = Path(exe_path).stat().st_size
         if file_size == 0:
-            logger.exception(f"EXE文件大小为0: {exe_path}")
+            logger.warning(f"EXE文件大小为0: {exe_path}")
             return False
 
         # 检查PE文件头（Windows可执行文件）
@@ -77,13 +77,13 @@ def check_exe_integrity(exe_path: str) -> bool:
             # 读取前两个字节，检查MZ签名
             magic = f.read(2)
             if magic != b"MZ":
-                logger.exception(f"EXE文件格式错误，不是有效的PE文件: {exe_path}")
+                logger.warning(f"EXE文件格式错误，不是有效的PE文件: {exe_path}")
                 return False
 
         logger.debug(f"EXE安装程序完整性检查通过: {exe_path}")
         return True
     except Exception as e:
-        logger.exception(f"检查EXE安装程序完整性失败: {e}")
+        logger.warning(f"检查EXE安装程序完整性失败: {e}")
         return False
 
 
@@ -104,7 +104,7 @@ def check_update_file_integrity(file_path: str, file_type: str = None) -> bool:
             if file_ext == ".exe":
                 file_type = "exe"
             else:
-                logger.exception(
+                logger.warning(
                     f"不支持的更新文件类型: {file_ext}，仅支持 EXE 安装程序"
                 )
                 return False
@@ -113,10 +113,10 @@ def check_update_file_integrity(file_path: str, file_type: str = None) -> bool:
         if file_type == "exe":
             return check_exe_integrity(file_path)
         else:
-            logger.exception(f"不支持的文件类型: {file_type}，仅支持 EXE 安装程序")
+            logger.warning(f"不支持的文件类型: {file_type}，仅支持 EXE 安装程序")
             return False
     except Exception as e:
-        logger.exception(f"检查更新文件完整性失败: {e}")
+        logger.warning(f"检查更新文件完整性失败: {e}")
         return False
 
 
@@ -135,12 +135,12 @@ async def run_installer_and_exit(exe_path: str) -> bool:
 
         # 验证安装程序存在
         if not Path(exe_path).exists():
-            logger.exception(f"安装程序不存在: {exe_path}")
+            logger.warning(f"安装程序不存在: {exe_path}")
             return False
 
         # 检查安装程序完整性
         if not check_exe_integrity(exe_path):
-            logger.exception(f"安装程序不完整或已损坏: {exe_path}")
+            logger.warning(f"安装程序不完整或已损坏: {exe_path}")
             return False
 
         # 使用 subprocess 启动安装程序
@@ -171,7 +171,7 @@ async def run_installer_and_exit(exe_path: str) -> bool:
 
         return True
     except Exception as e:
-        logger.exception(f"运行安装程序失败: {e}")
+        logger.warning(f"运行安装程序失败: {e}")
         return False
 
 
@@ -271,7 +271,7 @@ async def get_best_source() -> dict:
 
         return best_source
     except Exception as e:
-        logger.exception(f"获取最佳镜像源失败: {e}")
+        logger.warning(f"获取最佳镜像源失败: {e}")
         return UPDATE_SOURCES[0]  # 返回默认源
 
 
@@ -292,7 +292,7 @@ def get_update_source_url() -> str:
         else:
             return "https://github.com"
     except Exception as e:
-        logger.exception(f"获取更新源 URL 失败: {e}")
+        logger.warning(f"获取更新源 URL 失败: {e}")
         return "https://github.com"
 
 
@@ -312,7 +312,7 @@ async def get_update_source_url_async() -> str:
         else:
             return "https://github.com"
     except Exception as e:
-        logger.exception(f"获取更新源 URL 失败: {e}")
+        logger.warning(f"获取更新源 URL 失败: {e}")
         return "https://github.com"
 
 
@@ -441,7 +441,7 @@ async def get_metadata_info_async() -> dict | None:
                 continue
 
         # 所有镜像源都失败了
-        logger.exception("所有镜像源都获取 metadata.yaml 文件失败")
+        logger.warning("所有镜像源都获取 metadata.yaml 文件失败")
         return None
     else:
         # 使用指定的更新源
@@ -476,12 +476,12 @@ async def get_metadata_info_async() -> dict | None:
                         )
                         return metadata
             except Exception as e:
-                logger.exception(
+                logger.warning(
                     f"使用指定的更新源 {source['name']} 获取 metadata.yaml 失败: {e}"
                 )
                 return None
         else:
-            logger.exception(f"无效的更新源索引: {source_index}")
+            logger.warning(f"无效的更新源索引: {source_index}")
             return None
 
 
@@ -534,7 +534,7 @@ async def get_latest_version_async(channel: int | None = None) -> dict | None:
         )
         return {"version": version, "version_no": version_no}
     except Exception as e:
-        logger.exception(f"获取最新版本信息失败: {e}")
+        logger.warning(f"获取最新版本信息失败: {e}")
         return None
 
 
@@ -566,7 +566,7 @@ def compare_versions(current_version: str, latest_version: str) -> int:
     try:
         # 检查版本号是否为空
         if not current_version or not latest_version:
-            logger.exception(
+            logger.warning(
                 f"比较版本号失败: 版本号为空，current={current_version}, latest={latest_version}"
             )
             return -1
@@ -625,7 +625,7 @@ def compare_versions(current_version: str, latest_version: str) -> int:
 
         return 0  # 版本号完全相同
     except Exception as e:
-        logger.exception(f"比较版本号失败: {e}")
+        logger.warning(f"比较版本号失败: {e}")
         return -1
 
 
@@ -673,7 +673,7 @@ def get_update_download_url(
         logger.debug(f"生成更新下载 URL 成功: {download_url}")
         return download_url
     except Exception as e:
-        logger.exception(f"生成更新下载 URL 失败: {e}")
+        logger.warning(f"生成更新下载 URL 失败: {e}")
         # 返回默认的 GitHub 下载 URL
         return f"https://github.com/SECTL/SecRandom/releases/download/{version}/SecRandom-{system}-{version}-{arch}-{struct}.zip"
 
@@ -722,7 +722,7 @@ async def get_update_download_url_async(
         logger.debug(f"生成更新下载 URL 成功: {download_url}")
         return download_url
     except Exception as e:
-        logger.exception(f"生成更新下载 URL 失败: {e}")
+        logger.warning(f"生成更新下载 URL 失败: {e}")
         # 返回默认的 GitHub 下载 URL
         return f"https://github.com/SECTL/SecRandom/releases/download/{version}/SecRandom-{system}-{version}-{arch}-{struct}.zip"
 
@@ -839,7 +839,7 @@ async def download_update_async(
                         file_path.unlink()
                         logger.info(f"已删除损坏的文件: {file_path}")
                     except Exception as unlink_error:
-                        logger.exception(f"删除损坏文件失败: {unlink_error}")
+                        logger.warning(f"删除损坏文件失败: {unlink_error}")
                 # 继续尝试下一个镜像源
                 continue
 
@@ -853,11 +853,11 @@ async def download_update_async(
                     file_path.unlink()
                     logger.info(f"已删除部分下载文件: {file_path}")
                 except Exception as unlink_error:
-                    logger.exception(f"删除部分下载文件失败: {unlink_error}")
+                    logger.warning(f"删除部分下载文件失败: {unlink_error}")
             continue
 
     # 所有镜像源都失败了
-    logger.exception("所有镜像源都下载更新文件失败")
+    logger.warning("所有镜像源都下载更新文件失败")
     return None
 
 
@@ -912,7 +912,7 @@ async def install_update_async(file_path: str) -> bool:
 
         # 验证更新文件存在
         if not Path(file_path).exists():
-            logger.exception(f"更新文件不存在: {file_path}")
+            logger.warning(f"更新文件不存在: {file_path}")
             return False
 
         # 检查文件类型
@@ -920,25 +920,25 @@ async def install_update_async(file_path: str) -> bool:
 
         # 只支持 exe 安装程序
         if file_ext != ".exe":
-            logger.exception(f"不支持的更新文件类型: {file_ext}，仅支持 EXE 安装程序")
+            logger.warning(f"不支持的更新文件类型: {file_ext}，仅支持 EXE 安装程序")
             return False
 
         # 检查安装程序完整性
         if not check_exe_integrity(file_path):
-            logger.exception(f"安装程序不完整或已损坏: {file_path}")
+            logger.warning(f"安装程序不完整或已损坏: {file_path}")
             # 删除损坏的文件
             try:
                 Path(file_path).unlink()
                 logger.info(f"已删除损坏的安装程序: {file_path}")
             except Exception as e:
-                logger.exception(f"删除损坏的安装程序失败: {e}")
+                logger.warning(f"删除损坏的安装程序失败: {e}")
             return False
 
         # 运行安装程序并退出应用程序
         logger.info("准备运行 EXE 安装程序")
         return await run_installer_and_exit(file_path)
     except Exception as e:
-        logger.exception(f"安装更新文件失败: {e}")
+        logger.warning(f"安装更新文件失败: {e}")
         return False
 
 
@@ -1279,7 +1279,7 @@ class UpdateCheckThread(QThread):
                     if success:
                         logger.debug("自动安装更新成功")
                     else:
-                        logger.exception("自动安装更新失败")
+                        logger.warning("自动安装更新失败")
                     return
                 else:
                     # 文件损坏，需要重新下载
@@ -1291,7 +1291,7 @@ class UpdateCheckThread(QThread):
                         expected_file_path.unlink()
                         logger.debug(f"已删除损坏的文件: {expected_file_path}")
                     except Exception as e:
-                        logger.exception(f"删除损坏文件失败: {e}")
+                        logger.warning(f"删除损坏文件失败: {e}")
                     # 继续执行下载流程
 
             if compare_result == 1:
@@ -1359,7 +1359,7 @@ class UpdateCheckThread(QThread):
                                 expected_file_path.unlink()
                                 logger.debug(f"已删除损坏的文件: {expected_file_path}")
                             except Exception as e:
-                                logger.exception(f"删除损坏文件失败: {e}")
+                                logger.warning(f"删除损坏文件失败: {e}")
                             # 继续执行下载流程
 
                     # 通知更新页面开始下载
@@ -1437,7 +1437,7 @@ class UpdateCheckThread(QThread):
                         # 更新全局状态
                         update_status_manager.set_download_cancelled()
                     else:
-                        logger.exception("自动下载更新失败")
+                        logger.warning("自动下载更新失败")
                         # 通知更新页面下载失败
                         safe_call_update_interface("set_download_failed")
                         # 更新全局状态
@@ -1456,7 +1456,7 @@ class UpdateCheckThread(QThread):
             # 更新上次检查时间
             safe_call_update_interface("update_last_check_time")
         except Exception as e:
-            logger.exception(f"启动时检查更新失败: {e}")
+            logger.warning(f"启动时检查更新失败: {e}")
             # 通知更新页面检查失败
             safe_call_update_interface("set_check_failed")
         finally:

@@ -259,7 +259,7 @@ def write_behind_scenes_settings(d: dict) -> None:
             except Exception as e2:
                 logger.warning(f"降级写入明文JSON也失败：{e2}")
     except Exception as e:
-        logger.exception(f"写入内幕设置失败：{p}, 错误：{e}")
+        logger.warning(f"写入内幕设置失败：{p}, 错误：{e}")
         try:
             with open(p, "w", encoding="utf-8") as f:
                 json.dump(d, f, ensure_ascii=False, indent=4)

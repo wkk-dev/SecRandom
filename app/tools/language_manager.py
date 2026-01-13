@@ -257,7 +257,7 @@ class SimpleLanguageManager:
                             merged[attr_name] = zh_cn_data
 
             except Exception as e:
-                logger.exception(f"导入语言模块 {file_path} 时出错: {e}")
+                logger.warning(f"导入语言模块 {file_path} 时出错: {e}")
                 continue
 
         return merged
@@ -288,7 +288,7 @@ class SimpleLanguageManager:
                             language_data = json.load(f)
                             self._loaded_languages[language_code] = language_data
                     except Exception as e:
-                        logger.exception(f"加载语言文件 {filename} 时出错: {e}")
+                        logger.warning(f"加载语言文件 {filename} 时出错: {e}")
 
         except Exception as e:
             logger.exception(f"加载语言文件夹时出错: {e}")

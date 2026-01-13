@@ -78,7 +78,7 @@ class VoicePlaybackSystem:
         """设置播放音量，范围0.0-1.0"""
         # 输入验证
         if not isinstance(volume, (int, float)):
-            logger.exception(f"无效的音量值: {volume}")
+            logger.warning(f"无效的音量值: {volume}")
             return
         self._volume = max(0.0, min(1.0, float(volume)))
 
@@ -86,7 +86,7 @@ class VoicePlaybackSystem:
         """设置播放语速，范围0-200"""
         # 输入验证
         if not isinstance(speed, int):
-            logger.exception(f"无效的语速值: {speed}")
+            logger.warning(f"无效的语速值: {speed}")
             return
         self._speed = max(0, min(200, speed))
 
@@ -254,7 +254,7 @@ class VoicePlaybackSystem:
             self.play_queue.put_nowait(task)
             return True
         except queue.Full:
-            logger.exception("播放队列已满，丢弃新任务")
+            logger.warning("播放队列已满，丢弃新任务")
             return False
         except Exception as e:
             logger.exception(f"添加播放任务失败: {e}")
@@ -396,28 +396,28 @@ class VoiceCacheManager:
                 return data, fs
             except NoAudioReceived as e:
                 retry_count += 1
-                logger.exception(
+                logger.warning(
                     f"生成语音失败，未接收到音频数据，重试{retry_count}/{max_retries}: {type(e).__name__} {e}"
                 )
                 if retry_count < max_retries:
                     await asyncio.sleep(1)
             except WebSocketError as e:
                 retry_count += 1
-                logger.exception(
+                logger.warning(
                     f"生成语音失败，WebSocket通信错误，重试{retry_count}/{max_retries}: {type(e).__name__} {e}"
                 )
                 if retry_count < max_retries:
                     await asyncio.sleep(1)
             except Exception as e:
                 retry_count += 1
-                logger.exception(
+                logger.warning(
                     f"生成语音失败，重试{retry_count}/{max_retries}: {type(e).__name__} {e}"
                 )
                 if retry_count < max_retries:
                     await asyncio.sleep(1)
 
         # 最终失败时的降级处理
-        logger.exception("生成语音失败，已达到最大重试次数")
+        logger.warning("生成语音失败，已达到最大重试次数")
         raise RuntimeError("生成语音失败")
 
     def _generate_cache_key(self, text: str, voice: str) -> str:
@@ -481,7 +481,7 @@ class VoiceCacheManager:
             with self._disk_cache_lock:
                 sf.write(file_path, data, fs)
         except Exception as e:
-            logger.exception(f"保存缓存失败: {e}")
+            logger.warning(f"保存缓存失败: {e}")
 
     def _check_and_cleanup(self) -> None:
         """检查并执行缓存清理"""
@@ -507,7 +507,7 @@ class VoiceCacheManager:
             logger.info("缓存清理：本地音频文件不会过期，跳过文件删除")
             # 可以在这里添加其他清理逻辑，如日志清理等
         except Exception as e:
-            logger.exception(f"缓存清理失败: {e}")
+            logger.warning(f"缓存清理失败: {e}")
 
 
 class LoadBalancer:
@@ -560,11 +560,11 @@ class LoadBalancer:
                 or cpu_percent < 0
                 or cpu_percent > 100
             ):
-                logger.exception("CPU使用率异常，使用基础队列大小")
+                logger.warning("CPU使用率异常，使用基础队列大小")
                 return self.BASE_QUEUE_SIZE
 
             if not isinstance(mem_available, (int, float)) or mem_available < 0:
-                logger.exception("内存信息异常，使用基础队列大小")
+                logger.warning("内存信息异常，使用基础队列大小")
                 return self.BASE_QUEUE_SIZE
 
             # 计算基于CPU的队列大小调整系数
@@ -605,7 +605,7 @@ class LoadBalancer:
             return queue_size
         except Exception as e:
             # 异常处理，确保方法总是返回有效值
-            logger.exception(f"获取系统负载信息失败: {e}，使用基础队列大小")
+            logger.warning(f"获取系统负载信息失败: {e}，使用基础队列大小")
             return self.BASE_QUEUE_SIZE
 
 
@@ -658,7 +658,7 @@ class TTSHandler:
                     )
                     logger.info("Windows系统TTS引擎初始化成功")
                 else:
-                    logger.exception(
+                    logger.warning(
                         "Windows系统TTS引擎需要Windows 10及以上系统且非x86架构"
                     )
 
@@ -686,7 +686,7 @@ class TTSHandler:
                         )
                         logger.info("Linux系统TTS引擎初始化成功 (使用espeak)")
                     else:
-                        logger.exception(
+                        logger.warning(
                             "Linux系统TTS引擎需要安装espeak: sudo apt-get install espeak"
                         )
                 except Exception as e:

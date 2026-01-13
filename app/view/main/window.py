@@ -163,7 +163,7 @@ class MainWindow(FluentWindow):
                     logger.info(f"IPC服务器已在端口 {new_port} 上重新启动")
                     return True
                 else:
-                    logger.exception(f"IPC服务器在端口 {new_port} 上启动失败")
+                    logger.warning(f"IPC服务器在端口 {new_port} 上启动失败")
                     return False
             else:
                 logger.exception("无法访问URLHandler实例")
@@ -663,7 +663,7 @@ class MainWindow(FluentWindow):
             CSharpIPCHandler.instance().stop_ipc_client()
             logger.debug("C# IPC 停止请求已发出")
         except Exception as e:
-            logger.exception(f"停止 IPC 客户端失败: {e}")
+            logger.warning(f"停止 IPC 客户端失败: {e}")
 
         # 显式关闭所有顶层窗口（包括悬浮窗、设置窗口等）
         try:

@@ -354,7 +354,7 @@ class update(QWidget):
                     # 更新全局状态
                     update_status_manager.set_check_failed()
             except Exception as e:
-                logger.exception(f"检查更新时发生错误: {e}")
+                logger.warning(f"检查更新时发生错误: {e}")
                 # 处理异常
                 status_text = get_content_name_async("update", "check_update_failed")
                 # 隐藏下载并安装按钮
@@ -500,7 +500,7 @@ class update(QWidget):
                         expected_file_path.unlink()
                         logger.debug(f"已删除损坏的文件: {expected_file_path}")
                     except Exception as e:
-                        logger.exception(f"删除损坏文件失败: {e}")
+                        logger.warning(f"删除损坏文件失败: {e}")
 
         # 如果文件完整且存在，直接使用，不需要下载
         if file_exists_and_same_version:
@@ -692,7 +692,7 @@ class update(QWidget):
                     )
                     self.on_complete(file_path)
                 except Exception as e:
-                    logger.exception(f"下载任务执行失败: {e}")
+                    logger.warning(f"下载任务执行失败: {e}")
                     # 确保即使发生异常也会调用完成回调
                     self.on_complete(None)
 

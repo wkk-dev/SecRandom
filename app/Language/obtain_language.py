@@ -63,7 +63,7 @@ class LanguageReaderWorker(QObject):
             value = self._read_language_value()
             self.finished.emit(value)
         except Exception as e:
-            logger.exception(f"读取语言内容失败: {e}")
+            logger.warning(f"读取语言内容失败: {e}")
             self.finished.emit(None)
 
     def _read_language_value(self):

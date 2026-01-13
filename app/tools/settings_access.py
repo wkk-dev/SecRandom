@@ -37,7 +37,7 @@ class SettingsReaderWorker(QObject):
             # logger.debug(f"读取设置: {self.first_level_key}.{self.second_level_key} = {value}")
             self.finished.emit(value)
         except Exception as e:
-            logger.exception(f"读取设置失败: {e}")
+            logger.warning(f"读取设置失败: {e}")
             default_value = self._get_default_value()
             self.finished.emit(default_value)
 
@@ -162,7 +162,7 @@ def readme_settings(first_level_key: str, second_level_key: str):
         # logger.debug(f"使用默认设置: {first_level_key}.{second_level_key} = {default_value}")
         return default_value
     except Exception as e:
-        logger.exception(f"读取设置失败: {e}")
+        logger.warning(f"读取设置失败: {e}")
         default_setting = _get_default_setting(first_level_key, second_level_key)
         if isinstance(default_setting, dict) and "default_value" in default_setting:
             return default_setting["default_value"]
@@ -246,7 +246,7 @@ def update_settings(first_level_key: str, second_level_key: str, value: Any):
             first_level_key, second_level_key, value
         )
     except Exception as e:
-        logger.exception(f"设置更新失败: {e}")
+        logger.warning(f"设置更新失败: {e}")
 
 
 def _get_default_setting(first_level_key: str, second_level_key: str):
