@@ -1,7 +1,7 @@
 latest:
-  release: v2.1.0
-  beta: v2.1.0
-  alpha: v2.1.0
+  release: v2.2.0
+  beta: v2.2.0
+  alpha: v2.2.0
 
 latest_no:
   release: 2
@@ -11,12 +11,9 @@ latest_no:
 subchannels:
   system:
     - windows
-    - linux
   arch:
     - x64
-    - amd64
   struct:
     - dir
-    - deb
 
-name_format: SecRandom-[system]-[version]-[arch]-[struct].zip
+name_format: SecRandom-setup-[version]-[arch]-[struct].exe
