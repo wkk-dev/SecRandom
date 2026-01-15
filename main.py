@@ -64,6 +64,9 @@ def main():
             traces_sample_rate=1.0,
         )
 
+        # 只使用ip判断
+        sentry_sdk.set_user({"ip_address": "{{auto}}"})
+
     wm.app_start_time = time.perf_counter()
 
     shared_memory, is_first_instance = check_single_instance()
