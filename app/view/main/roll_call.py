@@ -19,8 +19,7 @@ from app.common.data.list import *
 from app.common.history import *
 from app.common.display.result_display import *
 from app.tools.config import *
-from app.common.roll_call.roll_call_utils import RollCallUtils, RollCallController
-from app.common.ui import UIUtils, LongPressHandler
+from app.common.roll_call.roll_call_utils import RollCallUtils
 from app.tools.variable import *
 from app.common.voice.voice import TTSHandler
 from app.common.music.music_player import music_player
@@ -46,14 +45,44 @@ class roll_call(QWidget):
         self.file_watcher = QFileSystemWatcher()
         self.setup_file_watcher()
 
-        self.long_press_handler = LongPressHandler(self.update_count)
-        self.roll_call_controller = RollCallController()
-        self.roll_call_controller.set_tts_handler(TTSHandler())
+        self.press_timer = QTimer()
+        self.press_timer.timeout.connect(self.handle_long_press)
+        self.long_press_interval = 100
+        self.long_press_delay = 500
+        self.is_long_pressing = False
+        self.long_press_direction = 0
+
+        self.tts_handler = TTSHandler()
 
         self.is_animating = False
 
         self.initUI()
         self.setupSettingsListener()
+
+    def handle_long_press(self):
+        """处理长按事件"""
+        if self.is_long_pressing:
+            # 更新定时器间隔为连续触发间隔
+            self.press_timer.setInterval(self.long_press_interval)
+            # 执行更新计数
+            self.update_count(self.long_press_direction)
+
+    def start_long_press(self, direction):
+        """开始长按
+
+        Args:
+            direction (int): 长按方向，1为增加，-1为减少
+        """
+        self.long_press_direction = direction
+        self.is_long_pressing = True
+        # 设置初始延迟
+        self.press_timer.setInterval(self.long_press_delay)
+        self.press_timer.start()
+
+    def stop_long_press(self):
+        """停止长按"""
+        self.is_long_pressing = False
+        self.press_timer.stop()
 
     def closeEvent(self, event):
         """窗口关闭事件，清理资源"""
@@ -61,8 +90,9 @@ class roll_call(QWidget):
             if hasattr(self, "file_watcher"):
                 self.file_watcher.removePaths(self.file_watcher.directories())
                 self.file_watcher.removePaths(self.file_watcher.files())
-            if hasattr(self, "long_press_handler"):
-                self.long_press_handler.stop()
+            # 停止长按定时器
+            if hasattr(self, "press_timer"):
+                self.press_timer.stop()
         except Exception as e:
             logger.exception(f"清理文件监控器失败: {e}")
         super().closeEvent(event)
@@ -116,7 +146,7 @@ class roll_call(QWidget):
         formatted_text = text_template.format(total_count=0, remaining_count=0)
         self.many_count_label = BodyLabel(formatted_text)
         self.many_count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        UIUtils.set_widget_font(self.many_count_label, 10)
+        self._set_widget_font(self.many_count_label, 10)
 
         self.control_widget = QWidget()
         self.control_layout = QVBoxLayout(self.control_widget)
@@ -168,7 +198,7 @@ class roll_call(QWidget):
             button = PushButton(
                 get_content_pushbutton_name_async(content_key, button_key)
             )
-        UIUtils.set_widget_font(button, font_size)
+        self._set_widget_font(button, font_size)
         button.setFixedHeight(45)
         button.clicked.connect(lambda: callback())
         return button
@@ -186,7 +216,7 @@ class roll_call(QWidget):
             创建的下拉框
         """
         combobox = ComboBox()
-        UIUtils.set_widget_font(combobox, font_size)
+        self._set_widget_font(combobox, font_size)
         combobox.setFixedHeight(45)
         if placeholder_key:
             combobox.setPlaceholderText(
@@ -201,26 +231,15 @@ class roll_call(QWidget):
         Returns:
             tuple: (minus_button, plus_button, count_widget)
         """
-        minus_button = UIUtils.create_button_with_long_press(
-            self, "-", 20, -1, self.update_count
-        )
-        plus_button = UIUtils.create_button_with_long_press(
-            self, "+", 20, 1, self.update_count
-        )
+        minus_button = self._create_button_with_long_press("-", 20, -1)
+        plus_button = self._create_button_with_long_press("+", 20, 1)
 
         minus_button.setEnabled(False)
         plus_button.setEnabled(True)
 
-        minus_button.pressed.connect(
-            lambda: self.long_press_handler.start_long_press(-1)
-        )
-        minus_button.released.connect(self.long_press_handler.stop_long_press)
-        plus_button.pressed.connect(lambda: self.long_press_handler.start_long_press(1))
-        plus_button.released.connect(self.long_press_handler.stop_long_press)
-
         self.count_label = BodyLabel("1")
         self.count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        UIUtils.set_widget_font(self.count_label, 20)
+        self._set_widget_font(self.count_label, 20)
         self.count_label.setFixedSize(65, 45)
         self.current_count = 1
 
@@ -236,6 +255,73 @@ class roll_call(QWidget):
         count_widget.setLayout(horizontal_layout)
 
         return minus_button, plus_button, count_widget
+
+    def _create_button_with_long_press(self, text, font_size, direction):
+        """创建带长按功能的按钮
+
+        Args:
+            text: 按钮文本
+            font_size: 字体大小
+            direction: 长按方向（1为增加，-1为减少）
+
+        Returns:
+            创建的按钮
+        """
+        button = PushButton(text)
+        self._set_widget_font(button, font_size)
+        button.setFixedSize(45, 45)
+        button.clicked.connect(lambda: self.update_count(direction))
+        button.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+
+        button.mousePressEvent = lambda event: self._custom_mouse_press_event(
+            button, event
+        )
+        button.mouseReleaseEvent = lambda event: self._custom_mouse_release_event(
+            button, event
+        )
+
+        button.pressed.connect(lambda: self.start_long_press(direction))
+        button.released.connect(self.stop_long_press)
+
+        return button
+
+    def _custom_mouse_press_event(self, widget, event):
+        """自定义鼠标按下事件，将右键转换为左键
+
+        Args:
+            widget: 控件
+            event: 鼠标事件
+        """
+        if event.button() == Qt.MouseButton.RightButton:
+            new_event = QMouseEvent(
+                QEvent.Type.MouseButtonPress,
+                event.position(),
+                Qt.MouseButton.LeftButton,
+                Qt.MouseButton.LeftButton,
+                Qt.KeyboardModifier.NoModifier,
+            )
+            QApplication.sendEvent(widget, new_event)
+        else:
+            PushButton.mousePressEvent(widget, event)
+
+    def _custom_mouse_release_event(self, widget, event):
+        """自定义鼠标释放事件，将右键转换为左键
+
+        Args:
+            widget: 控件
+            event: 鼠标事件
+        """
+        if event.button() == Qt.MouseButton.RightButton:
+            new_event = QMouseEvent(
+                QEvent.Type.MouseButtonRelease,
+                event.position(),
+                Qt.MouseButton.LeftButton,
+                Qt.MouseButton.NoButton,
+                Qt.KeyboardModifier.NoModifier,
+            )
+            QApplication.sendEvent(widget, new_event)
+        else:
+            PushButton.mouseReleaseEvent(widget, event)
 
     def _add_control_widgets(self):
         """添加控制控件到布局"""
@@ -596,9 +682,42 @@ class roll_call(QWidget):
 
     def play_voice_result(self):
         """播放语音结果"""
-        self.roll_call_controller.play_voice_result(
-            self.final_class_name, self.final_selected_students
-        )
+        try:
+            # 准备语音设置
+            voice_settings = {
+                "voice_volume": readme_settings_async(
+                    "basic_voice_settings", "volume_size"
+                ),
+                "voice_speed": readme_settings_async(
+                    "basic_voice_settings", "speech_rate"
+                ),
+                "system_voice_name": readme_settings_async(
+                    "basic_voice_settings", "system_voice_name"
+                ),
+            }
+
+            # 准备学生名单（只取名字部分）
+            student_names = [name[1] for name in self.final_selected_students]
+
+            # 获取语音引擎类型
+            voice_engine = readme_settings_async("basic_voice_settings", "voice_engine")
+            engine_type = 1 if voice_engine == "Edge TTS" else 0
+
+            # 获取Edge TTS语音名称
+            edge_tts_voice_name = readme_settings_async(
+                "basic_voice_settings", "edge_tts_voice_name"
+            )
+
+            # 调用语音播放
+            self.tts_handler.voice_play(
+                config=voice_settings,
+                student_names=student_names,
+                engine_type=engine_type,
+                voice_name=edge_tts_voice_name,
+                class_name=self.list_combobox.currentText(),
+            )
+        except Exception as e:
+            logger.exception(f"播放语音失败: {e}", exc_info=True)
 
     def animate_result(self):
         """动画过程中更新显示"""
@@ -613,7 +732,7 @@ class roll_call(QWidget):
         gender_filter = self.gender_combobox.currentText()
         half_repeat = readme_settings_async("roll_call_settings", "half_repeat")
 
-        result = self.roll_call_controller.draw_random_students(
+        result = RollCallUtils.draw_random_students(
             class_name,
             group_index,
             group_filter,
@@ -624,8 +743,8 @@ class roll_call(QWidget):
         )
 
         if "reset_required" in result and result["reset_required"]:
-            self.roll_call_controller.reset_drawn_records(
-                class_name, gender_filter, group_filter
+            RollCallUtils.reset_drawn_records(
+                self, class_name, gender_filter, group_filter
             )
             return
 
@@ -636,24 +755,48 @@ class roll_call(QWidget):
         self.final_gender_filter = result["gender_filter"]
 
         if self.is_animating:
-            self.roll_call_controller.display_result_animated(
-                self.result_grid,
-                class_name,
-                self.final_selected_students,
-                self.current_count,
+            self.display_result_animated(
+                result["selected_students"], result["class_name"]
             )
         else:
-            self.roll_call_controller.display_result(
-                self.result_grid,
-                class_name,
-                self.final_selected_students,
-                self.current_count,
-                group_index,
-            )
+            self.display_result(result["selected_students"], result["class_name"])
 
-        self.roll_call_controller.show_notification_if_enabled(
-            class_name, self.final_selected_students, self.current_count
+        # 检查是否启用了通知服务
+        call_notification_service = readme_settings_async(
+            "roll_call_notification_settings", "call_notification_service"
         )
+        # 检查是否启用了最大浮窗通知人数功能
+        use_main_window_when_exceed_threshold = readme_settings_async(
+            "roll_call_notification_settings", "use_main_window_when_exceed_threshold"
+        )
+        # 检查人数是否超过最大浮窗通知人数
+        max_notify_count = readme_settings_async(
+            "roll_call_notification_settings", "main_window_display_threshold"
+        )
+        if call_notification_service:
+            # 准备通知设置
+            settings = RollCallUtils.prepare_notification_settings()
+            # 只有当没有启用阈值功能，或者启用了但抽取人数没有超过阈值时，才显示通知
+            if use_main_window_when_exceed_threshold:
+                # 如果启用了阈值功能，检查抽取人数是否超过阈值
+                if self.current_count <= max_notify_count:
+                    # 使用ResultDisplayUtils显示通知
+                    ResultDisplayUtils.show_notification_if_enabled(
+                        self.final_class_name,
+                        self.final_selected_students,
+                        self.current_count,
+                        settings,
+                        settings_group="roll_call_notification_settings",
+                    )
+            else:
+                # 如果没有启用阈值功能，直接显示通知
+                ResultDisplayUtils.show_notification_if_enabled(
+                    self.final_class_name,
+                    self.final_selected_students,
+                    self.current_count,
+                    settings,
+                    settings_group="roll_call_notification_settings",
+                )
 
     def display_result(self, selected_students, class_name, display_settings=None):
         """显示抽取结果
@@ -668,13 +811,14 @@ class roll_call(QWidget):
             "quick_draw_settings" if display_settings else "roll_call_settings"
         )
 
-        self.roll_call_controller.display_result(
-            self.result_grid,
-            class_name,
-            selected_students,
-            self.current_count,
-            group_index,
-            display_settings,
+        RollCallUtils.display_result(
+            result_grid=self.result_grid,
+            class_name=class_name,
+            selected_students=selected_students,
+            draw_count=self.current_count,
+            group_index=group_index,
+            settings_group=settings_group,
+            display_settings=display_settings,
         )
 
     def display_result_animated(self, selected_students, class_name):
@@ -692,9 +836,9 @@ class roll_call(QWidget):
             selected_students=selected_students,
             draw_count=self.current_count,
             font_size=display_dict["font_size"],
-            animation_color=display_dict["animation_color_theme"],
+            animation_color=display_dict["animation_color"],
             display_format=display_dict["display_format"],
-            show_student_image=display_dict["student_image"],
+            show_student_image=display_dict["show_student_image"],
             group_index=group_index,
             show_random=display_dict["show_random"],
             settings_group="roll_call_settings",
@@ -711,7 +855,7 @@ class roll_call(QWidget):
         class_name = self.list_combobox.currentText()
         gender = self.gender_combobox.currentText()
         group = self.range_combobox.currentText()
-        self.roll_call_controller.reset_drawn_records(class_name, gender, group)
+        RollCallUtils.reset_drawn_records(self, class_name, gender, group)
         self.clear_result()
         self.update_many_count_label()
 
@@ -1086,3 +1230,34 @@ class roll_call(QWidget):
             child = layout.takeAt(0)
             if child.widget():
                 child.widget().setParent(None)
+
+    def eventFilter(self, obj, event):
+        """事件过滤器，处理触屏长按事件"""
+        if obj in (self.minus_button, self.plus_button):
+            if event.type() == QEvent.Type.MouseButtonPress:
+                # 处理左/右键点击，确保长按功能正常
+                return super().eventFilter(obj, event)
+            # 其他事件正常处理
+        return super().eventFilter(obj, event)
+
+    def _set_widget_font(self, widget, font_size):
+        """为控件设置字体"""
+        # 确保字体大小有效
+        try:
+            # 确保font_size是有效的整数
+            if not isinstance(font_size, (int, float)):
+                font_size = int(font_size) if str(font_size).isdigit() else 12
+
+            font_size = int(font_size)
+            if font_size <= 0:
+                font_size = 12  # 使用默认字体大小
+
+            custom_font = load_custom_font()
+            if custom_font:
+                widget.setFont(QFont(custom_font, font_size))
+        except (ValueError, TypeError) as e:
+            logger.warning(f"设置字体大小失败，使用默认值: {e}")
+            # 使用默认字体大小
+            custom_font = load_custom_font()
+            if custom_font:
+                widget.setFont(QFont(custom_font, 12))

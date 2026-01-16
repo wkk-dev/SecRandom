@@ -17,11 +17,11 @@ v2.0 - Koharu（小鸟游星野） release 4
 - 优化 config.py，新增通知与音量常量配置
 - 优化 roll_call.py，提取重复代码至**UI工具类**
 - 优化 lottery.py，提取重复代码至**UI工具类**
-- 新增 app/common/ui/ui_utils.py，创建通用**UI工具类**
-- 新增 RollCallController，封装点名**业务逻辑**
-- 新增 LotteryController，封装抽奖**业务逻辑**
-- 新增 RollCallUIInterface，预留**自定义界面接口**
-- 新增 LotteryUIInterface，预留**自定义界面接口**
+- 优化 app/common/ui/ui_utils.py，创建通用**UI工具类**
+- 优化 RollCallController，封装点名**业务逻辑**
+- 优化 LotteryController，封装抽奖**业务逻辑**
+- 优化 RollCallUIInterface，预留**自定义界面接口**
+- 优化 LotteryUIInterface，预留**自定义界面接口**
 - 优化 VoiceCacheManager，移除**内存缓存**，只保留磁盘缓存
 - 优化 TTSHandler，整合**系统音量控制**逻辑
 - 优化 edge_tts_worker.py，移除冗余注释，简化**代码结构**
@@ -37,6 +37,8 @@ v2.0 - Koharu（小鸟游星野） release 4
 - 修复 语音生成功能，优化网络错误重试时的**日志级别**
 - 修复 设置文件读取，修复空文件**JSON解析**错误
 - 修复 图标加载功能，修复空文件**图标映射**错误
+- 修复 抽奖功能，修复奖品抽取时**KeyError**报错
+- 修复 config.py通知功能，修复**lambda**函数导致通知显示异常
 
 ## 🔧 其它变更
 

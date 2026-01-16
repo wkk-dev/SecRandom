@@ -19,8 +19,7 @@ from app.common.data.list import *
 from app.common.history import *
 from app.common.display.result_display import *
 from app.tools.config import *
-from app.common.lottery.lottery_utils import LotteryUtils, LotteryController
-from app.common.ui import UIUtils, LongPressHandler
+from app.common.lottery.lottery_utils import LotteryUtils
 from app.tools.variable import *
 from app.common.voice.voice import TTSHandler
 from app.common.music.music_player import music_player
@@ -46,14 +45,46 @@ class Lottery(QWidget):
         self.file_watcher = QFileSystemWatcher()
         self.setup_file_watcher()
 
-        self.long_press_handler = LongPressHandler(self.update_count)
-        self.lottery_controller = LotteryController()
-        self.lottery_controller.set_tts_handler(TTSHandler())
+        # 长按功能相关变量
+        self.press_timer = QTimer()
+        self.press_timer.timeout.connect(self.handle_long_press)
+        self.long_press_interval = 100  # 长按时连续触发的间隔时间(毫秒)
+        self.long_press_delay = 500  # 开始长按前的延迟时间(毫秒)
+        self.is_long_pressing = False  # 是否正在长按
+        self.long_press_direction = 0  # 长按方向：1为增加，-1为减少
+
+        # 初始化TTS处理器
+        self.tts_handler = TTSHandler()
 
         self.is_animating = False
 
         self.initUI()
         self.setupSettingsListener()
+
+    def handle_long_press(self):
+        """处理长按事件"""
+        if self.is_long_pressing:
+            # 更新定时器间隔为连续触发间隔
+            self.press_timer.setInterval(self.long_press_interval)
+            # 执行更新计数
+            self.update_count(self.long_press_direction)
+
+    def start_long_press(self, direction):
+        """开始长按
+
+        Args:
+            direction (int): 长按方向，1为增加，-1为减少
+        """
+        self.long_press_direction = direction
+        self.is_long_pressing = True
+        # 设置初始延迟
+        self.press_timer.setInterval(self.long_press_delay)
+        self.press_timer.start()
+
+    def stop_long_press(self):
+        """停止长按"""
+        self.is_long_pressing = False
+        self.press_timer.stop()
 
     def closeEvent(self, event):
         """窗口关闭事件，清理资源"""
@@ -61,8 +92,9 @@ class Lottery(QWidget):
             if hasattr(self, "file_watcher"):
                 self.file_watcher.removePaths(self.file_watcher.directories())
                 self.file_watcher.removePaths(self.file_watcher.files())
-            if hasattr(self, "long_press_handler"):
-                self.long_press_handler.stop()
+            # 停止长按定时器
+            if hasattr(self, "press_timer"):
+                self.press_timer.stop()
         except Exception as e:
             logger.exception(f"清理文件监控器失败: {e}")
         super().closeEvent(event)
@@ -83,31 +115,94 @@ class Lottery(QWidget):
         self.reset_button = PushButton(
             get_content_pushbutton_name_async("lottery", "reset_button")
         )
-        UIUtils.set_widget_font(self.reset_button, 15)
+        self._set_widget_font(self.reset_button, 15)
         self.reset_button.setFixedHeight(45)
         self.reset_button.clicked.connect(lambda: self.reset_count())
 
-        self.minus_button = UIUtils.create_button_with_long_press(
-            self, "-", 20, -1, self.update_count
-        )
-        self.minus_button.pressed.connect(
-            lambda: self.long_press_handler.start_long_press(-1)
-        )
-        self.minus_button.released.connect(self.long_press_handler.stop_long_press)
+        # 自定义的鼠标事件处理方法，将右键事件转换为左键事件
+        def custom_mouse_press_event(widget, event):
+            if event.button() == Qt.MouseButton.RightButton:
+                # 将右键按下事件转换为左键按下事件
+                new_event = QMouseEvent(
+                    QEvent.Type.MouseButtonPress,
+                    event.position(),
+                    Qt.MouseButton.LeftButton,
+                    Qt.MouseButton.LeftButton,
+                    Qt.KeyboardModifier.NoModifier,
+                )
+                QApplication.sendEvent(widget, new_event)
+            else:
+                # 其他事件正常处理
+                PushButton.mousePressEvent(widget, event)
+
+        def custom_mouse_release_event(widget, event):
+            if event.button() == Qt.MouseButton.RightButton:
+                # 将右键释放事件转换为左键释放事件
+                new_event = QMouseEvent(
+                    QEvent.Type.MouseButtonRelease,
+                    event.position(),
+                    Qt.MouseButton.LeftButton,
+                    Qt.MouseButton.NoButton,
+                    Qt.KeyboardModifier.NoModifier,
+                )
+                QApplication.sendEvent(widget, new_event)
+            else:
+                # 其他事件正常处理
+                PushButton.mouseReleaseEvent(widget, event)
+
+        self.minus_button = PushButton("-")
+        self._set_widget_font(self.minus_button, 20)
+        self.minus_button.setFixedSize(45, 45)
+        self.minus_button.clicked.connect(lambda: self.update_count(-1))
+        # 禁用右键菜单，兼容触屏
+        self.minus_button.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+
+        # 动态替换按钮的鼠标事件处理方法
+        original_minus_press = self.minus_button.mousePressEvent
+        original_minus_release = self.minus_button.mouseReleaseEvent
+
+        def minus_press_wrapper(event):
+            custom_mouse_press_event(self.minus_button, event)
+
+        def minus_release_wrapper(event):
+            custom_mouse_release_event(self.minus_button, event)
+
+        self.minus_button.mousePressEvent = minus_press_wrapper
+        self.minus_button.mouseReleaseEvent = minus_release_wrapper
+
+        # 添加长按连续减功能
+        self.minus_button.pressed.connect(lambda: self.start_long_press(-1))
+        self.minus_button.released.connect(self.stop_long_press)
 
         self.count_label = BodyLabel("1")
         self.count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        UIUtils.set_widget_font(self.count_label, 20)
+        self._set_widget_font(self.count_label, 20)
         self.count_label.setFixedSize(65, 45)
         self.current_count = 1
 
-        self.plus_button = UIUtils.create_button_with_long_press(
-            self, "+", 20, 1, self.update_count
-        )
-        self.plus_button.pressed.connect(
-            lambda: self.long_press_handler.start_long_press(1)
-        )
-        self.plus_button.released.connect(self.long_press_handler.stop_long_press)
+        self.plus_button = PushButton("+")
+        self._set_widget_font(self.plus_button, 20)
+        self.plus_button.setFixedSize(45, 45)
+        self.plus_button.clicked.connect(lambda: self.update_count(1))
+        # 禁用右键菜单，兼容触屏
+        self.plus_button.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+
+        # 动态替换按钮的鼠标事件处理方法
+        original_plus_press = self.plus_button.mousePressEvent
+        original_plus_release = self.plus_button.mouseReleaseEvent
+
+        def plus_press_wrapper(event):
+            custom_mouse_press_event(self.plus_button, event)
+
+        def plus_release_wrapper(event):
+            custom_mouse_release_event(self.plus_button, event)
+
+        self.plus_button.mousePressEvent = plus_press_wrapper
+        self.plus_button.mouseReleaseEvent = plus_release_wrapper
+
+        # 添加长按连续加功能
+        self.plus_button.pressed.connect(lambda: self.start_long_press(1))
+        self.plus_button.released.connect(self.stop_long_press)
 
         self.minus_button.setEnabled(False)
         self.plus_button.setEnabled(True)
@@ -126,12 +221,12 @@ class Lottery(QWidget):
         self.start_button = PrimaryPushButton(
             get_content_pushbutton_name_async("lottery", "start_button")
         )
-        UIUtils.set_widget_font(self.start_button, 15)
+        self._set_widget_font(self.start_button, 15)
         self.start_button.setFixedHeight(45)
         self.start_button.clicked.connect(lambda: self.start_draw())
 
         self.pool_list_combobox = ComboBox()
-        UIUtils.set_widget_font(self.pool_list_combobox, 12)
+        self._set_widget_font(self.pool_list_combobox, 12)
         self.pool_list_combobox.setFixedHeight(45)
         self.pool_list_combobox.setPlaceholderText(
             get_content_name_async("lottery", "default_empty_item")
@@ -140,19 +235,19 @@ class Lottery(QWidget):
         self.pool_list_combobox.currentTextChanged.connect(self.on_pool_changed)
 
         self.list_combobox = ComboBox()
-        UIUtils.set_widget_font(self.list_combobox, 12)
+        self._set_widget_font(self.list_combobox, 12)
         self.list_combobox.setFixedHeight(45)
         # 延迟填充班级列表，避免启动时进行文件IO
         self.list_combobox.currentTextChanged.connect(self.on_class_changed)
 
         self.range_combobox = ComboBox()
-        UIUtils.set_widget_font(self.range_combobox, 12)
+        self._set_widget_font(self.range_combobox, 12)
         self.range_combobox.setFixedHeight(45)
         # 延迟填充范围选项
         self.range_combobox.currentTextChanged.connect(self.on_filter_changed)
 
         self.gender_combobox = ComboBox()
-        UIUtils.set_widget_font(self.gender_combobox, 12)
+        self._set_widget_font(self.gender_combobox, 12)
         self.gender_combobox.setFixedHeight(45)
         # 延迟填充性别选项
         self.gender_combobox.currentTextChanged.connect(self.on_filter_changed)
@@ -160,7 +255,7 @@ class Lottery(QWidget):
         self.remaining_button = PushButton(
             get_content_pushbutton_name_async("lottery", "remaining_button")
         )
-        UIUtils.set_widget_font(self.remaining_button, 12)
+        self._set_widget_font(self.remaining_button, 12)
         self.remaining_button.setFixedHeight(45)
         self.remaining_button.clicked.connect(lambda: self.show_remaining_list())
 
@@ -173,7 +268,7 @@ class Lottery(QWidget):
         formatted_text = text_template.format(total_count=0, remaining_count=0)
         self.many_count_label = BodyLabel(formatted_text)
         self.many_count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        UIUtils.set_widget_font(self.many_count_label, 10)
+        self._set_widget_font(self.many_count_label, 10)
 
         self.control_widget = QWidget()
         self.control_layout = QVBoxLayout(self.control_widget)
@@ -664,9 +759,42 @@ class Lottery(QWidget):
 
     def play_voice_result(self):
         """播放语音结果"""
-        self.lottery_controller.play_voice_result(
-            self.final_pool_name, self.final_selected_students
-        )
+        try:
+            # 准备语音设置
+            voice_settings = {
+                "voice_volume": readme_settings_async(
+                    "basic_voice_settings", "volume_size"
+                ),
+                "voice_speed": readme_settings_async(
+                    "basic_voice_settings", "speech_rate"
+                ),
+                "system_voice_name": readme_settings_async(
+                    "basic_voice_settings", "system_voice_name"
+                ),
+            }
+
+            # 准备奖品名单（只取名字部分）
+            prize_names = [prize[1] for prize in self.final_selected_students]
+
+            # 获取语音引擎类型
+            voice_engine = readme_settings_async("basic_voice_settings", "voice_engine")
+            engine_type = 1 if voice_engine == "Edge TTS" else 0
+
+            # 获取Edge TTS语音名称
+            edge_tts_voice_name = readme_settings_async(
+                "basic_voice_settings", "edge_tts_voice_name"
+            )
+
+            # 调用语音播放
+            self.tts_handler.voice_play(
+                config=voice_settings,
+                student_names=prize_names,
+                engine_type=engine_type,
+                voice_name=edge_tts_voice_name,
+                class_name=self.pool_list_combobox.currentText(),
+            )
+        except Exception as e:
+            logger.exception(f"播放语音失败: {e}", exc_info=True)
 
     def animate_result(self):
         """动画过程中更新显示"""
@@ -681,14 +809,14 @@ class Lottery(QWidget):
         gender_filter = self.gender_combobox.currentText()
         half_repeat = readme_settings_async("lottery_settings", "half_repeat")
 
-        result = self.lottery_controller.draw_random_prizes(
+        result = LotteryUtils.draw_random_prizes(
             pool_name,
             self.current_count,
         )
 
         # 处理需要重置的情况
         if "reset_required" in result and result["reset_required"]:
-            self.lottery_controller.reset_drawn_prize_record(pool_name)
+            reset_drawn_prize_record(self, pool_name)
             return
 
         self.final_selected_students = result.get("selected_prizes") or result.get(
@@ -713,7 +841,7 @@ class Lottery(QWidget):
                 prize_names = [item[1] for item in (self.final_selected_students or [])]
 
                 # 抽取与奖品数量相同的学生（不重复规则由学生设置决定，此处不启用半重复）
-                student_result = self.lottery_controller.draw_random_students(
+                student_result = LotteryUtils.draw_random_students(
                     selected_text,
                     0,
                     "",
@@ -743,6 +871,42 @@ class Lottery(QWidget):
             )
         else:
             self.display_result(self.final_selected_students, self.final_pool_name)
+
+        # 检查是否启用了通知服务
+        call_notification_service = readme_settings_async(
+            "lottery_notification_settings", "call_notification_service"
+        )
+        # 检查是否启用了最大浮窗通知奖数功能
+        use_main_window_when_exceed_threshold = readme_settings_async(
+            "roll_call_notification_settings", "use_main_window_when_exceed_threshold"
+        )
+        # 检查奖数是否超过最大浮窗通知奖数
+        max_notify_count = readme_settings_async(
+            "roll_call_notification_settings", "main_window_display_threshold"
+        )
+        if call_notification_service:
+            # 准备通知设置
+            settings = LotteryUtils.prepare_notification_settings()
+            if use_main_window_when_exceed_threshold:
+                # 如果启用了阈值功能，检查抽取奖数是否超过阈值
+                if self.current_count <= max_notify_count:
+                    # 使用ResultDisplayUtils显示通知
+                    ResultDisplayUtils.show_notification_if_enabled(
+                        self.final_pool_name,
+                        self.final_selected_students,
+                        self.current_count,
+                        settings,
+                        settings_group="lottery_notification_settings",
+                    )
+            else:
+                # 如果未启用阈值功能，直接显示通知
+                ResultDisplayUtils.show_notification_if_enabled(
+                    self.final_pool_name,
+                    self.final_selected_students,
+                    self.current_count,
+                    settings,
+                    settings_group="lottery_notification_settings",
+                )
 
     def display_result(self, selected_students, pool_name):
         """显示抽取结果"""
@@ -1232,3 +1396,34 @@ class Lottery(QWidget):
             child = layout.takeAt(0)
             if child.widget():
                 child.widget().setParent(None)
+
+    def eventFilter(self, obj, event):
+        """事件过滤器，处理触屏长按事件"""
+        if obj in (self.minus_button, self.plus_button):
+            if event.type() == QEvent.Type.MouseButtonPress:
+                # 处理左/右键点击，确保长按功能正常
+                return super().eventFilter(obj, event)
+            # 其他事件正常处理
+        return super().eventFilter(obj, event)
+
+    def _set_widget_font(self, widget, font_size):
+        """为控件设置字体"""
+        # 确保字体大小有效
+        try:
+            # 确保font_size是有效的整数
+            if not isinstance(font_size, (int, float)):
+                font_size = int(font_size) if str(font_size).isdigit() else 12
+
+            font_size = int(font_size)
+            if font_size <= 0:
+                font_size = 12  # 使用默认字体大小
+
+            custom_font = load_custom_font()
+            if custom_font:
+                widget.setFont(QFont(custom_font, font_size))
+        except (ValueError, TypeError) as e:
+            logger.warning(f"设置字体大小失败，使用默认值: {e}")
+            # 使用默认字体大小
+            custom_font = load_custom_font()
+            if custom_font:
+                widget.setFont(QFont(custom_font, 12))

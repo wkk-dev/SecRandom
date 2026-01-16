@@ -92,6 +92,8 @@ class UnbindUsbWindow(QWidget):
             InfoBar.error(
                 title=get_content_name_async("basic_safety_settings", "title"),
                 content=text,
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
                 position=InfoBarPosition.TOP,
                 duration=duration,
                 parent=self,
@@ -104,6 +106,8 @@ class UnbindUsbWindow(QWidget):
             InfoBar.success(
                 title=get_content_name_async("basic_safety_settings", "title"),
                 content=text,
+                orient=Qt.Orientation.Horizontal,
+                isClosable=True,
                 position=InfoBarPosition.TOP,
                 duration=duration,
                 parent=self,

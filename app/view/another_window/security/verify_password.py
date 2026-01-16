@@ -321,6 +321,8 @@ class VerifyPasswordWindow(QWidget):
                     content=get_content_name_async(
                         "basic_safety_settings", "verify_in_progress"
                     ),
+                    orient=Qt.Orientation.Horizontal,
+                    isClosable=True,
                     duration=2000,
                     position=InfoBarPosition.TOP,
                     parent=self,
@@ -386,6 +388,8 @@ class VerifyPasswordWindow(QWidget):
                         content=get_content_name_async(
                             "basic_safety_settings", "verify_failed_generic"
                         ),
+                        orient=Qt.Orientation.Horizontal,
+                        isClosable=True,
                         duration=3000,
                         position=InfoBarPosition.TOP,
                         parent=self,
