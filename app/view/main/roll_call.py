@@ -1,13 +1,20 @@
 # ==================================================
-# 导入库
+# 标准库导入
 # ==================================================
+from random import SystemRandom
 
+# ==================================================
+# 第三方库导入
+# ==================================================
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtNetwork import *
 from qfluentwidgets import *
 
+# ==================================================
+# 本地模块导入
+# ==================================================
 from app.tools.variable import *
 from app.tools.path_utils import *
 from app.tools.personalised import *
@@ -20,15 +27,12 @@ from app.common.history import *
 from app.common.display.result_display import *
 from app.tools.config import *
 from app.common.roll_call.roll_call_utils import RollCallUtils
-from app.tools.variable import *
 from app.common.voice.voice import TTSHandler
 from app.common.music.music_player import music_player
 from app.common.extraction.extract import _is_non_class_time
 from app.common.safety.verify_ops import require_and_run
 
 from app.page_building.another_window import *
-
-from random import SystemRandom
 
 system_random = SystemRandom()
 
@@ -37,14 +41,38 @@ system_random = SystemRandom()
 # 班级点名类
 # ==================================================
 class roll_call(QWidget):
-    # 添加一个信号，当设置发生变化时发出
+    """班级点名主界面类
+
+    提供班级点名功能，支持：
+    - 按班级、小组、性别筛选
+    - 随机抽取指定人数
+    - 显示剩余名单
+    - 长按连续调整人数
+    """
+
     settingsChanged = Signal()
 
     def __init__(self, parent=None):
+        """初始化班级点名界面
+
+        Args:
+            parent: 父窗口对象
+        """
         super().__init__(parent)
+        self._init_file_watcher()
+        self._init_long_press()
+        self._init_tts()
+        self._init_animation_state()
+        self._init_ui()
+        self._setup_settings_listener()
+
+    def _init_file_watcher(self):
+        """初始化文件监控器"""
         self.file_watcher = QFileSystemWatcher()
         self.setup_file_watcher()
 
+    def _init_long_press(self):
+        """初始化长按功能相关属性"""
         self.press_timer = QTimer()
         self.press_timer.timeout.connect(self.handle_long_press)
         self.long_press_interval = 100
@@ -52,19 +80,29 @@ class roll_call(QWidget):
         self.is_long_pressing = False
         self.long_press_direction = 0
 
+    def _init_tts(self):
+        """初始化文本转语音处理器"""
         self.tts_handler = TTSHandler()
 
+    def _init_animation_state(self):
+        """初始化动画状态"""
         self.is_animating = False
 
+    def _init_ui(self):
+        """初始化用户界面"""
         self.initUI()
+
+    def _setup_settings_listener(self):
+        """设置设置监听器"""
         self.setupSettingsListener()
 
     def handle_long_press(self):
-        """处理长按事件"""
+        """处理长按事件
+
+        当长按状态激活时，以连续触发间隔更新计数
+        """
         if self.is_long_pressing:
-            # 更新定时器间隔为连续触发间隔
             self.press_timer.setInterval(self.long_press_interval)
-            # 执行更新计数
             self.update_count(self.long_press_direction)
 
     def start_long_press(self, direction):
@@ -75,7 +113,6 @@ class roll_call(QWidget):
         """
         self.long_press_direction = direction
         self.is_long_pressing = True
-        # 设置初始延迟
         self.press_timer.setInterval(self.long_press_delay)
         self.press_timer.start()
 
@@ -85,12 +122,15 @@ class roll_call(QWidget):
         self.press_timer.stop()
 
     def closeEvent(self, event):
-        """窗口关闭事件，清理资源"""
+        """窗口关闭事件，清理资源
+
+        Args:
+            event: 关闭事件对象
+        """
         try:
             if hasattr(self, "file_watcher"):
                 self.file_watcher.removePaths(self.file_watcher.directories())
                 self.file_watcher.removePaths(self.file_watcher.files())
-            # 停止长按定时器
             if hasattr(self, "press_timer"):
                 self.press_timer.stop()
         except Exception as e:
@@ -98,45 +138,73 @@ class roll_call(QWidget):
         super().closeEvent(event)
 
     def initUI(self):
-        """初始化UI"""
+        """初始化用户界面
+
+        创建并布局所有控件，包括：
+        - 结果显示区域
+        - 控制按钮（重置、开始、剩余名单）
+        - 计数控制（加减按钮）
+        - 筛选下拉框（班级、范围、性别）
+        - 人数统计标签
+        """
         container = QWidget()
         roll_call_container = QVBoxLayout(container)
         roll_call_container.setContentsMargins(0, 0, 0, 0)
 
+        self._create_result_widget(roll_call_container)
+        self._create_buttons()
+        self._create_count_control()
+        self._create_comboboxes()
+        self._create_count_label()
+        self._setup_control_widget()
+        self._setup_main_layout(container)
+
+        QTimer.singleShot(0, self.populate_lists)
+
+    def _create_result_widget(self, parent_layout):
+        """创建结果显示区域
+
+        Args:
+            parent_layout: 父布局对象
+        """
         self.result_widget = QWidget()
         self.result_layout = QVBoxLayout(self.result_widget)
         self.result_grid = QGridLayout()
         self.result_layout.addLayout(self.result_grid)
-        roll_call_container.addWidget(self.result_widget)
+        parent_layout.addWidget(self.result_widget)
 
+    def _create_buttons(self):
+        """创建按钮控件"""
         self.reset_button = self._create_button(
             "roll_call", "reset_button", 15, self.reset_count
         )
-
-        self.minus_button, self.plus_button, self.count_widget = (
-            self._create_count_control_widget()
-        )
-
         self.start_button = self._create_button(
             "roll_call", "start_button", 15, self.start_draw, is_primary=True
         )
-
-        self.list_combobox = self._create_combobox(
-            "roll_call", "default_empty_item", 12, self.on_class_changed
-        )
-
-        self.range_combobox = self._create_combobox(
-            "roll_call", None, 12, self.on_filter_changed
-        )
-
-        self.gender_combobox = self._create_combobox(
-            "roll_call", None, 12, self.on_filter_changed
-        )
-
         self.remaining_button = self._create_button(
             "roll_call", "remaining_button", 12, self.show_remaining_list
         )
 
+    def _create_count_control(self):
+        """创建计数控制控件"""
+        self.minus_button, self.plus_button, self.count_widget = (
+            self._create_count_control_widget()
+        )
+
+    def _create_comboboxes(self):
+        """创建下拉框控件"""
+        self.list_combobox = self._create_combobox(
+            "roll_call", "default_empty_item", 12, self.on_class_changed
+        )
+        self.range_combobox = self._create_combobox(
+            "roll_call", None, 12, self.on_filter_changed
+        )
+        self.gender_combobox = self._create_combobox(
+            "roll_call", None, 12, self.on_filter_changed
+        )
+
+    def _create_count_label(self):
+        """创建人数统计标签"""
         self.total_count = 0
         self.remaining_count = 0
 
@@ -148,13 +216,20 @@ class roll_call(QWidget):
         self.many_count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._set_widget_font(self.many_count_label, 10)
 
+    def _setup_control_widget(self):
+        """设置控制控件区域"""
         self.control_widget = QWidget()
         self.control_layout = QVBoxLayout(self.control_widget)
         self.control_layout.setContentsMargins(0, 0, 0, 0)
         self.control_layout.addStretch()
-
         self._add_control_widgets()
 
+    def _setup_main_layout(self, container):
+        """设置主布局
+
+        Args:
+            container: 容器控件
+        """
         scroll = SmoothScrollArea()
         scroll.setWidget(container)
         scroll.setWidgetResizable(True)
@@ -173,22 +248,20 @@ class roll_call(QWidget):
 
         self._adjustControlWidgetWidths()
 
-        QTimer.singleShot(0, self.populate_lists)
-
     def _create_button(
         self, content_key, button_key, font_size, callback, is_primary=False
     ):
         """创建按钮
 
         Args:
-            content_key: 内容键
-            button_key: 按钮键
+            content_key: 语言配置中的内容键
+            button_key: 语言配置中的按钮键
             font_size: 字体大小
-            callback: 回调函数
-            is_primary: 是否为主按钮
+            callback: 点击回调函数
+            is_primary: 是否为主按钮（使用PrimaryPushButton）
 
         Returns:
-            创建的按钮
+            创建的按钮对象
         """
         if is_primary:
             button = PrimaryPushButton(
@@ -207,13 +280,13 @@ class roll_call(QWidget):
         """创建下拉框
 
         Args:
-            content_key: 内容键
-            placeholder_key: 占位符键
+            content_key: 语言配置中的内容键
+            placeholder_key: 语言配置中的占位符键（可为None）
             font_size: 字体大小
-            callback: 回调函数
+            callback: 文本变化回调函数
 
         Returns:
-            创建的下拉框
+            创建的下拉框对象
         """
         combobox = ComboBox()
         self._set_widget_font(combobox, font_size)
@@ -227,6 +300,8 @@ class roll_call(QWidget):
 
     def _create_count_control_widget(self):
         """创建计数控制控件
+
+        包含减号按钮、计数标签、加号按钮
 
         Returns:
             tuple: (minus_button, plus_button, count_widget)
@@ -265,7 +340,7 @@ class roll_call(QWidget):
             direction: 长按方向（1为增加，-1为减少）
 
         Returns:
-            创建的按钮
+            创建的按钮对象
         """
         button = PushButton(text)
         self._set_widget_font(button, font_size)
@@ -289,8 +364,8 @@ class roll_call(QWidget):
         """自定义鼠标按下事件，将右键转换为左键
 
         Args:
-            widget: 控件
-            event: 鼠标事件
+            widget: 控件对象
+            event: 鼠标事件对象
         """
         if event.button() == Qt.MouseButton.RightButton:
             new_event = QMouseEvent(
@@ -308,8 +383,8 @@ class roll_call(QWidget):
         """自定义鼠标释放事件，将右键转换为左键
 
         Args:
-            widget: 控件
-            event: 鼠标事件
+            widget: 控件对象
+            event: 鼠标事件对象
         """
         if event.button() == Qt.MouseButton.RightButton:
             new_event = QMouseEvent(
@@ -324,7 +399,10 @@ class roll_call(QWidget):
             PushButton.mouseReleaseEvent(widget, event)
 
     def _add_control_widgets(self):
-        """添加控制控件到布局"""
+        """添加控制控件到布局
+
+        根据页面管理设置决定是否显示各个控件
+        """
         widgets_config = [
             (self.reset_button, "page_management", "roll_call_reset_button"),
             (self.count_widget, "page_management", "roll_call_quantity_control"),
@@ -344,12 +422,17 @@ class roll_call(QWidget):
     def add_control_widget_if_enabled(
         self, layout, widget, settings_group, setting_name
     ):
-        """根据设置决定是否添加控件到布局"""
+        """根据设置决定是否添加控件到布局
+
+        Args:
+            layout: 布局对象
+            widget: 要添加的控件
+            settings_group: 设置组名称
+            setting_name: 设置项名称
+        """
         try:
-            # 对于数量标签，需要特殊处理显示模式
             if setting_name in ["roll_call_quantity_label", "lottery_quantity_label"]:
                 display_mode = readme_settings_async(settings_group, setting_name)
-                # display_mode == 3 表示不显示
                 if display_mode != 3:
                     layout.addWidget(widget, alignment=Qt.AlignmentFlag.AlignCenter)
             else:
@@ -358,13 +441,14 @@ class roll_call(QWidget):
                     layout.addWidget(widget, alignment=Qt.AlignmentFlag.AlignCenter)
         except Exception as e:
             logger.exception(f"添加控件 {setting_name} 时出错: {e}")
-            # 出错时默认添加控件
             layout.addWidget(widget, alignment=Qt.AlignmentFlag.AlignCenter)
 
     def _adjustControlWidgetWidths(self):
-        """统一调整控件宽度以适应文本内容"""
+        """统一调整控件宽度以适应文本内容
+
+        计算所有控件文本所需的最大宽度，并设置统一宽度
+        """
         try:
-            # 收集所有需要调整宽度的控件
             widgets_to_adjust = [
                 self.reset_button,
                 self.count_widget,
@@ -376,37 +460,43 @@ class roll_call(QWidget):
                 self.many_count_label,
             ]
 
-            # 计算所有控件文本所需的最大宽度
-            max_text_width = 0
-            for widget in widgets_to_adjust:
-                fm = widget.fontMetrics()
-                # 检查按钮/标签文本
-                if hasattr(widget, "text") and widget.text():
-                    text_width = fm.horizontalAdvance(widget.text())
-                    max_text_width = max(max_text_width, text_width)
-                # 检查占位符文本
-                if hasattr(widget, "placeholderText") and widget.placeholderText():
-                    text_width = fm.horizontalAdvance(widget.placeholderText())
-                    max_text_width = max(max_text_width, text_width)
-                # 检查下拉框所有选项的宽度
-                if hasattr(widget, "count"):
-                    for i in range(widget.count()):
-                        item_text = widget.itemText(i)
-                        if item_text:
-                            text_width = fm.horizontalAdvance(item_text)
-                            max_text_width = max(max_text_width, text_width)
+            max_text_width = self._calculate_max_text_width(widgets_to_adjust)
 
-            # 计算统一宽度（文本宽度 + 边距 + 下拉框箭头空间）
-            padding = 60  # 左右边距 + 下拉箭头空间
-            min_width = 200  # 最小宽度
+            padding = 60
+            min_width = 200
             unified_width = max(min_width, max_text_width + padding)
 
-            # 设置所有控件的固定宽度
             for widget in widgets_to_adjust:
                 widget.setFixedWidth(int(unified_width))
 
         except Exception as e:
             logger.debug(f"调整控件宽度时出错: {e}")
+
+    def _calculate_max_text_width(self, widgets):
+        """计算控件集合中所需的最大文本宽度
+
+        Args:
+            widgets: 控件列表
+
+        Returns:
+            int: 最大文本宽度
+        """
+        max_text_width = 0
+        for widget in widgets:
+            fm = widget.fontMetrics()
+            if hasattr(widget, "text") and widget.text():
+                text_width = fm.horizontalAdvance(widget.text())
+                max_text_width = max(max_text_width, text_width)
+            if hasattr(widget, "placeholderText") and widget.placeholderText():
+                text_width = fm.horizontalAdvance(widget.placeholderText())
+                max_text_width = max(max_text_width, text_width)
+            if hasattr(widget, "count"):
+                for i in range(widget.count()):
+                    item_text = widget.itemText(i)
+                    if item_text:
+                        text_width = fm.horizontalAdvance(item_text)
+                        max_text_width = max(max_text_width, text_width)
+        return max_text_width
 
     def on_class_changed(self):
         """当班级选择改变时，更新范围选择、性别选择和人数显示"""
@@ -414,80 +504,60 @@ class roll_call(QWidget):
         self.gender_combobox.blockSignals(True)
 
         try:
-            self.range_combobox.clear()
-            # 范围
-            base_options = get_content_combo_name_async("roll_call", "range_combobox")
-            group_list = get_group_list(self.list_combobox.currentText())
-            # 如果有小组，才添加"抽取全部小组"选项
-            if group_list and group_list != [""]:
-                # 添加基础选项和小组列表
-                self.range_combobox.addItems(base_options + group_list)
-            else:
-                # 只添加基础选项，跳过"抽取全部小组"
-                self.range_combobox.addItems(base_options[:1])  # 只添加"抽取全部学生"
-
-            # 性别
-            self.gender_combobox.clear()
-            gender_options = get_content_combo_name_async(
-                "roll_call", "gender_combobox"
-            )
-            gender_list = get_gender_list(self.list_combobox.currentText())
-            # 如果有性别，才添加"抽取全部性别"选项
-            if gender_list and gender_list != [""]:
-                # 添加基础选项和性别列表
-                self.gender_combobox.addItems(gender_options + gender_list)
-            else:
-                # 只添加基础选项，跳过"抽取全部性别"
-                self.gender_combobox.addItems(
-                    gender_options[:1]
-                )  # 只添加"抽取全部性别"
-
-            # 使用统一的方法更新剩余人数显示
+            self._update_range_options()
+            self._update_gender_options()
             self.update_many_count_label()
-
-            # 根据当前选择的范围计算实际的总人数
-            total_count = RollCallUtils.get_total_count(
-                self.list_combobox.currentText(),
-                self.range_combobox.currentIndex(),
-                self.range_combobox.currentText(),
-            )
-
-            # 根据总人数是否为0，启用或禁用开始按钮
-            RollCallUtils.update_start_button_state(self.start_button, total_count)
-
-            # 更新剩余名单窗口
-            if (
-                hasattr(self, "remaining_list_page")
-                and self.remaining_list_page is not None
-            ):
-                QTimer.singleShot(APP_INIT_DELAY, self._update_remaining_list_delayed)
+            self._update_start_button_state()
+            self._update_remaining_list_window()
         except Exception as e:
             logger.exception(f"切换班级时发生错误: {e}")
         finally:
             self.range_combobox.blockSignals(False)
             self.gender_combobox.blockSignals(False)
 
+    def _update_range_options(self):
+        """更新范围下拉框选项"""
+        self.range_combobox.clear()
+        base_options = get_content_combo_name_async("roll_call", "range_combobox")
+        group_list = get_group_list(self.list_combobox.currentText())
+        if group_list and group_list != [""]:
+            self.range_combobox.addItems(base_options + group_list)
+        else:
+            self.range_combobox.addItems(base_options[:1])
+
+    def _update_gender_options(self):
+        """更新性别下拉框选项"""
+        self.gender_combobox.clear()
+        gender_options = get_content_combo_name_async("roll_call", "gender_combobox")
+        gender_list = get_gender_list(self.list_combobox.currentText())
+        if gender_list and gender_list != [""]:
+            self.gender_combobox.addItems(gender_options + gender_list)
+        else:
+            self.gender_combobox.addItems(gender_options[:1])
+
+    def _update_start_button_state(self):
+        """根据总人数更新开始按钮状态"""
+        total_count = RollCallUtils.get_total_count(
+            self.list_combobox.currentText(),
+            self.range_combobox.currentIndex(),
+            self.range_combobox.currentText(),
+        )
+        RollCallUtils.update_start_button_state(self.start_button, total_count)
+
+    def _update_remaining_list_window(self):
+        """延迟更新剩余名单窗口"""
+        if (
+            hasattr(self, "remaining_list_page")
+            and self.remaining_list_page is not None
+        ):
+            QTimer.singleShot(APP_INIT_DELAY, self._update_remaining_list_delayed)
+
     def on_filter_changed(self):
         """当范围或性别选择改变时，更新人数显示"""
         try:
-            # 使用统一的方法更新剩余人数显示
             self.update_many_count_label()
-
-            # 根据当前选择的范围计算实际的总人数
-            total_count = RollCallUtils.get_total_count(
-                self.list_combobox.currentText(),
-                self.range_combobox.currentIndex(),
-                self.range_combobox.currentText(),
-            )
-
-            # 根据总人数是否为0，启用或禁用开始按钮
-            RollCallUtils.update_start_button_state(self.start_button, total_count)
-
-            if (
-                hasattr(self, "remaining_list_page")
-                and self.remaining_list_page is not None
-            ):
-                QTimer.singleShot(APP_INIT_DELAY, self._update_remaining_list_delayed)
+            self._update_start_button_state()
+            self._update_remaining_list_window()
         except Exception as e:
             logger.exception(f"切换筛选条件时发生错误: {e}")
 

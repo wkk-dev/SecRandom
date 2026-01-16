@@ -208,6 +208,32 @@ class RollCallUtils:
                 }
                 students_dict_list.append(student_dict)
 
+            if half_repeat > 0:
+                record_key = f"{class_name}_{gender_filter}_{group_filter}"
+                if record_key not in RollCallUtils._drawn_record_cache:
+                    drawn_records = read_drawn_record(
+                        class_name, gender_filter, group_filter
+                    )
+                    RollCallUtils._drawn_record_cache[record_key] = drawn_records
+                else:
+                    drawn_records = RollCallUtils._drawn_record_cache[record_key]
+
+                drawn_counts = {name: count for name, count in drawn_records}
+
+                filtered_groups = []
+                for group in students_dict_list:
+                    group_name = group["name"]
+                    if (
+                        group_name not in drawn_counts
+                        or drawn_counts[group_name] < half_repeat
+                    ):
+                        filtered_groups.append(group)
+
+                students_dict_list = filtered_groups
+
+            if not students_dict_list:
+                return {"reset_required": True}
+
             draw_type = readme_settings_async("roll_call_settings", "draw_type")
             selected_groups = RollCallUtils.draw_random_groups(
                 students_dict_list, current_count, draw_type
@@ -564,9 +590,9 @@ class RollCallUtils:
 
         return {
             "font_size": font_size,
-            "animation_color_theme": animation_color,
+            "animation_color": animation_color,
             "display_format": display_format,
-            "student_image": show_student_image,
+            "show_student_image": show_student_image,
             "show_random": show_random,
         }
 
@@ -601,9 +627,9 @@ class RollCallUtils:
             selected_students=selected_students,
             draw_count=draw_count,
             font_size=display_dict["font_size"],
-            animation_color=display_dict["animation_color_theme"],
+            animation_color=display_dict["animation_color"],
             display_format=display_dict["display_format"],
-            show_student_image=display_dict["student_image"],
+            show_student_image=display_dict["show_student_image"],
             group_index=group_index,
             show_random=display_dict["show_random"],
             settings_group=settings_group,
@@ -637,6 +663,9 @@ class RollCallUtils:
                 group=group_filter,
                 student_name=selected_students,
             )
+            record_key = f"{class_name}_{gender_filter}_{group_filter}"
+            if record_key in RollCallUtils._drawn_record_cache:
+                del RollCallUtils._drawn_record_cache[record_key]
 
         if selected_students_dict:
             save_roll_call_history(
