@@ -340,6 +340,7 @@ class roll_call_list(GroupHeaderCardWidget):
                     "export",
                     "title",
                     "success",
+                    "name",
                 ),
                 content=get_any_position_value_async(
                     "notification",
@@ -347,6 +348,7 @@ class roll_call_list(GroupHeaderCardWidget):
                     "export",
                     "content",
                     "success",
+                    "name",
                 ).format(path=file_path),
                 duration=3000,
             )
@@ -360,6 +362,7 @@ class roll_call_list(GroupHeaderCardWidget):
                     "export",
                     "title",
                     "failure",
+                    "name",
                 ),
                 content=get_any_position_value_async(
                     "notification",
@@ -367,6 +370,7 @@ class roll_call_list(GroupHeaderCardWidget):
                     "export",
                     "content",
                     "error",
+                    "name",
                 ).format(message=message),
                 duration=3000,
             )

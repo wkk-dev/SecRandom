@@ -145,14 +145,18 @@ def readme_settings(first_level_key: str, second_level_key: str):
         settings_path = get_settings_path()
         if file_exists(settings_path):
             with open_file(settings_path, "r", encoding="utf-8") as f:
-                settings_data = json.load(f)
-                if (
-                    first_level_key in settings_data
-                    and second_level_key in settings_data[first_level_key]
-                ):
-                    value = settings_data[first_level_key][second_level_key]
-                    # logger.debug(f"从设置文件读取: {first_level_key}.{second_level_key} = {value}")
-                    return value
+                content = f.read()
+                if not content or not content.strip():
+                    logger.warning(f"设置文件为空: {settings_path}")
+                else:
+                    settings_data = json.loads(content)
+                    if (
+                        first_level_key in settings_data
+                        and second_level_key in settings_data[first_level_key]
+                    ):
+                        value = settings_data[first_level_key][second_level_key]
+                        # logger.debug(f"从设置文件读取: {first_level_key}.{second_level_key} = {value}")
+                        return value
 
         default_setting = _get_default_setting(first_level_key, second_level_key)
         if isinstance(default_setting, dict) and "default_value" in default_setting:

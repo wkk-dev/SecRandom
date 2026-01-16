@@ -998,8 +998,6 @@ class update(QWidget):
             Q_ARG(str, get_content_name_async("update", "update_cancelled")),
         )
 
-
-
     def _restore_from_global_status(self):
         """从全局状态管理器恢复状态"""
         try:

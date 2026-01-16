@@ -183,7 +183,12 @@ def _get_icon_map():
         try:
             map_path = get_data_path("assets", "FluentSystemIcons-Filled.json")
             with open(map_path, "r", encoding="utf-8") as f:
-                _icon_map_cache = json.load(f)
+                content = f.read()
+                if not content or not content.strip():
+                    logger.warning(f"图标映射表文件为空: {map_path}")
+                    _icon_map_cache = {}
+                else:
+                    _icon_map_cache = json.loads(content)
         except Exception as e:
             logger.exception(f"加载图标映射表失败: {e}")
             _icon_map_cache = {}

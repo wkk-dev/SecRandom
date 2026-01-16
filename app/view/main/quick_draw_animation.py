@@ -172,7 +172,9 @@ class QuickDrawAnimation(QObject):
         class_name = readme_settings_async("quick_draw_settings", "default_class")
         if not class_name:
             # 未设置默认班级，初始化为空结果并停止动画
-            logger.warning("draw_random_students: 未设置默认抽取名单，请在设置中配置默认班级")
+            logger.warning(
+                "draw_random_students: 未设置默认抽取名单，请在设置中配置默认班级"
+            )
             self.final_selected_students = []
             self.final_class_name = None
             # 停止动画计时器

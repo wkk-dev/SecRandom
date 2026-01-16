@@ -70,10 +70,10 @@ class MusicPlayer:
 
         # 获取音乐文件路径
         try:
+            from app.tools.path_utils import get_audio_path
+
             if is_random_play:
                 # 随机播放：从音乐文件列表中随机选择一个
-                from app.tools.path_utils import get_audio_path
-
                 audio_dir = get_audio_path("music")
                 if audio_dir.exists():
                     supported_formats = [".mp3", ".flac", ".wav", ".ogg"]

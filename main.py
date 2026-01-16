@@ -13,7 +13,11 @@ from loguru import logger
 from app.tools.path_utils import get_app_root
 from app.tools.config import configure_logging
 from app.tools.settings_access import readme_settings_async
-from app.tools.variable import APP_QUIT_ON_LAST_WINDOW_CLOSED, VERSION, EXIT_CODE_RESTART
+from app.tools.variable import (
+    APP_QUIT_ON_LAST_WINDOW_CLOSED,
+    VERSION,
+    EXIT_CODE_RESTART,
+)
 from app.core.single_instance import (
     check_single_instance,
     setup_local_server,
@@ -43,9 +47,27 @@ def main():
     if "0.0.0" not in VERSION:
 
         def before_send(event, hint):
-            # 如果事件中不包含异常信息（即没有堆栈），则不上传
             if "exception" not in event:
                 return None
+
+            exceptions = event.get("exception", {}).get("values", [])
+            if not exceptions:
+                return None
+
+            for exc in exceptions:
+                module = exc.get("module", "")
+                type_ = exc.get("type", "")
+                value = exc.get("value", "")
+
+                if module.startswith("qfluentwidgets"):
+                    return None
+
+                if type_ == "RuntimeError" and "Internal C++ object" in str(value):
+                    return None
+
+                if type_ == "COMError" and "没有注册类" in str(value):
+                    return None
+
             return event
 
         sentry_sdk.init(

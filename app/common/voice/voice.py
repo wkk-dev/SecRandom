@@ -48,7 +48,7 @@ def require_permission(permission: str):
             # 示例：检查当前用户是否有使用TTS的权限
             has_perm = True  # 实际实现时替换为真实权限检查
             if not has_perm:
-                logger.exception(f"权限不足，无法执行 {func.__name__}")
+                logger.warning(f"权限不足，无法执行 {func.__name__}")
                 return
             return func(self, *args, **kwargs)
 
@@ -78,7 +78,7 @@ class VoicePlaybackSystem:
         """设置播放音量，范围0.0-1.0"""
         # 输入验证
         if not isinstance(volume, (int, float)):
-            logger.exception(f"无效的音量值: {volume}")
+            logger.warning(f"无效的音量值: {volume}")
             return
         self._volume = max(0.0, min(1.0, float(volume)))
 
@@ -86,7 +86,7 @@ class VoicePlaybackSystem:
         """设置播放语速，范围0-200"""
         # 输入验证
         if not isinstance(speed, int):
-            logger.exception(f"无效的语速值: {speed}")
+            logger.warning(f"无效的语速值: {speed}")
             return
         self._speed = max(0, min(200, speed))
 
@@ -240,21 +240,21 @@ class VoicePlaybackSystem:
             # 输入验证
             if isinstance(task, tuple):  # 内存数据
                 if len(task) != 2:
-                    logger.exception(f"无效的任务格式: {task}")
+                    logger.warning(f"无效的任务格式: {task}")
                     return False
                 data, fs = task
                 if not isinstance(data, np.ndarray) or not isinstance(fs, int):
-                    logger.exception("无效的内存数据格式")
+                    logger.warning("无效的内存数据格式")
                     return False
             else:  # 文件路径
                 if not isinstance(task, str) or not task:
-                    logger.exception("无效的文件路径")
+                    logger.warning("无效的文件路径")
                     return False
 
             self.play_queue.put_nowait(task)
             return True
         except queue.Full:
-            logger.exception("播放队列已满，丢弃新任务")
+            logger.warning("播放队列已满，丢弃新任务")
             return False
         except Exception as e:
             logger.exception(f"添加播放任务失败: {e}")
@@ -314,10 +314,10 @@ class VoiceCacheManager:
         """获取语音数据（自动缓存）"""
         # 输入验证
         if not isinstance(text, str) or not text:
-            logger.exception(f"无效的文本: {text}")
+            logger.warning(f"无效的文本: {text}")
             raise ValueError("文本不能为空")
         if not isinstance(voice, str) or not voice:
-            logger.exception(f"无效的语音名称: {voice}")
+            logger.warning(f"无效的语音名称: {voice}")
             raise ValueError("语音名称不能为空")
 
         logger.debug(f"获取语音: text='{text}', voice='{voice}'")
@@ -396,28 +396,28 @@ class VoiceCacheManager:
                 return data, fs
             except NoAudioReceived as e:
                 retry_count += 1
-                logger.exception(
+                logger.warning(
                     f"生成语音失败，未接收到音频数据，重试{retry_count}/{max_retries}: {type(e).__name__} {e}"
                 )
                 if retry_count < max_retries:
                     await asyncio.sleep(1)
             except WebSocketError as e:
                 retry_count += 1
-                logger.exception(
+                logger.warning(
                     f"生成语音失败，WebSocket通信错误，重试{retry_count}/{max_retries}: {type(e).__name__} {e}"
                 )
                 if retry_count < max_retries:
                     await asyncio.sleep(1)
             except Exception as e:
                 retry_count += 1
-                logger.exception(
+                logger.warning(
                     f"生成语音失败，重试{retry_count}/{max_retries}: {type(e).__name__} {e}"
                 )
                 if retry_count < max_retries:
                     await asyncio.sleep(1)
 
         # 最终失败时的降级处理
-        logger.exception("生成语音失败，已达到最大重试次数")
+        logger.warning("生成语音失败，已达到最大重试次数")
         raise RuntimeError("生成语音失败")
 
     def _generate_cache_key(self, text: str, voice: str) -> str:
@@ -644,23 +644,30 @@ class TTSHandler:
                     and sys.getwindowsversion().major >= 10
                     and platform.machine() != "x86"
                 ):
-                    if not hasattr(
-                        QApplication.instance(), "pumping_reward_voice_engine"
-                    ):
-                        QApplication.instance().pumping_reward_voice_engine = (
-                            pyttsx3.init()
+                    try:
+                        if not hasattr(
+                            QApplication.instance(), "pumping_reward_voice_engine"
+                        ):
+                            QApplication.instance().pumping_reward_voice_engine = (
+                                pyttsx3.init()
+                            )
+                            QApplication.instance().pumping_reward_voice_engine.startLoop(
+                                False
+                            )
+                        self.voice_engine = (
+                            QApplication.instance().pumping_reward_voice_engine
                         )
-                        QApplication.instance().pumping_reward_voice_engine.startLoop(
-                            False
+                        logger.info("Windows系统TTS引擎初始化成功")
+                    except Exception as e:
+                        logger.warning(
+                            f"Windows系统TTS引擎初始化失败: {e}，语音功能将不可用"
                         )
-                    self.voice_engine = (
-                        QApplication.instance().pumping_reward_voice_engine
-                    )
-                    logger.info("Windows系统TTS引擎初始化成功")
+                        self.voice_engine = None
                 else:
-                    logger.exception(
+                    logger.warning(
                         "Windows系统TTS引擎需要Windows 10及以上系统且非x86架构"
                     )
+                    self.voice_engine = None
 
             elif system == "Linux":
                 # Linux平台TTS引擎初始化
@@ -686,17 +693,20 @@ class TTSHandler:
                         )
                         logger.info("Linux系统TTS引擎初始化成功 (使用espeak)")
                     else:
-                        logger.exception(
+                        logger.warning(
                             "Linux系统TTS引擎需要安装espeak: sudo apt-get install espeak"
                         )
+                        self.voice_engine = None
                 except Exception as e:
-                    logger.exception(f"Linux系统TTS引擎初始化失败: {e}")
+                    logger.warning(f"Linux系统TTS引擎初始化失败: {e}，语音功能将不可用")
+                    self.voice_engine = None
 
             else:
-                logger.exception(f"不支持的操作系统: {system}，系统TTS功能不可用")
+                logger.warning(f"不支持的操作系统: {system}，系统TTS功能不可用")
+                self.voice_engine = None
 
         except Exception as e:
-            logger.exception(f"TTS引擎初始化失败: {e}")
+            logger.warning(f"TTS引擎初始化失败: {e}，语音功能将不可用")
             self.voice_engine = None
 
     @require_permission("tts.use")
