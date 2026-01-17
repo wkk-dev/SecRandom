@@ -11,6 +11,7 @@ from loguru import logger
 
 from app.tools.path_utils import get_app_root
 from app.tools.config import configure_logging
+from app.tools.settings_default import manage_settings_file
 from app.tools.settings_access import readme_settings_async
 from app.tools.variable import (
     APP_QUIT_ON_LAST_WINDOW_CLOSED,
@@ -369,6 +370,8 @@ def main():
 
     if not is_first_instance:
         handle_existing_instance(shared_memory)
+
+    manage_settings_file()
 
     app, window_manager, url_handler, cs_ipc_handler, local_server = (
         setup_qt_application()

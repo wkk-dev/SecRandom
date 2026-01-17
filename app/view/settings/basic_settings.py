@@ -15,7 +15,6 @@ from qfluentwidgets import (
     Theme,
     setTheme,
     setThemeColor,
-    SpinBox,
 )
 
 from app.tools.personalised import get_theme_icon
@@ -42,7 +41,6 @@ from app.tools.config import (
     NotificationConfig,
 )
 from app.common.IPC_URL import URLIPCHandler
-from app.tools.variable import WIDTH_SPINBOX
 from app.page_building.another_window import create_log_viewer_window
 
 
@@ -181,18 +179,6 @@ class basic_settings_function(GroupHeaderCardWidget):
         # 初始化URL IPC处理器
         self.url_ipc_handler = URLIPCHandler("SecRandom", "secrandom")
 
-        # IPC端口设置
-        self.ipc_port_spinbox = SpinBox()
-        self.ipc_port_spinbox.setRange(1, 65535)  # 端口范围 1-65535
-        self.ipc_port_spinbox.setFixedWidth(WIDTH_SPINBOX)
-        self.ipc_port_spinbox.setValue(
-            readme_settings_async("basic_settings", "ipc_port")
-        )
-        self.ipc_port_spinbox.valueChanged.connect(self.__on_ipc_port_changed)
-        self.ipc_port_spinbox.setToolTip(
-            get_any_position_value_async("basic_settings", "ipc_port", "tooltip")
-        )
-
         # 检查协议是否已注册
         is_protocol_registered = self.url_ipc_handler.is_protocol_registered()
         self.url_protocol_switch.setChecked(is_protocol_registered)
@@ -239,13 +225,6 @@ class basic_settings_function(GroupHeaderCardWidget):
                 get_content_name_async("basic_settings", "url_protocol"),
                 get_content_description_async("basic_settings", "url_protocol"),
                 self.url_protocol_switch,
-            )
-        if is_setting_visible("basic_settings", "ipc_port"):
-            self.addGroup(
-                get_theme_icon("ic_fluent_server_20_filled"),
-                get_content_name_async("basic_settings", "ipc_port"),
-                get_content_description_async("basic_settings", "ipc_port"),
-                self.ipc_port_spinbox,
             )
 
     def __on_simplified_mode_changed(self, checked):
@@ -511,75 +490,6 @@ class basic_settings_function(GroupHeaderCardWidget):
             self.url_protocol_switch.checkedChanged.connect(
                 self.__on_url_protocol_changed
             )
-
-    def __on_ipc_port_changed(self, value):
-        """IPC端口变化处理"""
-        update_settings("basic_settings", "ipc_port", value)
-        logger.info(f"IPC端口设置已更新为: {value}")
-
-        # 重启IPC服务器以应用新端口
-        self._restart_ipc_server(value)
-
-        show_notification(
-            NotificationType.INFO,
-            NotificationConfig(
-                title=get_content_name_async("basic_settings", "ipc_port"),
-                content=get_content_name_async(
-                    "basic_settings", "ipc_port_notification"
-                ).format(value=value),
-            ),
-            parent=self.window(),
-        )
-
-    def _restart_ipc_server(self, new_port: int):
-        """重启IPC服务器以应用新端口设置"""
-        try:
-            # 获取主窗口实例并重启IPC服务器
-            main_window = self._get_main_window()
-            if main_window and hasattr(main_window, "restart_ipc_server"):
-                success = main_window.restart_ipc_server(new_port)
-                if success:
-                    logger.info(f"IPC服务器已成功重启，使用新端口: {new_port}")
-                else:
-                    logger.exception(f"重启IPC服务器失败，端口: {new_port}")
-                    show_notification(
-                        NotificationType.ERROR,
-                        NotificationConfig(
-                            title=get_content_name_async("basic_settings", "ipc_port"),
-                            content=get_any_position_value_async(
-                                "basic_settings",
-                                "ipc_port_notification",
-                                "restart_required",
-                            ),
-                        ),
-                        parent=self.window(),
-                    )
-            else:
-                logger.warning("无法获取主窗口实例，无法重启IPC服务器")
-        except Exception as e:
-            logger.exception(f"重启IPC服务器时发生错误: {e}")
-            show_notification(
-                NotificationType.ERROR,
-                NotificationConfig(
-                    title=get_content_name_async("basic_settings", "ipc_port"),
-                    content=get_any_position_value_async(
-                        "basic_settings", "ipc_port_notification", "restart_error"
-                    ).format(error=str(e)),
-                ),
-                parent=self.window(),
-            )
-
-    def _get_main_window(self):
-        """获取主窗口实例"""
-        from PySide6.QtWidgets import QApplication
-
-        app = QApplication.instance()
-        if app:
-            # 遍历所有顶层窗口，查找MainWindow实例
-            for widget in app.topLevelWidgets():
-                if widget.__class__.__name__ == "MainWindow":
-                    return widget
-        return None
 
 
 class basic_settings_personalised(GroupHeaderCardWidget):

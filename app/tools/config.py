@@ -1346,7 +1346,7 @@ def export_all_data(parent: Optional[QWidget] = None) -> None:
         dialog.exec()
 
 
-def import_all_data(parent: Optional[QWidget] = None) -> None:
+def import_all_data(parent: Optional[QWidget] = None) -> bool:
     """从文件导入所有数据"""
     try:
         file_path, _ = QFileDialog.getOpenFileName(
@@ -1356,57 +1356,60 @@ def import_all_data(parent: Optional[QWidget] = None) -> None:
             "ZIP Files (*.zip);;All Files (*)",
         )
 
-        if file_path:
-            version_info = _check_version_info(file_path)
+        if not file_path:
+            return False
 
-            if version_info:
-                if not _confirm_version_mismatch(version_info, parent):
-                    return
+        version_info = _check_version_info(file_path)
 
-            existing_files = _check_existing_files(file_path)
-            if existing_files and not _confirm_overwrite(existing_files, parent):
-                return
+        if version_info:
+            if not _confirm_version_mismatch(version_info, parent):
+                return False
 
-            if not _confirm_import(parent):
-                return
+        existing_files = _check_existing_files(file_path)
+        if existing_files and not _confirm_overwrite(existing_files, parent):
+            return False
 
-            skipped_files = _extract_data_files(file_path)
+        if not _confirm_import(parent):
+            return False
 
-            success_dialog = MessageBox(
+        skipped_files = _extract_data_files(file_path)
+
+        success_dialog = MessageBox(
+            get_any_position_value_async(
+                "basic_settings",
+                "data_import_export",
+                "import_success_title",
+                "name",
+            ),
+            (
                 get_any_position_value_async(
                     "basic_settings",
                     "data_import_export",
-                    "import_success_title",
+                    "import_success_content_skipped",
                     "name",
-                ),
-                (
-                    get_any_position_value_async(
-                        "basic_settings",
-                        "data_import_export",
-                        "import_success_content_skipped",
-                        "name",
-                    ).format(count=len(skipped_files))
-                    if skipped_files
-                    else get_any_position_value_async(
-                        "basic_settings",
-                        "data_import_export",
-                        "import_success_content",
-                        "name",
-                    )
-                ),
-                parent,
-            )
-            success_dialog.yesButton.setText(
-                get_any_position_value_async(
+                ).format(count=len(skipped_files))
+                if skipped_files
+                else get_any_position_value_async(
                     "basic_settings",
                     "data_import_export",
-                    "import_success_button",
+                    "import_success_content",
                     "name",
                 )
+            ),
+            parent,
+        )
+        success_dialog.yesButton.setText(
+            get_any_position_value_async(
+                "basic_settings",
+                "data_import_export",
+                "import_success_button",
+                "name",
             )
-            success_dialog.cancelButton.hide()
-            success_dialog.buttonLayout.insertStretch(1)
-            success_dialog.exec()
+        )
+        success_dialog.cancelButton.hide()
+        success_dialog.buttonLayout.insertStretch(1)
+        success_dialog.exec()
+        return True
 
     except Exception as e:
         logger.exception(f"导入所有数据失败: {e}")
@@ -1427,6 +1430,7 @@ def import_all_data(parent: Optional[QWidget] = None) -> None:
         dialog.cancelButton.hide()
         dialog.buttonLayout.insertStretch(1)
         dialog.exec()
+        return False
 
 
 def _check_version_info(file_path: str) -> dict:

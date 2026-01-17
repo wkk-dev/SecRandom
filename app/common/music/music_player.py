@@ -28,10 +28,12 @@ class MusicPlayer:
         self._is_playing: bool = False
         self._stop_flag: threading.Event = threading.Event()
         self._play_thread: Optional[threading.Thread] = None
+        self._play_started: threading.Event = threading.Event()
         self._volume: float = 1.0  # 默认音量
         self._fade_in_duration: float = 0.0  # 渐入时长(秒)
         self._fade_out_duration: float = 0.0  # 渐出时长(秒)
         self._fade_out_thread: Optional[threading.Thread] = None
+        self._last_error: Optional[str] = None
 
     def play_music(
         self,
@@ -133,7 +135,9 @@ class MusicPlayer:
         # 启动播放线程
         self._current_music = music_file
         self._stop_flag.clear()
+        self._play_started.clear()
         self._is_playing = True
+        self._last_error = None
         self._play_thread = threading.Thread(
             target=self._play_music_worker,
             args=(str(music_path), loop),
@@ -184,6 +188,12 @@ class MusicPlayer:
         """
         return self._is_playing
 
+    def wait_play_started(self, timeout: float = 1.0) -> bool:
+        return self._play_started.wait(timeout=timeout)
+
+    def get_last_error(self) -> Optional[str]:
+        return self._last_error
+
     def get_current_music(self) -> Optional[str]:
         """获取当前播放的音乐文件名
 
@@ -201,67 +211,85 @@ class MusicPlayer:
         """
         stream = None
         try:
-            # 读取音乐文件（只读取一次）
             try:
-                data, fs = sf.read(music_path)
-                if len(data.shape) > 1 and data.shape[1] > 1:
-                    data = np.mean(data, axis=1)
-                data = data.astype(np.float32)
+                with sf.SoundFile(music_path) as audio_file:
+                    fs = int(audio_file.samplerate)
+                    channels = int(audio_file.channels)
+                    if fs <= 0 or channels <= 0:
+                        self._last_error = "Invalid audio format"
+                        logger.exception(
+                            f"音频文件参数无效: fs={fs}, channels={channels}"
+                        )
+                        return
+
+                    try:
+                        stream = sd.OutputStream(
+                            samplerate=fs,
+                            channels=1,
+                            dtype="float32",
+                            blocksize=4096,
+                        )
+                        stream.start()
+                    except Exception as e:
+                        self._last_error = str(e)
+                        logger.exception(f"初始化音频流失败: {e}")
+                        return
+
+                    fade_in_total_samples = int(self._fade_in_duration * fs)
+                    fade_in_pos = 0
+                    chunk_size = 8192
+                    played_any = False
+
+                    while not self._stop_flag.is_set():
+                        audio_file.seek(0)
+                        while not self._stop_flag.is_set():
+                            chunk = audio_file.read(
+                                frames=chunk_size, dtype="float32", always_2d=True
+                            )
+                            if chunk.size == 0:
+                                break
+
+                            if channels > 1 and chunk.shape[1] > 1:
+                                chunk = np.mean(chunk, axis=1, keepdims=True)
+                            elif chunk.shape[1] != 1:
+                                chunk = chunk[:, :1]
+
+                            if (
+                                fade_in_total_samples > 0
+                                and fade_in_pos < fade_in_total_samples
+                            ):
+                                remaining = min(
+                                    fade_in_total_samples - fade_in_pos, chunk.shape[0]
+                                )
+                                factors = np.linspace(
+                                    0.0, self._volume, remaining, dtype=np.float32
+                                ).reshape(-1, 1)
+                                chunk[:remaining] *= factors
+                                if remaining < chunk.shape[0]:
+                                    chunk[remaining:] *= self._volume
+                                fade_in_pos += remaining
+                            else:
+                                chunk *= self._volume
+
+                            try:
+                                stream.write(chunk)
+                                if not played_any:
+                                    played_any = True
+                                    self._play_started.set()
+                            except Exception as e:
+                                self._last_error = str(e)
+                                logger.exception(f"写入音频流失败: {e}")
+                                return
+
+                        if not loop or self._stop_flag.is_set():
+                            break
             except Exception as e:
+                self._last_error = str(e)
                 logger.exception(f"读取音乐文件失败: {e}")
                 return
 
-            # 初始化音频流（只初始化一次）
-            try:
-                stream = sd.OutputStream(
-                    samplerate=fs,
-                    channels=1,
-                    dtype="float32",
-                    blocksize=4096,  # 增加块大小以减少系统调用
-                )
-                stream.start()
-            except Exception as e:
-                logger.exception(f"初始化音频流失败: {e}")
-                return
-
-            # 计算渐入步数
-            fade_in_steps = int(self._fade_in_duration * fs)
-            fade_in_step = 0
-
-            # 使用更大的块大小以提高性能
-            chunk_size = 8192  # 增加到8192
-
-            while not self._stop_flag.is_set():
-                # 分块播放
-                for i in range(0, len(data), chunk_size):
-                    if self._stop_flag.is_set():
-                        break
-
-                    chunk = data[i : i + chunk_size].copy()
-
-                    # 应用渐入效果
-                    if fade_in_steps > 0 and fade_in_step < fade_in_steps:
-                        remaining_steps = min(fade_in_steps - fade_in_step, len(chunk))
-                        fade_in_factor = np.linspace(0, self._volume, remaining_steps)
-                        chunk[:remaining_steps] *= fade_in_factor
-                        if remaining_steps < len(chunk):
-                            chunk[remaining_steps:] *= self._volume
-                        fade_in_step += remaining_steps
-                    else:
-                        chunk *= self._volume
-
-                    # 写入音频流
-                    try:
-                        stream.write(chunk)
-                    except Exception as e:
-                        logger.exception(f"写入音频流失败: {e}")
-                        break
-
-                # 如果不循环或者收到停止信号，退出循环
-                if not loop or self._stop_flag.is_set():
-                    break
-
         except Exception as e:
+            self._last_error = str(e)
             logger.exception(f"音乐播放工作线程异常: {e}")
         finally:
             # 确保音频流关闭
@@ -270,6 +298,7 @@ class MusicPlayer:
                     stream.stop()
                     stream.close()
                 except Exception as e:
+                    self._last_error = str(e)
                     logger.exception(f"关闭音频流失败: {e}")
             self._is_playing = False
             logger.debug("音乐播放工作线程结束")

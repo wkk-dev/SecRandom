@@ -730,9 +730,7 @@ async def get_update_download_url_async(
 
 async def download_update_async(
     version: str,
-    system: str = SYSTEM,
     arch: str = ARCH,
-    struct: str = STRUCT,
     progress_callback: Optional[Callable] = None,
     timeout: int = 300,
     cancel_check: Optional[Callable[[], bool]] = None,
@@ -753,13 +751,11 @@ async def download_update_async(
         Optional[str]: 下载完成的文件路径，如果下载失败则返回 None
     """
     # 从 metadata.yaml 获取文件名格式
-    name_format = "SecRandom-[system]-[version]-[arch]-[struct].zip"
+    name_format = "SecRandom-setup-[version]-[arch].exe"
 
     # 替换占位符生成实际文件名
-    file_name = name_format.replace("[system]", system)
-    file_name = file_name.replace("[version]", version)
+    file_name = name_format.replace("[version]", version)
     file_name = file_name.replace("[arch]", arch)
-    file_name = file_name.replace("[struct]", struct)
 
     # 确定下载保存路径
     download_dir = get_data_path("downloads")
@@ -864,9 +860,7 @@ async def download_update_async(
 
 def download_update(
     version: str,
-    system: str = SYSTEM,
     arch: str = ARCH,
-    struct: str = STRUCT,
     progress_callback: Optional[Callable] = None,
     timeout: int = 300,
     cancel_check: Optional[Callable[[], bool]] = None,
@@ -889,9 +883,7 @@ def download_update(
     return _run_async_func(
         download_update_async,
         version,
-        system,
         arch,
-        struct,
         progress_callback,
         timeout,
         cancel_check,

@@ -8,7 +8,6 @@ from typing import Optional, Dict, Any
 from PySide6.QtCore import QObject, Signal
 from app.common.IPC_URL import URLIPCHandler
 from app.common.IPC_URL.url_command_handler import URLCommandHandler
-from app.tools.settings_access import readme_settings_async
 
 
 class URLHandler(QObject):
@@ -151,17 +150,8 @@ class URLHandler(QObject):
             如果是第一个实例返回True，否则返回False
         """
         # 尝试启动IPC服务器
-        # 优先使用用户设置的端口，如果用户设置为0（动态分配）则使用配置文件中的端口
-        user_port = readme_settings_async("basic_settings", "ipc_port") or 0
         config_port = self.url_ipc_handler.load_port_config()
-
-        # 如果用户设置了特定端口（非0），则使用用户设置的端口
-        # 如果用户设置为0（动态分配），则先尝试使用配置文件中的端口，如果配置文件中没有则使用0
-        if user_port != 0:
-            port = user_port
-        else:
-            # 用户设置为0（动态分配），使用配置文件中的端口或0
-            port = config_port if config_port is not None else 0
+        port = config_port if config_port is not None else 0
 
         if self.url_ipc_handler.start_ipc_server(port):
             # 注册消息处理器

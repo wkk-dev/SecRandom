@@ -34,12 +34,12 @@ class AppInitializer:
 
     def _schedule_initialization_tasks(self) -> None:
         """调度所有初始化任务"""
+        self._apply_font_settings()
         self._load_theme()
         self._load_theme_color()
         self._clear_restart_record()
         self._check_updates()
         self._create_main_window()
-        self._apply_font_settings()
 
     def _load_theme(self) -> None:
         """加载主题设置"""
@@ -95,8 +95,10 @@ class AppInitializer:
 
     def _create_main_window(self) -> None:
         """创建主窗口实例（但不自动显示）"""
+        guide_completed = readme_settings_async("basic_settings", "guide_completed")
+        init_delay = 0 if not guide_completed else APP_INIT_DELAY
         QTimer.singleShot(
-            APP_INIT_DELAY,
+            init_delay,
             lambda: safe_execute(
                 self.window_manager.create_main_window, error_message="创建主窗口失败"
             ),
@@ -104,7 +106,9 @@ class AppInitializer:
 
     def _apply_font_settings(self) -> None:
         """应用字体设置"""
+        guide_completed = readme_settings_async("basic_settings", "guide_completed")
+        init_delay = 0 if not guide_completed else APP_INIT_DELAY
         QTimer.singleShot(
-            APP_INIT_DELAY,
+            init_delay,
             lambda: safe_execute(apply_font_settings, error_message="应用字体设置失败"),
         )

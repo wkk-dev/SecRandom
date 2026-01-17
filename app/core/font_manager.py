@@ -163,10 +163,13 @@ def apply_font_settings() -> None:
 
     from qfluentwidgets import setFontFamilies
 
-    actual_font_family = load_font_by_weight(
-        font_family, int(font_weight_value) if font_weight_value else 3
-    )
+    font_weight_int = int(font_weight_value) if font_weight_value else 3
+    actual_font_family = load_font_by_weight(font_family, font_weight_int)
     setFontFamilies([actual_font_family])
+    app_font = QApplication.font()
+    app_font.setFamily(actual_font_family)
+    app_font.setWeight(get_font_weight_value(font_weight_int))
+    QApplication.setFont(app_font)
     QTimer.singleShot(
         FONT_APPLY_DELAY,
         lambda: safe_execute(

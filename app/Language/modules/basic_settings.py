@@ -42,16 +42,6 @@ basic_settings = {
             "description": "注册自定义URL协议(secrandom://)，支持通过链接启动应用",
             "switchbutton_name": {"enable": "", "disable": ""},
         },
-        "ipc_port": {
-            "name": "IPC端口设置",
-            "description": "设置IPC通信端口（0表示动态分配）",
-            "tooltip": "设置IPC通信端口，范围0-65535。设置为0表示使用动态分配端口",
-        },
-        "ipc_port_notification": {
-            "name": "IPC端口已设置为: {value} (0表示动态分配)",
-            "restart_required": "IPC服务器重启失败，请重启应用以应用新端口设置",
-            "restart_error": "重启IPC服务器时发生错误: {error}",
-        },
         "autostart_notification": {
             "enable": "已开启开机自启",
             "disable": "已关闭开机自启",
@@ -337,10 +327,6 @@ basic_settings = {
             "register_failure": "Failed to register URL protocol",
             "unregister_failure": "Failed to unregister URL protocol",
             "error": "URL protocol setting error: {error}",
-        },
-        "ipc_port": {
-            "name": "IPC port setting",
-            "description": "Set IPC communication port (0 means dynamic allocation)",
         },
         "settings_import_export": {
             "export_success_title": {"name": "Export settings"},

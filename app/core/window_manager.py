@@ -19,6 +19,7 @@ class WindowManager:
         self.main_window: Optional["QWidget"] = None
         self.settings_window: Optional["QWidget"] = None
         self.float_window: Optional["QWidget"] = None
+        self.guide_window: Optional["QWidget"] = None
         self.url_handler: Optional = None
 
     def set_url_handler(self, url_handler) -> None:
@@ -31,6 +32,11 @@ class WindowManager:
 
     def create_main_window(self) -> None:
         """创建主窗口实例"""
+        guide_completed = readme_settings_async("basic_settings", "guide_completed")
+        if not guide_completed:
+            self.show_guide_window()
+            return
+
         success, _ = safe_execute(
             self._create_main_window_impl, error_message="创建主窗口失败"
         )
@@ -303,6 +309,31 @@ class WindowManager:
 
         if self.float_window is not None:
             self.float_window.show()
+
+    def show_guide_window(self) -> None:
+        """显示引导窗口"""
+        if self.guide_window is None:
+            from app.view.guide.guide_window import GuideWindow
+            from PySide6.QtWidgets import QApplication
+
+            self.guide_window = GuideWindow()
+            self.guide_window.guideFinished.connect(self._on_guide_finished)
+            # 居中显示
+            screen = QApplication.primaryScreen().availableGeometry()
+            w, h = screen.width(), screen.height()
+            self.guide_window.move(
+                w // 2 - self.guide_window.width() // 2,
+                h // 2 - self.guide_window.height() // 2,
+            )
+
+        self.guide_window.show()
+        self.guide_window.raise_()
+        self.guide_window.activateWindow()
+
+    def _on_guide_finished(self) -> None:
+        """引导完成处理"""
+        self.guide_window = None
+        self.create_main_window()
 
     def get_main_window(self) -> Optional["QWidget"]:
         """获取主窗口实例
