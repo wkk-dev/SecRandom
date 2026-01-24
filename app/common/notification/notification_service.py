@@ -482,11 +482,19 @@ class FloatingNotificationWindow(CardWidget):
         return positions.get(position_index, (center_x, center_y))
 
     def _calculate_window_position(
-        self, screen_geometry, position_index, horizontal_offset, vertical_offset
+        self,
+        screen_geometry,
+        position_index,
+        horizontal_offset,
+        vertical_offset,
+        window_width=None,
+        window_height=None,
     ):
         """计算窗口位置"""
-        window_width = 300
-        window_height = 200
+        if window_width is None:
+            window_width = self.width() if self.width() > 0 else 300
+        if window_height is None:
+            window_height = self.height() if self.height() > 0 else 200
 
         base_x, base_y = self._get_position_coordinates(
             screen_geometry, window_width, window_height, position_index
@@ -515,10 +523,13 @@ class FloatingNotificationWindow(CardWidget):
             horizontal_offset = 0
             vertical_offset = 0
 
-        # 不在定位阶段显示窗口，避免显示空白窗口
-        # 通过默认尺寸计算位置，内容添加后再调整大小
         window_rect = self._calculate_window_position(
-            screen_geometry, position_index, horizontal_offset, vertical_offset
+            screen_geometry,
+            position_index,
+            horizontal_offset,
+            vertical_offset,
+            self.width(),
+            self.height(),
         )
         self.move(window_rect.x(), window_rect.y())
 
@@ -573,7 +584,12 @@ class FloatingNotificationWindow(CardWidget):
 
             # 计算最终位置
             window_rect = self._calculate_window_position(
-                screen_geometry, position_index, horizontal_offset, vertical_offset
+                screen_geometry,
+                position_index,
+                horizontal_offset,
+                vertical_offset,
+                self.width(),
+                self.height(),
             )
             self.move(window_rect.x(), window_rect.y())
 
@@ -602,7 +618,12 @@ class FloatingNotificationWindow(CardWidget):
 
         # 计算最终位置
         window_rect = self._calculate_window_position(
-            screen_geometry, position_index, horizontal_offset, vertical_offset
+            screen_geometry,
+            position_index,
+            horizontal_offset,
+            vertical_offset,
+            self.width(),
+            self.height(),
         )
         # 使用当前窗口的实际尺寸而不是固定尺寸
         final_geometry = QRect(
@@ -764,6 +785,14 @@ class FloatingNotificationWindow(CardWidget):
         total_height = 0
         max_width = 0
 
+        inner_spacing = self.content_layout.spacing()
+        inner_margins = self.content_layout.contentsMargins()
+        outer_layout = self.background_widget.layout()
+        outer_spacing = outer_layout.spacing() if outer_layout is not None else 0
+        outer_margins = (
+            outer_layout.contentsMargins() if outer_layout is not None else None
+        )
+
         for label in student_labels:
             # 计算标签大小
             label.adjustSize()
@@ -772,19 +801,26 @@ class FloatingNotificationWindow(CardWidget):
             max_width = max(max_width, size_hint.width())
 
         # 加上布局间距和边距
-        spacing = self.content_layout.spacing()
-        margins = self.content_layout.contentsMargins()
-
         if student_labels:
-            total_height += spacing * (len(student_labels) - 1)
+            total_height += inner_spacing * (len(student_labels) - 1)
 
-        total_height += margins.top() + margins.bottom()
-        max_width += margins.left() + margins.right()
+        total_height += inner_margins.top() + inner_margins.bottom()
+        max_width += inner_margins.left() + inner_margins.right()
 
         # 加上倒计时标签的高度
         if self.countdown_label:
             countdown_height = self.countdown_label.sizeHint().height()
-            total_height += countdown_height + spacing
+            total_height += countdown_height + outer_spacing
+
+        if outer_margins is not None:
+            total_height += outer_margins.top() + outer_margins.bottom()
+            max_width += outer_margins.left() + outer_margins.right()
+
+        if (
+            hasattr(self, "drag_line_container")
+            and self.drag_line_container is not None
+        ):
+            total_height += self.drag_line_container.sizeHint().height()
 
         # 设置窗口大小限制
         window_width = max(300, max_width + 30)
@@ -806,6 +842,7 @@ class FloatingNotificationWindow(CardWidget):
         settings=None,
         font_settings_group=None,
         settings_group=None,
+        is_animating=False,
     ):
         """更新通知窗口的内容
 
@@ -814,6 +851,7 @@ class FloatingNotificationWindow(CardWidget):
             settings: 通知设置参数
             font_settings_group: 字体设置组名称
             settings_group: 通知设置组名称
+            is_animating: 是否在动画过程中
         """
         # 保存设置组，用于后续判断是否抢占焦点
         if settings_group:
@@ -843,8 +881,9 @@ class FloatingNotificationWindow(CardWidget):
         for label in student_labels:
             self.content_layout.addWidget(label)
 
-        # 设置窗口大小
-        self.setFixedSize(window_width, window_height)
+        # 设置窗口大小（动画过程中避免频繁调整导致闪烁）
+        if not is_animating or not self.isVisible():
+            self.setFixedSize(window_width, window_height)
 
         # 确保颜色与当前主题同步
         try:
@@ -1031,7 +1070,9 @@ class FloatingNotificationManager:
                 "font_size": settings.get("font_size", 50),
                 "animation_color": settings.get("animation_color_theme", 0),
                 "display_format": settings.get("display_format", 0),
+                "display_style": settings.get("display_style", 0),
                 "show_student_image": settings.get("student_image", False),
+                "image_position": settings.get("image_position"),
                 "is_animation_enabled": settings.get("animation", True),
                 "show_random": settings.get("show_random", 0),
             }
@@ -1039,7 +1080,9 @@ class FloatingNotificationManager:
             "font_size": 50,
             "animation_color": 0,
             "display_format": 0,
+            "display_style": 0,
             "show_student_image": False,
+            "image_position": None,
             "is_animation_enabled": True,
             "show_random": 0,
         }
@@ -1100,7 +1143,9 @@ class FloatingNotificationManager:
             font_size=display_settings["font_size"],
             animation_color=display_settings["animation_color"],
             display_format=display_settings["display_format"],
+            display_style=display_settings["display_style"],
             show_student_image=display_settings["show_student_image"],
+            image_position=display_settings.get("image_position"),
             group_index=group_index,
             show_random=display_settings.get("show_random", 0),
             settings_group=font_settings_group,
@@ -1131,7 +1176,7 @@ class FloatingNotificationManager:
             )  # 默认5秒
 
         window.update_content(
-            student_labels, settings, font_settings_group, settings_group
+            student_labels, settings, font_settings_group, settings_group, is_animating
         )
 
     def get_notification_title(self):

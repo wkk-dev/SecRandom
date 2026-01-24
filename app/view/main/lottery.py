@@ -21,11 +21,8 @@ from app.common.display.result_display import *
 from app.tools.config import *
 from app.common.lottery.lottery_utils import LotteryUtils
 from app.common.lottery.lottery_manager import LotteryManager
+from app.common.lottery import lottery_manager
 from app.tools.variable import *
-from app.common.voice.voice import TTSHandler
-from app.common.music.music_player import music_player
-from app.common.extraction.extract import _is_non_class_time
-from app.common.safety.verify_ops import require_and_run
 
 from app.page_building.another_window import *
 
@@ -43,37 +40,33 @@ class Lottery(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.file_watcher = QFileSystemWatcher()
-        self.setup_file_watcher()
-
-        # 长按功能相关变量
-        self.press_timer = QTimer()
-        self.press_timer.timeout.connect(self.handle_long_press)
-        self.long_press_interval = 100  # 长按时连续触发的间隔时间(毫秒)
-        self.long_press_delay = 500  # 开始长按前的延迟时间(毫秒)
-        self.is_long_pressing = False  # 是否正在长按
-        self.long_press_direction = 0  # 长按方向：1为增加，-1为减少
-
-        # 初始化TTS处理器
-        self.tts_handler = TTSHandler()
-
-        self.is_animating = False
+        self._init_file_watcher()
+        self._init_long_press()
+        self._init_tts()
+        self._init_animation_state()
         self.manager = LotteryManager()
-        self._total_count_cache_pool = None
-        self._total_count_cache_value = None
-        self._render_settings_cache = None
-        self._notification_settings_cache = None
 
         self.initUI()
-        self.setupSettingsListener()
+        self._setup_settings_listener()
+
+    def _init_file_watcher(self):
+        return lottery_manager.init_file_watcher(self)
+
+    def _init_long_press(self):
+        return lottery_manager.init_long_press(self)
+
+    def _init_tts(self):
+        return lottery_manager.init_tts(self)
+
+    def _init_animation_state(self):
+        return lottery_manager.init_animation_state(self)
+
+    def _setup_settings_listener(self):
+        return lottery_manager.setup_settings_listener(self)
 
     def handle_long_press(self):
         """处理长按事件"""
-        if self.is_long_pressing:
-            # 更新定时器间隔为连续触发间隔
-            self.press_timer.setInterval(self.long_press_interval)
-            # 执行更新计数
-            self.update_count(self.long_press_direction)
+        return lottery_manager.handle_long_press(self)
 
     def start_long_press(self, direction):
         """开始长按
@@ -81,16 +74,11 @@ class Lottery(QWidget):
         Args:
             direction (int): 长按方向，1为增加，-1为减少
         """
-        self.long_press_direction = direction
-        self.is_long_pressing = True
-        # 设置初始延迟
-        self.press_timer.setInterval(self.long_press_delay)
-        self.press_timer.start()
+        return lottery_manager.start_long_press(self, direction)
 
     def stop_long_press(self):
         """停止长按"""
-        self.is_long_pressing = False
-        self.press_timer.stop()
+        return lottery_manager.stop_long_press(self)
 
     def closeEvent(self, event):
         """窗口关闭事件，清理资源"""
@@ -375,58 +363,6 @@ class Lottery(QWidget):
         # 在事件循环中延迟填充下拉框和初始统计，减少启动阻塞
         QTimer.singleShot(0, self.populate_lists)
 
-    def _get_total_count_cached(self, pool_name: str) -> int:
-        if not pool_name:
-            self._total_count_cache_pool = pool_name
-            self._total_count_cache_value = 0
-            return 0
-
-        if self._total_count_cache_pool == pool_name and isinstance(
-            self._total_count_cache_value, int
-        ):
-            return self._total_count_cache_value
-
-        total_count = LotteryUtils.get_prize_total_count(pool_name)
-        self._total_count_cache_pool = pool_name
-        self._total_count_cache_value = int(total_count or 0)
-        return self._total_count_cache_value
-
-    def _get_render_settings(self, refresh: bool = False):
-        if refresh or self._render_settings_cache is None:
-            self._render_settings_cache = {
-                "font_size": get_safe_font_size("lottery_settings", "font_size"),
-                "animation_color": readme_settings_async(
-                    "lottery_settings", "animation_color_theme"
-                ),
-                "display_format": readme_settings_async(
-                    "lottery_settings", "display_format"
-                ),
-                "show_student_image": readme_settings_async(
-                    "lottery_settings", "student_image"
-                ),
-                "show_random": readme_settings_async("lottery_settings", "show_random"),
-            }
-
-        return self._render_settings_cache
-
-    def _get_notification_settings(self, refresh: bool = False):
-        if refresh:
-            self._notification_settings_cache = None
-
-        call_notification_service = readme_settings_async(
-            "lottery_notification_settings", "call_notification_service"
-        )
-        if not call_notification_service:
-            self._notification_settings_cache = None
-            return None
-
-        if self._notification_settings_cache is None:
-            self._notification_settings_cache = (
-                LotteryUtils.prepare_notification_settings()
-            )
-
-        return self._notification_settings_cache
-
     def _get_remaining_list_args(self):
         return (
             self.pool_list_combobox.currentText(),
@@ -508,10 +444,9 @@ class Lottery(QWidget):
     def on_pool_changed(self, *_):
         """当奖池选择改变时，更新奖数显示"""
         try:
-            self._total_count_cache_pool = None
-            self._total_count_cache_value = None
+            self.manager.invalidate_total_count_cache()
             self.update_many_count_label()
-            total_count = self._get_total_count_cached(
+            total_count = self.manager.get_pool_total_count(
                 self.pool_list_combobox.currentText()
             )
             LotteryUtils.update_start_button_state(self.start_button, total_count)
@@ -526,683 +461,75 @@ class Lottery(QWidget):
             logger.exception(f"切换奖池时发生错误: {e}")
 
     def on_class_changed(self, *_):
-        """当班级选择改变时，更新范围选择、性别选择"""
-        self.range_combobox.blockSignals(True)
-        self.gender_combobox.blockSignals(True)
-
-        try:
-            self.range_combobox.clear()
-            list_base_options = get_content_combo_name_async("lottery", "list_combobox")
-            selected_text = self.list_combobox.currentText()
-            if selected_text in (list_base_options or []):
-                self.range_combobox.addItems(
-                    get_content_combo_name_async("roll_call", "range_combobox")[:1]
-                )
-                self.gender_combobox.clear()
-                self.gender_combobox.addItems(
-                    get_content_combo_name_async("roll_call", "gender_combobox")[:1]
-                )
-                self.range_combobox.setEnabled(False)
-                self.gender_combobox.setEnabled(False)
-            else:
-                base_options = get_content_combo_name_async(
-                    "roll_call", "range_combobox"
-                )
-                group_list = get_group_list(selected_text)
-                if group_list and group_list != [""]:
-                    self.range_combobox.addItems(base_options + group_list)
-                else:
-                    self.range_combobox.addItems(base_options[:1])
-
-                # 性别
-                self.gender_combobox.clear()
-                gender_options = get_content_combo_name_async(
-                    "roll_call", "gender_combobox"
-                )
-                gender_list = get_gender_list(selected_text)
-                if gender_list and gender_list != [""]:
-                    self.gender_combobox.addItems(gender_options + gender_list)
-                else:
-                    self.gender_combobox.addItems(gender_options[:1])
-                self.range_combobox.setEnabled(True)
-                self.gender_combobox.setEnabled(True)
-        except Exception as e:
-            logger.exception(f"切换班级时发生错误: {e}")
-        finally:
-            self.range_combobox.blockSignals(False)
-            self.gender_combobox.blockSignals(False)
+        return lottery_manager.on_class_changed(self, *_)
 
     def on_filter_changed(self, *_):
         """当范围或性别选择改变时，更新奖数显示"""
-        try:
-            self.update_many_count_label()
-            total_count = self._get_total_count_cached(
-                self.pool_list_combobox.currentText()
-            )
-            LotteryUtils.update_start_button_state(self.start_button, total_count)
-
-            if (
-                hasattr(self, "remaining_list_page")
-                and self.remaining_list_page is not None
-            ):
-                QTimer.singleShot(APP_INIT_DELAY, self._update_remaining_list_delayed)
-        except Exception as e:
-            logger.exception(f"切换筛选条件时发生错误: {e}")
+        return lottery_manager.on_filter_changed(self, *_)
 
     def _update_remaining_list_delayed(self):
         """延迟更新剩余名单窗口的方法"""
-        try:
-            if (
-                hasattr(self, "remaining_list_page")
-                and self.remaining_list_page is not None
-            ):
-                (
-                    pool_name,
-                    group_filter,
-                    gender_filter,
-                    half_repeat,
-                    group_index,
-                    gender_index,
-                ) = self._get_remaining_list_args()
-
-                if hasattr(self.remaining_list_page, "update_remaining_list"):
-                    self.remaining_list_page.update_remaining_list(
-                        pool_name,
-                        group_filter,
-                        gender_filter,
-                        half_repeat,
-                        group_index,
-                        gender_index,
-                        emit_signal=False,
-                        source="lottery",
-                    )
-                else:
-                    if hasattr(self.remaining_list_page, "pool_name"):
-                        self.remaining_list_page.pool_name = pool_name
-                    if hasattr(self.remaining_list_page, "group_filter"):
-                        self.remaining_list_page.group_filter = group_filter
-                    if hasattr(self.remaining_list_page, "gender_filter"):
-                        self.remaining_list_page.gender_filter = gender_filter
-                    if hasattr(self.remaining_list_page, "group_index"):
-                        self.remaining_list_page.group_index = group_index
-                    if hasattr(self.remaining_list_page, "gender_index"):
-                        self.remaining_list_page.gender_index = gender_index
-                    if hasattr(self.remaining_list_page, "half_repeat"):
-                        self.remaining_list_page.half_repeat = half_repeat
-
-                    if hasattr(self.remaining_list_page, "count_changed"):
-                        self.remaining_list_page.count_changed.emit(
-                            self.remaining_count
-                        )
-        except Exception as e:
-            logger.exception(f"延迟更新剩余名单时发生错误: {e}")
-
-    def _do_start_draw(self):
-        """实际执行开始抽取的逻辑"""
-        # 加载数据到管理器
-        pool_name = self.pool_list_combobox.currentText()
-
-        class_name = self.list_combobox.currentText()
-        group_filter = self.range_combobox.currentText()
-        gender_filter = self.gender_combobox.currentText()
-        group_index = self.range_combobox.currentIndex()
-        gender_index = self.gender_combobox.currentIndex()
-
-        # 检查是否选择了有效的班级
-        list_base_options = get_content_combo_name_async("lottery", "list_combobox")
-        if list_base_options and class_name in list_base_options:
-            class_name = None
-
-        self.manager.load_data(
-            pool_name,
-            class_name,
-            group_filter,
-            gender_filter,
-            group_index,
-            gender_index,
-        )
-        self._get_render_settings(refresh=True)
-        self._get_notification_settings(refresh=True)
-        self._get_total_count_cached(pool_name)
-
-        self.start_button.setText(
-            get_content_pushbutton_name_async("lottery", "start_button")
-        )
-        self.start_button.setEnabled(True)
-        try:
-            self.start_button.clicked.disconnect()
-        except Exception as e:
-            logger.exception(
-                "Error disconnecting start_button clicked (ignored): {}", e
-            )
-
-        self.draw_random()
-        animation = readme_settings_async("lottery_settings", "animation")
-        autoplay_count = readme_settings_async("lottery_settings", "autoplay_count")
-        animation_interval = readme_settings_async(
-            "lottery_settings", "animation_interval"
-        )
-
-        # 获取动画音乐设置
-        animation_music = readme_settings_async("lottery_settings", "animation_music")
-
-        if animation == 0:
-            # 播放动画音乐
-            if animation_music:
-                music_player.play_music(
-                    music_file=animation_music,
-                    settings_group="lottery_settings",
-                    loop=True,
-                    fade_in=True,
-                )
-
-            self.start_button.setText(
-                get_content_pushbutton_name_async("lottery", "stop_button")
-            )
-            self.is_animating = True
-            self.animation_timer = QTimer()
-            self.animation_timer.timeout.connect(self.animate_result)
-            self.animation_timer.start(animation_interval)
-            self.start_button.clicked.connect(lambda: self.stop_animation())
-        elif animation == 1:
-            # 播放动画音乐
-            if animation_music:
-                music_player.play_music(
-                    music_file=animation_music,
-                    settings_group="lottery_settings",
-                    loop=True,
-                    fade_in=True,
-                )
-
-            self.animation_count = 0
-            self.target_animation_count = autoplay_count
-            self.is_animating = True
-            self.animation_timer = QTimer()
-            self.animation_timer.timeout.connect(self.animate_result)
-            self.animation_timer.start(animation_interval)
-            self.start_button.setEnabled(False)
-            QTimer.singleShot(
-                autoplay_count * animation_interval,
-                lambda: [
-                    self.animation_timer.stop(),
-                    self.stop_animation(),
-                    self.start_button.setEnabled(True),
-                ],
-            )
-            self.start_button.clicked.connect(lambda: self.start_draw())
-        elif animation == 2:
-            self.stop_animation()
-            self.start_button.clicked.connect(lambda: self.start_draw())
+        return lottery_manager._update_remaining_list_delayed(self)
 
     def start_draw(self):
         """开始抽取"""
-        # 检查当前时间是否在非上课时间段内
-        if _is_non_class_time():
-            # 检查是否需要验证流程
-            if readme_settings_async("linkage_settings", "verification_required"):
-                # 如果需要验证流程，弹出密码验证窗口
-                logger.info("当前时间在非上课时间段内，需要密码验证")
-                require_and_run("lottery_start", self, self._do_start_draw)
-            else:
-                # 如果不需要验证流程，直接禁止点击
-                logger.info("当前时间在非上课时间段内，禁止抽取")
-                return
-        else:
-            # 如果不在非上课时间段内，直接执行抽取
-            self._do_start_draw()
+        return lottery_manager.start_draw(self)
 
     def stop_animation(self):
-        """停止动画"""
-        if hasattr(self, "animation_timer") and self.animation_timer.isActive():
-            self.animation_timer.stop()
-        self.start_button.setText(
-            get_content_pushbutton_name_async("lottery", "start_button")
-        )
-        self.start_button.setEnabled(True)
-        self.is_animating = False
-        try:
-            self.start_button.clicked.disconnect()
-        except Exception as e:
-            logger.exception(
-                "Error disconnecting start_button clicked during stop_animation (ignored): {}",
-                e,
-            )
-        self.start_button.clicked.connect(lambda: self.start_draw())
-
-        # 停止动画音乐
-        music_player.stop_music(fade_out=True)
-
-        # 执行最终抽取
-        result = self.manager.draw_final_items(self.current_count)
-
-        # 处理需要重置的情况
-        if "reset_required" in result and result["reset_required"]:
-            reset_drawn_prize_record(self, self.manager.current_pool_name)
-            return
-
-        self.final_selected_students = result.get("selected_prizes") or result.get(
-            "selected_students"
-        )
-        self.final_pool_name = result["pool_name"]
-        self.final_selected_students_dict = result.get(
-            "selected_prizes_dict"
-        ) or result.get("selected_students_dict")
-
-        # 获取筛选条件
-        self.final_group_filter = self.range_combobox.currentText()
-        self.final_gender_filter = self.gender_combobox.currentText()
-
-        # 播放结果音乐
-        result_music = readme_settings_async("lottery_settings", "result_music")
-        if result_music:
-            music_player.play_music(
-                music_file=result_music,
-                settings_group="lottery_settings",
-                loop=False,
-                fade_in=True,
-            )
-
-        threshold = LotteryUtils._get_prize_draw_threshold()
-        save_temp = threshold is not None
-
-        self.manager.save_result(
-            self.final_selected_students_dict,
-            self.final_group_filter,
-            self.final_gender_filter,
-            save_temp=save_temp,
-        )
-
-        if save_temp:
-            self.update_many_count_label()
-
-            if (
-                hasattr(self, "remaining_list_page")
-                and self.remaining_list_page is not None
-                and hasattr(self.remaining_list_page, "count_changed")
-            ):
-                self.remaining_list_page.count_changed.emit(self.remaining_count)
-
-            # 更新剩余名单窗口
-            QTimer.singleShot(APP_INIT_DELAY, self._update_remaining_list_delayed)
-
-        if self.final_selected_students is not None:
-            self.display_result(self.final_selected_students, self.final_pool_name)
-
-            settings = self._get_notification_settings(refresh=True)
-            if settings is not None:
-                use_main_window_when_exceed_threshold = readme_settings_async(
-                    "lottery_notification_settings",
-                    "use_main_window_when_exceed_threshold",
-                )
-                max_notify_count = readme_settings_async(
-                    "lottery_notification_settings", "main_window_display_threshold"
-                )
-
-                if use_main_window_when_exceed_threshold:
-                    if self.current_count <= max_notify_count:
-                        ResultDisplayUtils.show_notification_if_enabled(
-                            self.final_pool_name,
-                            self.final_selected_students,
-                            self.current_count,
-                            settings,
-                            settings_group="lottery_notification_settings",
-                        )
-                else:
-                    ResultDisplayUtils.show_notification_if_enabled(
-                        self.final_pool_name,
-                        self.final_selected_students,
-                        self.current_count,
-                        settings,
-                        settings_group="lottery_notification_settings",
-                    )
-
-            self.play_voice_result()
+        return lottery_manager.stop_animation(self)
 
     def play_voice_result(self):
-        """播放语音结果"""
-        try:
-            # 准备语音设置
-            voice_settings = {
-                "voice_volume": readme_settings_async(
-                    "basic_voice_settings", "volume_size"
-                ),
-                "voice_speed": readme_settings_async(
-                    "basic_voice_settings", "speech_rate"
-                ),
-                "system_voice_name": readme_settings_async(
-                    "basic_voice_settings", "system_voice_name"
-                ),
-            }
-
-            # 准备奖品名单（只取名字部分）
-            prize_names = [prize[1] for prize in self.final_selected_students]
-
-            # 获取语音引擎类型
-            voice_engine = readme_settings_async("basic_voice_settings", "voice_engine")
-            engine_type = 1 if voice_engine == "Edge TTS" else 0
-
-            # 获取Edge TTS语音名称
-            edge_tts_voice_name = readme_settings_async(
-                "basic_voice_settings", "edge_tts_voice_name"
-            )
-
-            # 调用语音播放
-            self.tts_handler.voice_play(
-                config=voice_settings,
-                student_names=prize_names,
-                engine_type=engine_type,
-                voice_name=edge_tts_voice_name,
-                class_name=self.pool_list_combobox.currentText(),
-            )
-        except Exception as e:
-            logger.exception(f"播放语音失败: {e}", exc_info=True)
+        return lottery_manager.play_voice_result(self)
 
     def animate_result(self):
         """动画过程中更新显示"""
-        self.draw_random()
+        return lottery_manager.animate_result(self)
 
     def draw_random(self):
-        """抽取随机结果"""
-        if self.is_animating:
-            prizes = self.manager.get_random_items(self.current_count)
-            # 格式化为 UI 需要的格式 [(id, name, exist)]
-            selected_prizes = [
-                (p["id"], p["name"], p.get("exist", True)) for p in prizes
-            ]
-
-            self.display_result_animated(
-                selected_prizes, self.manager.current_pool_name
-            )
+        return lottery_manager.draw_random(self)
 
     def display_result(self, selected_students, pool_name):
-        """显示抽取结果"""
-        render_settings = self._get_render_settings(refresh=True)
-        student_labels = ResultDisplayUtils.create_student_label(
-            pool_name,
-            selected_students=selected_students,
-            draw_count=self.current_count,
-            font_size=render_settings["font_size"],
-            animation_color=render_settings["animation_color"],
-            display_format=render_settings["display_format"],
-            show_student_image=render_settings["show_student_image"],
-            group_index=0,
-            show_random=render_settings["show_random"],
-            settings_group="lottery_settings",
-        )
-        ResultDisplayUtils.display_results_in_grid(self.result_grid, student_labels)
+        return lottery_manager.display_result(self, selected_students, pool_name)
 
     def display_result_animated(self, selected_students, pool_name):
-        """动画过程中显示结果
-
-        Args:
-            selected_students: 选中的学生列表
-            pool_name: 奖池名称
-        """
-        render_settings = self._get_render_settings(refresh=False)
-
-        student_labels = ResultDisplayUtils.create_student_label(
-            class_name=pool_name,
-            selected_students=selected_students,
-            draw_count=self.current_count,
-            font_size=render_settings["font_size"],
-            animation_color=render_settings["animation_color"],
-            display_format=render_settings["display_format"],
-            show_student_image=render_settings["show_student_image"],
-            group_index=0,
-            show_random=render_settings["show_random"],
-            settings_group="lottery_settings",
+        return lottery_manager.display_result_animated(
+            self, selected_students, pool_name
         )
-
-        ResultDisplayUtils.display_results_in_grid(self.result_grid, student_labels)
-
-        settings = self._get_notification_settings(refresh=False)
-        if settings is not None:
-            ResultDisplayUtils.show_notification_if_enabled(
-                pool_name,
-                selected_students,
-                self.current_count,
-                settings,
-                settings_group="lottery_notification_settings",
-                is_animating=True,
-            )
 
     def _do_reset_count(self):
-        """实际执行重置奖数的逻辑"""
-        self.current_count = 1
-        self.count_label.setText("1")
-        self.minus_button.setEnabled(False)
-        self.plus_button.setEnabled(True)
-        pool_name = self.pool_list_combobox.currentText()
-
-        class_name = self.list_combobox.currentText()
-        group_filter = self.range_combobox.currentText()
-        gender_filter = self.gender_combobox.currentText()
-        group_index = self.range_combobox.currentIndex()
-        gender_index = self.gender_combobox.currentIndex()
-
-        # 检查是否选择了有效的班级
-        list_base_options = get_content_combo_name_async("lottery", "list_combobox")
-        if list_base_options and class_name in list_base_options:
-            class_name = None
-
-        # 使用管理器重置记录
-        self.manager.load_data(
-            pool_name,
-            class_name,
-            group_filter,
-            gender_filter,
-            group_index,
-            gender_index,
-        )
-        self.manager.reset_records(parent=self)
-
-        show_notification(
-            NotificationType.INFO,
-            NotificationConfig(
-                title="提示",
-                content=f"已重置{pool_name}奖池抽取记录",
-                icon=FluentIcon.INFO,
-            ),
-            parent=self,
-        )
-
-        self.clear_result()
-        self.update_many_count_label()
-
-        # 更新剩余名单窗口
-        if (
-            hasattr(self, "remaining_list_page")
-            and self.remaining_list_page is not None
-        ):
-            QTimer.singleShot(APP_INIT_DELAY, self._update_remaining_list_delayed)
-
-        if (
-            hasattr(self, "remaining_list_page")
-            and self.remaining_list_page is not None
-            and hasattr(self.remaining_list_page, "count_changed")
-        ):
-            self.remaining_list_page.count_changed.emit(self.remaining_count)
+        return lottery_manager.do_reset_count(self)
 
     def reset_count(self):
         """重置奖数"""
-        # 检查当前时间是否在非上课时间段内
-        if _is_non_class_time():
-            # 检查是否需要验证流程
-            if readme_settings_async("linkage_settings", "verification_required"):
-                # 如果需要验证流程，弹出密码验证窗口
-                logger.info("当前时间在非上课时间段内，需要密码验证")
-                require_and_run("lottery_reset", self, self._do_reset_count)
-            else:
-                # 如果不需要验证流程，直接禁止点击
-                logger.info("当前时间在非上课时间段内，禁止重置")
-                return
-        else:
-            # 如果不在非上课时间段内，直接执行重置
-            self._do_reset_count()
+        return lottery_manager.reset_count(self)
 
     def clear_result(self):
         """清空结果显示"""
         ResultDisplayUtils.clear_grid(self.result_grid)
 
     def update_count(self, change):
-        """更新奖数
-
-        Args:
-            change (int): 变化量，正数表示增加，负数表示减少
-        """
-        try:
-            self.total_count = self._get_total_count_cached(
-                self.pool_list_combobox.currentText()
-            )
-            self.current_count = max(1, int(self.count_label.text()) + change)
-            self.count_label.setText(str(self.current_count))
-            self.minus_button.setEnabled(self.current_count > 1)
-            self.plus_button.setEnabled(self.current_count < self.total_count)
-        except (ValueError, TypeError):
-            self.count_label.setText("1")
-            self.minus_button.setEnabled(False)
-            self.plus_button.setEnabled(True)
+        return lottery_manager.update_count(self, change)
 
     def get_total_count(self):
-        """获取总奖数"""
-        return LotteryUtils.get_prize_total_count(self.pool_list_combobox.currentText())
+        return lottery_manager.get_total_count(self)
 
     def update_many_count_label(self):
-        """更新多数量显示标签"""
-        total_count, remaining_count, formatted_text = (
-            LotteryUtils.update_prize_many_count_label_text(
-                self.pool_list_combobox.currentText()
-            )
-        )
-
-        self.remaining_count = remaining_count
-        self.many_count_label.setText(formatted_text)
-        self._total_count_cache_pool = self.pool_list_combobox.currentText()
-        self._total_count_cache_value = int(total_count or 0)
-
-        # 根据总奖数是否为0，启用或禁用开始按钮
-        LotteryUtils.update_start_button_state(self.start_button, total_count)
+        return lottery_manager.update_many_count_label(self)
 
     def update_remaining_list_window(self):
-        """更新剩余名单窗口的内容"""
-        if (
-            hasattr(self, "remaining_list_page")
-            and self.remaining_list_page is not None
-        ):
-            try:
-                (
-                    pool_name,
-                    group_filter,
-                    gender_filter,
-                    half_repeat,
-                    group_index,
-                    gender_index,
-                ) = self._get_remaining_list_args()
-
-                # 更新剩余名单页面内容
-                if hasattr(self.remaining_list_page, "update_remaining_list"):
-                    self.remaining_list_page.update_remaining_list(
-                        pool_name,
-                        group_filter,
-                        gender_filter,
-                        half_repeat,
-                        group_index,
-                        gender_index,
-                        emit_signal=False,  # 不发出信号，避免循环更新
-                        source="lottery",
-                    )
-            except Exception as e:
-                logger.exception(f"更新剩余名单窗口内容失败: {e}")
+        return lottery_manager.update_remaining_list_window(self)
 
     def show_remaining_list(self):
-        """显示剩余名单窗口"""
-        # 如果窗口已存在，则激活该窗口并更新内容
-        if (
-            hasattr(self, "remaining_list_page")
-            and self.remaining_list_page is not None
-        ):
-            try:
-                # 获取窗口实例
-                window = self.remaining_list_page.window()
-                if window is not None:
-                    # 激活窗口并置于前台
-                    window.raise_()
-                    window.activateWindow()
-                    # 更新窗口内容
-                    self.update_remaining_list_window()
-                    return
-            except Exception as e:
-                logger.exception(f"激活剩余名单窗口失败: {e}")
-                # 如果激活失败，继续创建新窗口
-
-        # 创建新窗口
-        (
-            pool_name,
-            group_filter,
-            gender_filter,
-            half_repeat,
-            group_index,
-            gender_index,
-        ) = self._get_remaining_list_args()
-
-        window, get_page = create_remaining_list_window(
-            pool_name,
-            group_filter,
-            gender_filter,
-            half_repeat,
-            group_index,
-            gender_index,
-            "lottery",
-        )
-
-        def on_page_ready(page):
-            self.remaining_list_page = page
-
-            if page and hasattr(page, "count_changed"):
-                page.count_changed.connect(self.update_many_count_label)
-                self.update_many_count_label()
-
-        get_page(on_page_ready)
-
-        window.windowClosed.connect(lambda: setattr(self, "remaining_list_page", None))
-
-        window.show()
+        return lottery_manager.show_remaining_list(self)
 
     def setup_file_watcher(self):
-        """设置文件监控器，监控名单文件夹的变化"""
-        try:
-            list_dir = get_data_path("list", "lottery_list")
-
-            if not list_dir.exists():
-                list_dir.mkdir(parents=True, exist_ok=True)
-
-            self.file_watcher.addPath(str(list_dir))
-
-            # 初始同步当前文件到监控器，确保文件内容变动也能触发刷新
-            self._sync_watcher_files()
-
-            self.file_watcher.directoryChanged.connect(self.on_directory_changed)
-            self.file_watcher.fileChanged.connect(self.on_file_changed)
-
-        except Exception as e:
-            logger.exception(f"设置文件监控器失败: {e}")
+        return lottery_manager.setup_file_watcher(self)
 
     def on_directory_changed(self, path):
-        """当文件夹内容发生变化时触发"""
-        try:
-            # 目录变更后重新同步监控的文件列表
-            self._sync_watcher_files()
-            QTimer.singleShot(500, self.refresh_pool_list)
-        except Exception as e:
-            logger.exception(f"处理文件夹变化事件失败: {e}")
+        return lottery_manager.on_directory_changed(self, path)
 
     def on_file_changed(self, path):
-        """当文件内容发生变化时触发"""
-        try:
-            # 文件内容变化同样刷新下拉框
-            QTimer.singleShot(500, self.refresh_pool_list)
-        except Exception as e:
-            logger.exception(f"处理文件变化事件失败: {e}")
+        return lottery_manager.on_file_changed(self, path)
 
     def _sync_watcher_files(self):
         """同步奖池目录下的文件到文件监控器"""
@@ -1233,8 +560,7 @@ class Lottery(QWidget):
     def refresh_pool_list(self):
         """刷新奖池列表下拉框"""
         try:
-            self._total_count_cache_pool = None
-            self._total_count_cache_value = None
+            self.manager.invalidate_total_count_cache()
             current_pool = self.pool_list_combobox.currentText()
 
             new_pool_list = get_pool_name_list()
@@ -1260,128 +586,15 @@ class Lottery(QWidget):
             logger.exception(f"刷新奖池列表失败: {e}")
 
     def populate_lists(self):
-        """在后台填充奖池/范围/性别下拉框并更新奖数统计"""
-        try:
-            self._total_count_cache_pool = None
-            self._total_count_cache_value = None
-            self._render_settings_cache = None
-            self._notification_settings_cache = None
-            # 填充奖池列表
-            pool_list = get_pool_name_list()
-            self.pool_list_combobox.blockSignals(True)
-            self.pool_list_combobox.clear()
-            if pool_list:
-                self.pool_list_combobox.addItems(pool_list)
-                # 应用默认抽取奖池设置
-                default_pool = readme_settings_async("lottery_settings", "default_pool")
-                if default_pool and default_pool in pool_list:
-                    # 设置默认抽取奖池
-                    index = pool_list.index(default_pool)
-                    self.pool_list_combobox.setCurrentIndex(index)
-                    logger.debug(f"应用默认抽取奖池: {default_pool}")
-                else:
-                    self.pool_list_combobox.setCurrentIndex(0)
-            self.pool_list_combobox.blockSignals(False)
-
-            # 填充班级列表，避免空字符串导致读取学生列表警告
-            list_base_options = get_content_combo_name_async("lottery", "list_combobox")
-            class_list = get_class_name_list()
-            self.list_combobox.blockSignals(True)
-            self.list_combobox.clear()
-            if class_list is not None:
-                try:
-                    combo_items = (list_base_options or []) + (class_list or [])
-                except Exception:
-                    combo_items = class_list or []
-                self.list_combobox.addItems(combo_items)
-                self.list_combobox.setCurrentIndex(0)
-                try:
-                    first_text = self.list_combobox.currentText()
-                    if first_text in (list_base_options or []):
-                        self.range_combobox.setEnabled(False)
-                        self.gender_combobox.setEnabled(False)
-                    else:
-                        self.range_combobox.setEnabled(True)
-                        self.gender_combobox.setEnabled(True)
-                except Exception:
-                    pass
-            self.list_combobox.blockSignals(False)
-
-            # 填充范围和性别选项
-            self.range_combobox.blockSignals(True)
-            try:
-                self.range_combobox.clear()
-
-                base_options = get_content_combo_name_async("lottery", "range_combobox")
-                list_base_options = get_content_combo_name_async(
-                    "lottery", "list_combobox"
-                )
-                selected_text = self.list_combobox.currentText()
-                if selected_text in (list_base_options or []):
-                    self.range_combobox.addItems(base_options[:1])
-                    self.gender_combobox.blockSignals(True)
-                    self.gender_combobox.clear()
-                    self.gender_combobox.addItems(
-                        get_content_combo_name_async("lottery", "gender_combobox")[:1]
-                    )
-                    self.gender_combobox.blockSignals(False)
-                else:
-                    group_list = get_group_list(selected_text)
-                    if group_list:
-                        self.range_combobox.addItems(base_options + group_list)
-                    else:
-                        self.range_combobox.addItems(base_options[:1])
-
-                    self.gender_combobox.blockSignals(True)
-                    self.gender_combobox.clear()
-                    self.gender_combobox.addItems(
-                        get_content_combo_name_async("lottery", "gender_combobox")
-                        + get_gender_list(selected_text)
-                    )
-                    self.gender_combobox.blockSignals(False)
-            finally:
-                self.range_combobox.blockSignals(False)
-
-            total_count, remaining_count, formatted_text = (
-                LotteryUtils.update_prize_many_count_label_text(
-                    self.pool_list_combobox.currentText()
-                )
-            )
-
-            self.remaining_count = remaining_count
-            self.many_count_label.setText(formatted_text)
-            self._total_count_cache_pool = self.pool_list_combobox.currentText()
-            self._total_count_cache_value = int(total_count or 0)
-
-            LotteryUtils.update_start_button_state(self.start_button, total_count)
-
-            # 重新调整控件宽度以适应下拉框内容
-            self._adjustControlWidgetWidths()
-
-        except Exception as e:
-            logger.exception(f"延迟填充列表失败: {e}")
+        return lottery_manager.populate_lists(self)
 
     def setupSettingsListener(self):
-        """设置设置监听器，监听页面管理设置变化"""
-        from app.tools.settings_access import get_settings_signals
-
-        settings_signals = get_settings_signals()
-        settings_signals.settingChanged.connect(self.onSettingsChanged)
+        return lottery_manager.setup_settings_listener(self)
 
     def onSettingsChanged(self, first_level_key, second_level_key, value):
-        """当设置发生变化时的处理函数"""
-        if first_level_key in ("lottery_settings", "lottery_notification_settings"):
-            self._render_settings_cache = None
-            self._notification_settings_cache = None
-
-        # 只处理页面管理相关的设置变化
-        if first_level_key == "page_management" and second_level_key.startswith(
-            "lottery"
-        ):
-            # 直接更新UI
-            self.updateUI()
-            # 发出信号让父组件处理
-            self.settingsChanged.emit()
+        return lottery_manager.on_settings_changed(
+            self, first_level_key, second_level_key, value
+        )
 
     def updateUI(self):
         """更新UI控件的可见性"""
@@ -1469,23 +682,4 @@ class Lottery(QWidget):
         return super().eventFilter(obj, event)
 
     def _set_widget_font(self, widget, font_size):
-        """为控件设置字体"""
-        # 确保字体大小有效
-        try:
-            # 确保font_size是有效的整数
-            if not isinstance(font_size, (int, float)):
-                font_size = int(font_size) if str(font_size).isdigit() else 12
-
-            font_size = int(font_size)
-            if font_size <= 0:
-                font_size = 12  # 使用默认字体大小
-
-            custom_font = load_custom_font()
-            if custom_font:
-                widget.setFont(QFont(custom_font, font_size))
-        except (ValueError, TypeError) as e:
-            logger.warning(f"设置字体大小失败，使用默认值: {e}")
-            # 使用默认字体大小
-            custom_font = load_custom_font()
-            if custom_font:
-                widget.setFont(QFont(custom_font, 12))
+        return lottery_manager.set_widget_font(widget, font_size)

@@ -1,9 +1,6 @@
 # ==================================================
 # 导入库
 # ==================================================
-import os
-import shutil
-
 from loguru import logger
 from PySide6.QtWidgets import QApplication, QWidget
 from PySide6.QtGui import QIcon
@@ -23,6 +20,7 @@ from app.tools.variable import (
 from app.tools.path_utils import get_data_path
 from app.tools.personalised import get_theme_icon
 from app.tools.settings_access import get_safe_font_size
+from app.tools.config import clear_temp_draw_records
 from app.Language.obtain_language import (
     get_content_name_async,
     readme_settings_async,
@@ -951,23 +949,12 @@ class MainWindow(FluentWindow):
 
     def _clear_temp_folder(self):
         """清除TEMP文件夹"""
-        temp_dir = get_data_path("TEMP")
-        if os.path.exists(temp_dir):
-            try:
-
-                def handle_remove_readonly(func, path, exc):
-                    import stat
-
-                    if not os.access(path, os.W_OK):
-                        os.chmod(path, stat.S_IWUSR)
-                        func(path)
-                    else:
-                        raise
-
-                shutil.rmtree(temp_dir, onerror=handle_remove_readonly)
-                logger.info("已清除 TEMP 文件夹")
-            except Exception as e:
-                logger.error(f"清除 TEMP 文件夹失败: {e}")
+        try:
+            deleted_count = clear_temp_draw_records()
+            if deleted_count:
+                logger.info("已清除抽取临时记录文件")
+        except Exception as e:
+            logger.error(f"清除抽取临时记录失败: {e}")
 
     def _refresh_page_displays(self):
         """刷新页面显示"""

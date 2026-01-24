@@ -130,6 +130,8 @@ class about_info(GroupHeaderCardWidget):
         # 查看当前软件版本号
         version_text = f"{SPECIAL_VERSION} | {CODENAME} ({SYSTEM}-{ARCH})"
         self.about_version_label = BodyLabel(version_text)
+        user_id = get_or_create_user_id()
+        self.about_user_id_label = BodyLabel(user_id)
 
         # 查看当前软件版权所属
         # 根据发布年份和当前年份是否相同，决定显示格式
@@ -194,6 +196,12 @@ class about_info(GroupHeaderCardWidget):
             get_content_name_async("about", "website"),
             get_content_description_async("about", "website"),
             website_widget,
+        )
+        self.addGroup(
+            get_theme_icon("ic_fluent_flag_pride_20_filled"),
+            get_content_name_async("about", "user_id"),
+            get_content_description_async("about", "user_id"),
+            self.about_user_id_label,
         )
         self.addGroup(
             get_theme_icon("ic_fluent_info_20_filled"),

@@ -9,6 +9,7 @@ from PySide6.QtCore import *
 from qfluentwidgets import *
 
 from app.tools.variable import *
+from app.view.components.center_flow_layout import CenterFlowLayout
 from app.tools.path_utils import *
 from app.tools.personalised import *
 from app.tools.settings_default import *
@@ -40,9 +41,6 @@ class contributor_page(QWidget):
         self._init_timer.setSingleShot(True)
         self._init_timer.timeout.connect(self.create_contributor_cards)
         self._init_timer.start(APP_INIT_DELAY)
-        self._layout_timer = QTimer(self)
-        self._layout_timer.setSingleShot(True)
-        self._layout_timer.timeout.connect(self.update_layout)
         self._resize_timer = QTimer(self)
         self._resize_timer.setSingleShot(True)
         self._resize_timer.timeout.connect(self._delayed_update_layout)
@@ -54,10 +52,23 @@ class contributor_page(QWidget):
         self.main_layout.setContentsMargins(10, 10, 10, 10)
         self.main_layout.setSpacing(10)
 
-        # 创建网格布局
-        self.grid_layout = QGridLayout()
-        self.grid_layout.setSpacing(CONTRIBUTOR_CARD_SPACING)
-        self.main_layout.addLayout(self.grid_layout)
+        # 滚动区域
+        self.scroll_area = ScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.main_layout.addWidget(self.scroll_area)
+
+        # 流式布局容器
+        self.flow_container = QWidget()
+        self.scroll_area.setWidget(self.flow_container)
+        self.flow_layout = CenterFlowLayout(self.flow_container)
+        self.flow_layout.setHorizontalSpacing(CONTRIBUTOR_CARD_SPACING)
+        self.flow_layout.setVerticalSpacing(CONTRIBUTOR_CARD_SPACING)
+        self.flow_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.flow_layout.setContentsMargins(10, 10, 10, 10)
+        self.flow_container.setLayout(self.flow_layout)
 
         # 初始化卡片列表
         self.cards = []
@@ -186,7 +197,7 @@ class contributor_page(QWidget):
         """创建贡献者卡片"""
         if self._closing:
             return
-        if not hasattr(self, "grid_layout") or self.grid_layout is None:
+        if not hasattr(self, "flow_layout") or self.flow_layout is None:
             return
 
         # 添加贡献者卡片
@@ -196,78 +207,29 @@ class contributor_page(QWidget):
                 self.cards.append(card)
 
         # 延迟更新布局
-        try:
-            if self._layout_timer.isActive():
-                self._layout_timer.stop()
-        except Exception:
-            pass
-        self._layout_timer.start(50)
+        self.update_layout()
 
     def update_layout(self):
         """更新布局 - 根据窗口大小动态调整卡片排列"""
-        # 清空网格布局
-        self._clear_grid_layout()
-
-        def calculate_columns(width):
-            """根据窗口宽度和卡片尺寸动态计算列数"""
-            if width <= 0:
-                return 1
-
-            # 计算可用宽度（减去左右边距）
-            available_width = width - 40  # 左右各20px边距
-
-            # 计算单个卡片实际占用的宽度（包括间距）
-            card_actual_width = CONTRIBUTOR_CARD_MIN_WIDTH + CONTRIBUTOR_CARD_SPACING
-
-            # 计算最大可能列数（不超过MAX_COLUMNS）
-            cols = min(available_width // card_actual_width, CONTRIBUTOR_MAX_COLUMNS)
-
-            # 至少显示1列
-            return max(cols, 1)
-
-        # 获取窗口实际可用宽度
-        window_width = max(self.width(), self.sizeHint().width())
-
-        # 根据窗口宽度计算列数
-        cols = calculate_columns(window_width)
-
-        # 设置网格布局的列伸缩因子，使卡片均匀分布
-        for col in range(cols):
-            self.grid_layout.setColumnStretch(col, 1)
-
-        # 添加卡片到网格
-        for i, card in enumerate(self.cards):
-            row = i // cols
-            col = i % cols
-            # 设置卡片的最小宽度和最大宽度
-            card.setMinimumWidth(CONTRIBUTOR_CARD_MIN_WIDTH)
-            card.setMaximumWidth(
-                CONTRIBUTOR_CARD_MIN_WIDTH * 1.5
-            )  # 设置最大宽度，防止卡片过宽
-            self.grid_layout.addWidget(card, row, col, Qt.AlignmentFlag.AlignCenter)
-            card.show()
-
-    def _clear_grid_layout(self):
-        """清空网格布局"""
-        # 重置列伸缩因子
-        for col in range(self.grid_layout.columnCount()):
-            self.grid_layout.setColumnStretch(col, 0)
-
-        while self.grid_layout.count():
-            item = self.grid_layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.hide()
-                widget.setParent(None)
+        if self.flow_layout is None:
+            return
+        if hasattr(self, "scroll_area") and self.scroll_area is not None:
+            try:
+                self.flow_container.setMinimumWidth(self.scroll_area.viewport().width())
+            except Exception:
+                pass
+        self.flow_layout.invalidate()
 
     def addContributorCard(self, contributor):
         """添加单个贡献者卡片"""
-        if not hasattr(self, "grid_layout") or self.grid_layout is None:
+        if not hasattr(self, "flow_layout") or self.flow_layout is None:
             return None
 
         try:
-            card = QWidget()
+            card = ElevatedCardWidget()
             card.setObjectName("contributorCard")
+            card.setMinimumWidth(CONTRIBUTOR_CARD_MIN_WIDTH)
+            card.setMaximumWidth(CONTRIBUTOR_CARD_MIN_WIDTH * 1.5)
             cardLayout = QVBoxLayout(card)
             cardLayout.setContentsMargins(
                 CONTRIBUTOR_CARD_MARGIN,
@@ -298,6 +260,7 @@ class contributor_page(QWidget):
             role.setMaximumWidth(CONTRIBUTOR_MAX_ROLE_WIDTH)
             cardLayout.addWidget(role, 0, Qt.AlignmentFlag.AlignCenter)
 
+            self.flow_layout.addWidget(card)
             return card
         except RuntimeError as e:
             logger.exception(f"创建贡献者卡片时出错: {e}")
@@ -316,7 +279,7 @@ class contributor_page(QWidget):
         if self._closing:
             return
         try:
-            if hasattr(self, "grid_layout") and self.grid_layout is not None:
+            if hasattr(self, "flow_layout") and self.flow_layout is not None:
                 if self.isVisible():
                     self.update_layout()
         except RuntimeError as e:
@@ -328,11 +291,6 @@ class contributor_page(QWidget):
         try:
             if self._init_timer.isActive():
                 self._init_timer.stop()
-        except Exception:
-            pass
-        try:
-            if self._layout_timer.isActive():
-                self._layout_timer.stop()
         except Exception:
             pass
         try:

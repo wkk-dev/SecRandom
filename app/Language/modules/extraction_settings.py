@@ -65,6 +65,11 @@ roll_call_settings = {
             "description": "设置点名结果显示格式",
             "combo_items": ["学号+姓名", "姓名", "学号"],
         },
+        "display_style": {
+            "name": "结果显示样式",
+            "description": "设置点名结果显示样式",
+            "combo_items": ["默认样式", "卡片样式"],
+        },
         "show_random": {
             "name": "显示随机组员格式",
             "description": "设置随机组员显示格式",
@@ -105,6 +110,11 @@ roll_call_settings = {
             "name": "显示学生图片",
             "description": "设置是否显示学生图片",
             "switchbutton_name": {"enable": "", "disable": ""},
+        },
+        "student_image_position": {
+            "name": "头像位置",
+            "description": "设置学生头像在结果中的位置",
+            "combo_items": ["左部", "顶部", "右部", "底部"],
         },
         "open_student_image_folder": {
             "name": "学生图片文件夹",
@@ -183,6 +193,11 @@ roll_call_settings = {
             "description": "Set the results display format",
             "combo_items": {"0": "Student ID + Name", "1": "Name", "2": "Student ID"},
         },
+        "display_style": {
+            "name": "Result display style",
+            "description": "Set the pick result display style",
+            "combo_items": {"0": "Default", "1": "Card"},
+        },
         "show_random": {
             "name": "Format of showing random group member",
             "description": "Set random group member display format",
@@ -231,6 +246,11 @@ roll_call_settings = {
             "name": "Show student images",
             "description": "Set whether to show student images",
         },
+        "student_image_position": {
+            "name": "Image position",
+            "description": "Set the position of student images in results",
+            "combo_items": {"0": "Left", "1": "Top", "2": "Right", "3": "Bottom"},
+        },
         "open_student_image_folder": {
             "name": "Student image folder",
             "description": "Manage student image files. Picture file names must match student name",
@@ -268,12 +288,6 @@ quick_draw_settings = {
             "name": "抽取模式",
             "description": "设置闪抽抽取模式",
             "combo_items": ["重复抽取", "不重复抽取", "半重复抽取"],
-        },
-        "clear_record": {
-            "name": "清除抽取记录方式",
-            "description": "设置清除闪抽抽取记录方式",
-            "combo_items": ["重启后清除", "直到全部抽取完"],
-            "combo_items_other": ["重启后清除", "直到全部抽取完", "无需清除"],
         },
         "half_repeat": {
             "name": "半重复抽取次数",
@@ -340,6 +354,11 @@ quick_draw_settings = {
             "description": "设置是否显示学生图片",
             "switchbutton_name": {"enable": "", "disable": ""},
         },
+        "student_image_position": {
+            "name": "头像位置",
+            "description": "设置学生头像在结果中的位置",
+            "combo_items": ["左侧", "顶部", "右侧", "底部"],
+        },
         "open_student_image_folder": {
             "name": "学生图片文件夹",
             "description": "管理学生图片文件，图片文件名需与学生姓名一致",
@@ -378,16 +397,6 @@ quick_draw_settings = {
                 "0": "Pick with repeating",
                 "1": "Pick without repeating",
                 "2": "Semi-repeatedly pick",
-            },
-        },
-        "clear_record": {
-            "name": "Clear history method",
-            "description": "Set the method to clear Quick Pick records",
-            "combo_items": {"0": "Clear on restart", "1": "Until all have been picked"},
-            "combo_items_other": {
-                "0": "Clear on restart",
-                "1": "Until all have been picked",
-                "2": "Do not clear",
             },
         },
         "half_repeat": {
@@ -460,6 +469,11 @@ quick_draw_settings = {
         "student_image": {
             "name": "Show student images",
             "description": "Set whether to show student images",
+        },
+        "student_image_position": {
+            "name": "Image position",
+            "description": "Set the position of student images in results",
+            "combo_items": {"0": "Left", "1": "Top", "2": "Right", "3": "Bottom"},
         },
         "open_student_image_folder": {
             "name": "Student image folder",
@@ -536,6 +550,11 @@ lottery_settings = {
             "description": "设置抽奖结果显示格式",
             "combo_items": ["序号+名称", "名称", "序号"],
         },
+        "display_style": {
+            "name": "结果显示样式",
+            "description": "设置抽奖结果显示样式",
+            "combo_items": ["默认样式", "卡片样式"],
+        },
         "show_random": {
             "name": "显示随机学生格式",
             "description": "设置显示随机学生抽取结果格式",
@@ -584,6 +603,11 @@ lottery_settings = {
             "name": "显示奖品图片",
             "description": "设置是否显示奖品图片",
             "switchbutton_name": {"enable": "", "disable": ""},
+        },
+        "lottery_image_position": {
+            "name": "图片位置",
+            "description": "设置奖品图片在结果中的位置",
+            "combo_items": ["左侧", "顶部", "右侧", "底部"],
         },
         "open_lottery_image_folder": {
             "name": "奖品图片文件夹",
@@ -662,6 +686,11 @@ lottery_settings = {
             "description": "Set the lottery results display format",
             "combo_items": {"0": "Serial + Name", "1": "Name", "2": "Serial"},
         },
+        "display_style": {
+            "name": "Result display style",
+            "description": "Set the lottery result display style",
+            "combo_items": {"0": "Default", "1": "Card"},
+        },
         "show_random": {
             "name": "Random student display format",
             "description": "Set random student display format in lottery results",
@@ -723,6 +752,11 @@ lottery_settings = {
         "lottery_image": {
             "name": "Show prize images",
             "description": "Set whether to show prize images",
+        },
+        "lottery_image_position": {
+            "name": "Image position",
+            "description": "Set the position of prize images in results",
+            "combo_items": {"0": "Left", "1": "Top", "2": "Right", "3": "Bottom"},
         },
         "open_lottery_image_folder": {
             "name": "Prize image folder",

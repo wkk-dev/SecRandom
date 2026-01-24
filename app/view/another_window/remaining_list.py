@@ -18,11 +18,15 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QGridLayout,
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import BodyLabel, CardWidget, SubtitleLabel, ScrollArea
+from qfluentwidgets import (
+    BodyLabel,
+    ElevatedCardWidget,
+    SubtitleLabel,
+    ScrollArea,
+)
 
 from app.Language.obtain_language import (
     get_any_position_value_async,
@@ -38,6 +42,7 @@ from app.tools.variable import (
     STUDENT_CARD_MARGIN,
     STUDENT_CARD_SPACING,
 )
+from app.view.components.center_flow_layout import CenterFlowLayout
 
 
 class StudentLoader(QThread):
@@ -266,7 +271,7 @@ class RemainingListPage(QWidget):
         self.gender_index = 0
         self.source = source
         self.students: List[Dict[str, Any]] = []
-        self.cards: List[CardWidget] = []
+        self.cards: List[ElevatedCardWidget] = []
         self._loading_thread: Optional[StudentLoader] = None
 
         self._load_timer = QTimer(self)
@@ -375,10 +380,13 @@ class RemainingListPage(QWidget):
         self.scroll_content = QWidget()
         self.scroll_area.setWidget(self.scroll_content)
 
-        # 网格布局
-        self.grid_layout = QGridLayout(self.scroll_content)
-        self.grid_layout.setSpacing(STUDENT_CARD_SPACING)
-        self.grid_layout.setContentsMargins(10, 10, 10, 10)
+        # 流式布局
+        self.flow_layout = CenterFlowLayout(self.scroll_content)
+        self.flow_layout.setHorizontalSpacing(STUDENT_CARD_SPACING)
+        self.flow_layout.setVerticalSpacing(STUDENT_CARD_SPACING)
+        self.flow_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.flow_layout.setContentsMargins(10, 10, 10, 10)
+        self.scroll_content.setLayout(self.flow_layout)
 
         try:
             self._student_info_text = get_any_position_value_async(
@@ -524,41 +532,31 @@ class RemainingListPage(QWidget):
                 pass
         self.cards.clear()
 
-        # 清空网格布局
-        while self.grid_layout.count():
-            item = self.grid_layout.takeAt(0)
-            if item.widget():
-                item.widget().hide()
+        if hasattr(self, "flow_layout") and self.flow_layout is not None:
+            self.flow_layout.removeAllWidgets()
 
     def _update_grid_layout(self) -> None:
         if not self.cards:
             return
 
-        # 计算列数
-        window_width = max(self.scroll_area.width(), 400)
-        available_width = window_width - 40
-        card_width = STUDENT_CARD_FIXED_WIDTH + STUDENT_CARD_SPACING
-        columns = max(1, min(available_width // card_width, 6))
+        if not hasattr(self, "flow_layout") or self.flow_layout is None:
+            return
 
-        # 添加卡片到网格
-        for i, card in enumerate(self.cards):
-            row = i // columns
-            col = i % columns
-            self.grid_layout.addWidget(card, row, col)
+        self.flow_layout.removeAllWidgets()
+        for card in self.cards:
+            self.flow_layout.addWidget(card)
             card.show()
 
-        # 设置列伸缩
-        for col in range(columns):
-            self.grid_layout.setColumnStretch(col, 1)
-
-        self._last_layout_width = window_width
+        self._last_layout_width = self.scroll_area.width()
         self._last_card_count = len(self.cards)
 
-    def _create_student_card(self, student: Dict[str, Any]) -> Optional[CardWidget]:
+    def _create_student_card(
+        self, student: Dict[str, Any]
+    ) -> Optional[ElevatedCardWidget]:
         """创建学生卡片"""
         is_group = student.get("is_group", False)
 
-        card = CardWidget()
+        card = ElevatedCardWidget()
         card.setProperty("is_group", is_group)
 
         if is_group:

@@ -396,6 +396,22 @@ class lottery_display_settings(GroupHeaderCardWidget):
             )
         )
 
+        # 结果显示样式下拉框
+        self.display_style_combo = ComboBox()
+        self.display_style_combo.addItems(
+            get_content_combo_name_async("lottery_settings", "display_style")
+        )
+        self.display_style_combo.setCurrentIndex(
+            readme_settings_async("lottery_settings", "display_style")
+        )
+        self.display_style_combo.currentIndexChanged.connect(
+            lambda: update_settings(
+                "lottery_settings",
+                "display_style",
+                self.display_style_combo.currentIndex(),
+            )
+        )
+
         # 显示随机学生格式下拉框
         self.random_student_format_combo = ComboBox()
         self.random_student_format_combo.addItems(
@@ -438,6 +454,12 @@ class lottery_display_settings(GroupHeaderCardWidget):
             get_content_name_async("lottery_settings", "display_format"),
             get_content_description_async("lottery_settings", "display_format"),
             self.display_format_combo,
+        )
+        self.addGroup(
+            get_theme_icon("ic_fluent_style_guide_20_filled"),
+            get_content_name_async("lottery_settings", "display_style"),
+            get_content_description_async("lottery_settings", "display_style"),
+            self.display_style_combo,
         )
         self.addGroup(
             get_theme_icon("ic_fluent_slide_text_sparkle_20_filled"),
@@ -691,6 +713,21 @@ class lottery_lottery_image_settings(GroupHeaderCardWidget):
             )
         )
 
+        self.lottery_image_position_combo = ComboBox()
+        self.lottery_image_position_combo.addItems(
+            get_content_combo_name_async("lottery_settings", "lottery_image_position")
+        )
+        self.lottery_image_position_combo.setCurrentIndex(
+            readme_settings_async("lottery_settings", "lottery_image_position")
+        )
+        self.lottery_image_position_combo.currentIndexChanged.connect(
+            lambda: update_settings(
+                "lottery_settings",
+                "lottery_image_position",
+                self.lottery_image_position_combo.currentIndex(),
+            )
+        )
+
         # 打开奖品图片文件夹按钮
         self.open_lottery_image_folder_button = PushButton(
             get_content_name_async("lottery_settings", "open_lottery_image_folder")
@@ -705,6 +742,12 @@ class lottery_lottery_image_settings(GroupHeaderCardWidget):
             get_content_name_async("lottery_settings", "lottery_image"),
             get_content_description_async("lottery_settings", "lottery_image"),
             self.lottery_image_switch,
+        )
+        self.addGroup(
+            get_theme_icon("ic_fluent_image_circle_20_filled"),
+            get_content_name_async("lottery_settings", "lottery_image_position"),
+            get_content_description_async("lottery_settings", "lottery_image_position"),
+            self.lottery_image_position_combo,
         )
         self.addGroup(
             get_theme_icon("ic_fluent_folder_open_20_filled"),

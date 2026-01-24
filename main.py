@@ -12,7 +12,7 @@ from loguru import logger
 from app.tools.path_utils import get_app_root
 from app.tools.config import configure_logging
 from app.tools.settings_default import manage_settings_file
-from app.tools.settings_access import readme_settings_async
+from app.tools.settings_access import readme_settings_async, get_or_create_user_id
 from app.tools.variable import (
     APP_QUIT_ON_LAST_WINDOW_CLOSED,
     VERSION,
@@ -89,10 +89,12 @@ def initialize_sentry():
         before_send=create_sentry_before_send_filter(),
         release=VERSION,
         send_default_pii=True,
+        auto_session_tracking=True,
         enable_logs=True,
         traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
     )
-    sentry_sdk.set_user({"ip_address": "{{auto}}"})
+    user_id = get_or_create_user_id()
+    sentry_sdk.set_user({"id": user_id, "ip_address": "{{auto}}"})
 
 
 # ==================================================

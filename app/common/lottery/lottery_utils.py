@@ -578,7 +578,11 @@ class LotteryUtils:
             "display_format": readme_settings_async(
                 "lottery_settings", "display_format"
             ),
+            "display_style": readme_settings_async("lottery_settings", "display_style"),
             "student_image": readme_settings_async("lottery_settings", "student_image"),
+            "image_position": readme_settings_async(
+                "lottery_settings", "lottery_image_position"
+            ),
             "show_random": readme_settings_async("lottery_settings", "show_random"),
             # 浮窗设置
             "animation": readme_settings_async(

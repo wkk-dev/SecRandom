@@ -57,16 +57,6 @@ class quick_draw_extraction_function(GroupHeaderCardWidget):
         self.draw_mode_combo = ComboBox()
         self.draw_mode_combo.currentIndexChanged.connect(self.on_draw_mode_changed)
 
-        # 清除抽取记录方式下拉框（延迟填充）
-        self.clear_record_combo = ComboBox()
-        self.clear_record_combo.currentIndexChanged.connect(
-            lambda: update_settings(
-                "quick_draw_settings",
-                "clear_record",
-                self.clear_record_combo.currentIndex(),
-            )
-        )
-
         # 半重复抽取次数输入框
         self.half_repeat_spin = SpinBox()
         self.half_repeat_spin.setFixedWidth(WIDTH_SPINBOX)
@@ -137,12 +127,6 @@ class quick_draw_extraction_function(GroupHeaderCardWidget):
             self.draw_mode_combo,
         )
         self.addGroup(
-            get_theme_icon("ic_fluent_text_clear_formatting_20_filled"),
-            get_content_name_async("quick_draw_settings", "clear_record"),
-            get_content_description_async("quick_draw_settings", "clear_record"),
-            self.clear_record_combo,
-        )
-        self.addGroup(
             get_theme_icon("ic_fluent_clipboard_bullet_list_20_filled"),
             get_content_name_async("quick_draw_settings", "half_repeat"),
             get_content_description_async("quick_draw_settings", "half_repeat"),
@@ -203,12 +187,6 @@ class quick_draw_extraction_function(GroupHeaderCardWidget):
                 data["draw_mode_index"] = readme_settings_async(
                     "quick_draw_settings", "draw_mode"
                 )
-                data["clear_record_items"] = get_content_combo_name_async(
-                    "quick_draw_settings", "clear_record"
-                )
-                data["clear_record_index"] = readme_settings_async(
-                    "quick_draw_settings", "clear_record"
-                )
                 data["half_repeat_value"] = readme_settings_async(
                     "quick_draw_settings", "half_repeat"
                 )
@@ -237,11 +215,6 @@ class quick_draw_extraction_function(GroupHeaderCardWidget):
             if "draw_mode_items" in data:
                 self.draw_mode_combo.addItems(data.get("draw_mode_items", []))
                 self.draw_mode_combo.setCurrentIndex(data.get("draw_mode_index", 0))
-            if "clear_record_items" in data:
-                self.clear_record_combo.addItems(data.get("clear_record_items", []))
-                self.clear_record_combo.setCurrentIndex(
-                    data.get("clear_record_index", 0)
-                )
             if "half_repeat_value" in data:
                 self.half_repeat_spin.setValue(data.get("half_repeat_value", 0))
             if "draw_type_items" in data:
@@ -276,27 +249,6 @@ class quick_draw_extraction_function(GroupHeaderCardWidget):
 
         # 根据抽取模式设置不同的控制逻辑
         if draw_mode_index == 0:  # 重复抽取模式
-            # 暂时屏蔽信号，防止修改选项时触发不必要的更新
-            self.clear_record_combo.blockSignals(True)
-
-            # 禁用清除抽取记录方式下拉框
-            self.clear_record_combo.setEnabled(False)
-            # 清空当前选项
-            self.clear_record_combo.clear()
-            self.clear_record_combo.addItems(
-                get_any_position_value_async(
-                    "quick_draw_settings", "clear_record", "combo_items_other"
-                )
-            )
-            # 强制设置为"无需清除"（索引2）
-            self.clear_record_combo.setCurrentIndex(2)
-
-            # 恢复信号
-            self.clear_record_combo.blockSignals(False)
-
-            # 更新设置
-            update_settings("quick_draw_settings", "clear_record", 2)
-
             # 设置half_repeat_spin为0并禁用
             self.half_repeat_spin.setEnabled(False)
             self.half_repeat_spin.setRange(0, 0)
@@ -305,35 +257,6 @@ class quick_draw_extraction_function(GroupHeaderCardWidget):
             update_settings("quick_draw_settings", "half_repeat", 0)
 
         else:  # 不重复抽取模式或半重复抽取模式
-            # 启用清除抽取记录方式下拉框
-            self.clear_record_combo.setEnabled(True)
-
-            # 暂时屏蔽信号，防止clear()触发更新导致设置被覆盖
-            self.clear_record_combo.blockSignals(True)
-
-            # 清空当前选项
-            self.clear_record_combo.clear()
-
-            # 添加前两个选项（不包含"无需清除"）
-            self.clear_record_combo.addItems(
-                get_content_combo_name_async("quick_draw_settings", "clear_record")
-            )
-
-            # 读取保存的设置
-            saved_clear_record = readme_settings_async(
-                "quick_draw_settings", "clear_record"
-            )
-
-            # 检查保存的设置是否有效
-            if 0 <= saved_clear_record < self.clear_record_combo.count():
-                self.clear_record_combo.setCurrentIndex(saved_clear_record)
-            else:
-                self.clear_record_combo.setCurrentIndex(0)
-                update_settings("quick_draw_settings", "clear_record", 0)
-
-            # 恢复信号
-            self.clear_record_combo.blockSignals(False)
-
             # 根据具体模式设置half_repeat_spin
             if draw_mode_index == 1:  # 不重复抽取模式
                 # 设置half_repeat_spin为1并禁用
@@ -674,6 +597,23 @@ class quick_draw_student_image_settings(GroupHeaderCardWidget):
             )
         )
 
+        self.student_image_position_combo = ComboBox()
+        self.student_image_position_combo.addItems(
+            get_content_combo_name_async(
+                "quick_draw_settings", "student_image_position"
+            )
+        )
+        self.student_image_position_combo.setCurrentIndex(
+            readme_settings_async("quick_draw_settings", "student_image_position")
+        )
+        self.student_image_position_combo.currentIndexChanged.connect(
+            lambda: update_settings(
+                "quick_draw_settings",
+                "student_image_position",
+                self.student_image_position_combo.currentIndex(),
+            )
+        )
+
         # 打开学生图片文件夹按钮
         self.open_student_image_folder_button = PushButton(
             get_content_name_async("quick_draw_settings", "open_student_image_folder")
@@ -688,6 +628,14 @@ class quick_draw_student_image_settings(GroupHeaderCardWidget):
             get_content_name_async("quick_draw_settings", "student_image"),
             get_content_description_async("quick_draw_settings", "student_image"),
             self.student_image_switch,
+        )
+        self.addGroup(
+            get_theme_icon("ic_fluent_image_circle_20_filled"),
+            get_content_name_async("quick_draw_settings", "student_image_position"),
+            get_content_description_async(
+                "quick_draw_settings", "student_image_position"
+            ),
+            self.student_image_position_combo,
         )
         self.addGroup(
             get_theme_icon("ic_fluent_folder_open_20_filled"),

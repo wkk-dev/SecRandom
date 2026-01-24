@@ -6,10 +6,10 @@ import colorsys
 import weakref
 from loguru import logger
 
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QMenu
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QMenu, QSizePolicy
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtCore import Qt, QPoint, QTimer, QEvent
-from qfluentwidgets import BodyLabel, AvatarWidget, qconfig
+from qfluentwidgets import BodyLabel, AvatarWidget, ElevatedCardWidget, qconfig
 
 from app.tools.variable import (
     STUDENT_ID_FORMAT,
@@ -294,7 +294,7 @@ class ResultDisplayUtils:
 
     @staticmethod
     def _create_student_label_with_avatar(
-        image_path, name, font_size, draw_count, text
+        image_path, name, font_size, draw_count, text, image_position=0
     ):
         """
         创建带头像的学生标签
@@ -313,21 +313,35 @@ class ResultDisplayUtils:
         container = QWidget()
         container.setAttribute(Qt.WA_DeleteOnClose)  # 自动清理
 
-        # 创建水平布局
-        h_layout = QHBoxLayout(container)
-        h_layout.setSpacing(AVATAR_LABEL_SPACING)
-        h_layout.setContentsMargins(0, 0, 0, 0)
+        try:
+            image_position = int(image_position)
+        except Exception:
+            image_position = 0
 
-        # 创建头像
+        use_vertical_layout = image_position in (1, 3)
+        layout = (
+            QVBoxLayout(container) if use_vertical_layout else QHBoxLayout(container)
+        )
+        layout.setSpacing(AVATAR_LABEL_SPACING)
+        layout.setContentsMargins(0, 0, 0, 0)
+
         avatar = ResultDisplayUtils._create_avatar_widget(image_path, name, font_size)
-        avatar.setRadius(font_size * 2 if draw_count == 1 else font_size // 2)
+        avatar.setRadius(font_size * 2 if draw_count == 1 else int(font_size * 1.5))
 
-        # 创建文本标签
         text_label = BodyLabel(text)
 
-        # 添加到布局
-        h_layout.addWidget(avatar)
-        h_layout.addWidget(text_label)
+        if image_position == 3:
+            layout.addWidget(text_label, 0, Qt.AlignmentFlag.AlignHCenter)
+            layout.addWidget(avatar, 0, Qt.AlignmentFlag.AlignHCenter)
+        elif image_position == 2:
+            layout.addWidget(text_label, 0, Qt.AlignmentFlag.AlignVCenter)
+            layout.addWidget(avatar, 0, Qt.AlignmentFlag.AlignVCenter)
+        elif image_position == 1:
+            layout.addWidget(avatar, 0, Qt.AlignmentFlag.AlignHCenter)
+            layout.addWidget(text_label, 0, Qt.AlignmentFlag.AlignHCenter)
+        else:
+            layout.addWidget(avatar, 0, Qt.AlignmentFlag.AlignVCenter)
+            layout.addWidget(text_label, 0, Qt.AlignmentFlag.AlignVCenter)
 
         # 内存优化：跟踪创建的widget以便清理
         ResultDisplayUtils._weak_widget_refs.add(container)
@@ -385,22 +399,21 @@ class ResultDisplayUtils:
         if custom_font and use_global_font == 1:
             style_sheet = f"font-family: '{custom_font}'; {style_sheet}"
 
-        if (
-            isinstance(label, QWidget)
-            and hasattr(label, "layout")
-            and label.layout() is not None
-        ):
-            layout = label.layout()
-            if layout:
+        def apply_to_widget(widget):
+            if isinstance(widget, BodyLabel):
+                widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                widget.setStyleSheet(style_sheet)
+                return
+            if isinstance(widget, QWidget) and widget.layout() is not None:
+                layout = widget.layout()
                 for i in range(layout.count()):
                     item = layout.itemAt(i)
-                    widget = item.widget()
-                    if isinstance(widget, BodyLabel):
-                        widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                        widget.setStyleSheet(style_sheet)
-        else:
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            label.setStyleSheet(style_sheet)
+                    child = item.widget()
+                    if child is not None:
+                        apply_to_widget(child)
+
+        if isinstance(label, QWidget):
+            apply_to_widget(label)
 
     @staticmethod
     def _find_student_image(image_dir, image_name):
@@ -419,7 +432,9 @@ class ResultDisplayUtils:
         font_size=50,
         animation_color=0,
         display_format=0,
+        display_style=None,
         show_student_image=False,
+        image_position=None,
         group_index=0,
         show_random=0,
         settings_group="roll_call_settings",
@@ -456,6 +471,29 @@ class ResultDisplayUtils:
         image_dir = (
             "prize_images" if settings_group == "lottery_settings" else "student_images"
         )
+        if display_style is None:
+            try:
+                display_style = readme_settings_async(settings_group, "display_style")
+            except Exception:
+                display_style = 0
+
+        image_position_key = (
+            "lottery_image_position"
+            if settings_group == "lottery_settings"
+            else "student_image_position"
+        )
+        if image_position is None:
+            try:
+                image_position = readme_settings_async(
+                    settings_group, image_position_key
+                )
+            except Exception:
+                image_position = 0
+
+        try:
+            image_position = int(image_position)
+        except Exception:
+            image_position = 0
 
         for i, (num, selected, exist) in enumerate(selected_students):
             current_image_path = None
@@ -490,7 +528,6 @@ class ResultDisplayUtils:
                 is_group_mode=(group_index == 1),
                 show_random=show_random,
             )
-
             # 使用支持触屏的容器包装所有内容，确保整个区域都能响应触屏操作
             touch_container = TouchResultWidget()
             touch_container.setAttribute(Qt.WA_DeleteOnClose)  # 自动清理
@@ -504,15 +541,41 @@ class ResultDisplayUtils:
             # 在小组模式下，只在没有成员显示时才显示头像
             if show_student_image:
                 label = ResultDisplayUtils._create_student_label_with_avatar(
-                    current_image_path, name, font_size, draw_count, text
+                    current_image_path,
+                    name,
+                    font_size,
+                    draw_count,
+                    text,
+                    image_position,
                 )
             else:
                 label = BodyLabel(text)
                 label.setAttribute(Qt.WA_DeleteOnClose)  # 自动清理
 
+            card_widget = None
+            if display_style == 1:
+                card_widget = ElevatedCardWidget()
+                card_widget.setAttribute(Qt.WA_DeleteOnClose)
+                card_layout = QVBoxLayout(card_widget)
+                card_layout.setContentsMargins(12, 12, 12, 12)
+                card_layout.setSpacing(4)
+                card_layout.addWidget(label, 0, Qt.AlignmentFlag.AlignCenter)
+                label = card_widget
+
             ResultDisplayUtils._apply_label_style(
                 label, font_size, animation_color, settings_group, custom_font_family
             )
+
+            if card_widget is not None:
+                card_widget.setSizePolicy(
+                    QSizePolicy.Policy.MinimumExpanding,
+                    QSizePolicy.Policy.MinimumExpanding,
+                )
+                layout = card_widget.layout()
+                if layout is not None:
+                    layout.setSizeConstraint(QVBoxLayout.SizeConstraint.SetMinimumSize)
+                    layout.activate()
+                    card_widget.setMinimumSize(layout.sizeHint())
 
             # 将标签添加到触屏容器中
             inner_layout.addWidget(label)

@@ -9,6 +9,7 @@ from PySide6.QtNetwork import *
 
 import json
 import asyncio
+import uuid
 from loguru import logger
 from typing import Any
 
@@ -251,6 +252,19 @@ def update_settings(first_level_key: str, second_level_key: str, value: Any):
         )
     except Exception as e:
         logger.exception(f"设置更新失败: {e}")
+
+
+def get_or_create_user_id():
+    try:
+        user_id = readme_settings("basic_settings", "offline_user_id")
+        if isinstance(user_id, str) and user_id.strip():
+            return user_id
+        user_id = uuid.uuid4().hex
+        update_settings("basic_settings", "offline_user_id", user_id)
+        return user_id
+    except Exception as e:
+        logger.exception(f"获取用户ID失败: {e}")
+        return uuid.uuid4().hex
 
 
 def _get_default_setting(first_level_key: str, second_level_key: str):

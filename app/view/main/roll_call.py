@@ -26,12 +26,8 @@ from app.common.data.list import *
 from app.common.history import *
 from app.common.display.result_display import *
 from app.tools.config import *
-from app.common.roll_call.roll_call_utils import RollCallUtils
 from app.common.roll_call.roll_call_manager import RollCallManager
-from app.common.voice.voice import TTSHandler
-from app.common.music.music_player import music_player
-from app.common.extraction.extract import _is_non_class_time
-from app.common.safety.verify_ops import require_and_run
+from app.common.roll_call import roll_call_manager
 
 from app.page_building.another_window import *
 
@@ -70,25 +66,19 @@ class roll_call(QWidget):
 
     def _init_file_watcher(self):
         """初始化文件监控器"""
-        self.file_watcher = QFileSystemWatcher()
-        self.setup_file_watcher()
+        return roll_call_manager.init_file_watcher(self)
 
     def _init_long_press(self):
         """初始化长按功能相关属性"""
-        self.press_timer = QTimer()
-        self.press_timer.timeout.connect(self.handle_long_press)
-        self.long_press_interval = 100
-        self.long_press_delay = 500
-        self.is_long_pressing = False
-        self.long_press_direction = 0
+        return roll_call_manager.init_long_press(self)
 
     def _init_tts(self):
         """初始化文本转语音处理器"""
-        self.tts_handler = TTSHandler()
+        return roll_call_manager.init_tts(self)
 
     def _init_animation_state(self):
         """初始化动画状态"""
-        self.is_animating = False
+        return roll_call_manager.init_animation_state(self)
 
     def _init_ui(self):
         """初始化用户界面"""
@@ -96,16 +86,14 @@ class roll_call(QWidget):
 
     def _setup_settings_listener(self):
         """设置设置监听器"""
-        self.setupSettingsListener()
+        return roll_call_manager.setup_settings_listener(self)
 
     def handle_long_press(self):
         """处理长按事件
 
         当长按状态激活时，以连续触发间隔更新计数
         """
-        if self.is_long_pressing:
-            self.press_timer.setInterval(self.long_press_interval)
-            self.update_count(self.long_press_direction)
+        return roll_call_manager.handle_long_press(self)
 
     def start_long_press(self, direction):
         """开始长按
@@ -113,15 +101,11 @@ class roll_call(QWidget):
         Args:
             direction (int): 长按方向，1为增加，-1为减少
         """
-        self.long_press_direction = direction
-        self.is_long_pressing = True
-        self.press_timer.setInterval(self.long_press_delay)
-        self.press_timer.start()
+        return roll_call_manager.start_long_press(self, direction)
 
     def stop_long_press(self):
         """停止长按"""
-        self.is_long_pressing = False
-        self.press_timer.stop()
+        return roll_call_manager.stop_long_press(self)
 
     def closeEvent(self, event):
         """窗口关闭事件，清理资源
@@ -518,783 +502,119 @@ class roll_call(QWidget):
         return max_text_width
 
     def on_class_changed(self):
-        """当班级选择改变时，更新范围选择、性别选择和人数显示"""
-        self.range_combobox.blockSignals(True)
-        self.gender_combobox.blockSignals(True)
-
-        try:
-            self._update_range_options()
-            self._update_gender_options()
-            self.update_many_count_label()
-            self._update_start_button_state()
-            self._update_remaining_list_window()
-        except Exception as e:
-            logger.exception(f"切换班级时发生错误: {e}")
-        finally:
-            self.range_combobox.blockSignals(False)
-            self.gender_combobox.blockSignals(False)
+        return roll_call_manager.on_class_changed(self)
 
     def _update_range_options(self):
         """更新范围下拉框选项"""
-        self.range_combobox.clear()
-        base_options = get_content_combo_name_async("roll_call", "range_combobox")
-        group_list = get_group_list(self.list_combobox.currentText())
-        if group_list and group_list != [""]:
-            self.range_combobox.addItems(base_options + group_list)
-        else:
-            self.range_combobox.addItems(base_options[:1])
+        return roll_call_manager._update_range_options(self)
 
     def _update_gender_options(self):
         """更新性别下拉框选项"""
-        self.gender_combobox.clear()
-        gender_options = get_content_combo_name_async("roll_call", "gender_combobox")
-        gender_list = get_gender_list(self.list_combobox.currentText())
-        if gender_list and gender_list != [""]:
-            self.gender_combobox.addItems(gender_options + gender_list)
-        else:
-            self.gender_combobox.addItems(gender_options[:1])
+        return roll_call_manager._update_gender_options(self)
 
     def _update_start_button_state(self):
         """根据总人数更新开始按钮状态"""
-        total_count = RollCallUtils.get_total_count(
-            self.list_combobox.currentText(),
-            self.range_combobox.currentIndex(),
-            self.range_combobox.currentText(),
-        )
-        RollCallUtils.update_start_button_state(self.start_button, total_count)
+        return roll_call_manager._update_start_button_state(self)
 
     def _update_remaining_list_window(self):
         """延迟更新剩余名单窗口"""
-        if (
-            hasattr(self, "remaining_list_page")
-            and self.remaining_list_page is not None
-        ):
-            QTimer.singleShot(APP_INIT_DELAY, self._update_remaining_list_delayed)
+        return roll_call_manager._update_remaining_list_window(self)
 
     def on_filter_changed(self):
         """当范围或性别选择改变时，更新人数显示"""
-        try:
-            self.update_many_count_label()
-            self._update_start_button_state()
-            self._update_remaining_list_window()
-        except Exception as e:
-            logger.exception(f"切换筛选条件时发生错误: {e}")
+        return roll_call_manager.on_filter_changed(self)
 
     def _update_remaining_list_delayed(self):
         """延迟更新剩余名单窗口的方法"""
-        try:
-            if (
-                hasattr(self, "remaining_list_page")
-                and self.remaining_list_page is not None
-            ):
-                class_name = self.list_combobox.currentText()
-                group_filter = self.range_combobox.currentText()
-                gender_filter = self.gender_combobox.currentText()
-                group_index = self.range_combobox.currentIndex()
-                gender_index = self.gender_combobox.currentIndex()
-                half_repeat = readme_settings_async("roll_call_settings", "half_repeat")
-
-                if hasattr(self.remaining_list_page, "update_remaining_list"):
-                    self.remaining_list_page.update_remaining_list(
-                        class_name,
-                        group_filter,
-                        gender_filter,
-                        half_repeat,
-                        group_index,
-                        gender_index,
-                        emit_signal=False,
-                        source="roll_call",
-                    )
-                else:
-                    if hasattr(self.remaining_list_page, "class_name"):
-                        self.remaining_list_page.class_name = class_name
-                    if hasattr(self.remaining_list_page, "group_filter"):
-                        self.remaining_list_page.group_filter = group_filter
-                    if hasattr(self.remaining_list_page, "gender_filter"):
-                        self.remaining_list_page.gender_filter = gender_filter
-                    if hasattr(self.remaining_list_page, "group_index"):
-                        self.remaining_list_page.group_index = group_index
-                    if hasattr(self.remaining_list_page, "gender_index"):
-                        self.remaining_list_page.gender_index = gender_index
-                    if hasattr(self.remaining_list_page, "half_repeat"):
-                        self.remaining_list_page.half_repeat = half_repeat
-
-                    if hasattr(self.remaining_list_page, "count_changed"):
-                        self.remaining_list_page.count_changed.emit(
-                            self.remaining_count
-                        )
-        except Exception as e:
-            logger.exception(f"延迟更新剩余名单时发生错误: {e}")
-
-    def _do_start_draw(self):
-        """实际执行开始抽取的逻辑"""
-        # 加载数据到管理器
-        class_name = self.list_combobox.currentText()
-        group_filter = self.range_combobox.currentText()
-        gender_filter = self.gender_combobox.currentText()
-        group_index = self.range_combobox.currentIndex()
-        gender_index = self.gender_combobox.currentIndex()
-        half_repeat = readme_settings_async("roll_call_settings", "half_repeat")
-
-        self.manager.load_data(
-            class_name,
-            group_filter,
-            gender_filter,
-            group_index,
-            gender_index,
-            half_repeat,
-        )
-
-        self.start_button.setText(
-            get_content_pushbutton_name_async("roll_call", "start_button")
-        )
-        self.start_button.setEnabled(True)
-        try:
-            self.start_button.clicked.disconnect()
-        except Exception as e:
-            logger.exception(
-                "Error disconnecting start_button clicked (ignored): {}", e
-            )
-
-        self.draw_random()
-
-        animation_music = readme_settings_async("roll_call_settings", "animation_music")
-        if animation_music:
-            music_player.play_music(
-                music_file=animation_music,
-                settings_group="roll_call_settings",
-                loop=True,
-                fade_in=True,
-            )
-
-        animation = readme_settings_async("roll_call_settings", "animation")
-        autoplay_count = readme_settings_async("roll_call_settings", "autoplay_count")
-        animation_interval = readme_settings_async(
-            "roll_call_settings", "animation_interval"
-        )
-        if animation == 0:
-            self.start_button.setText(
-                get_content_pushbutton_name_async("roll_call", "stop_button")
-            )
-            self.is_animating = True
-            self.animation_timer = QTimer()
-            self.animation_timer.timeout.connect(self.animate_result)
-            self.animation_timer.start(animation_interval)
-            self.start_button.clicked.connect(lambda: self.stop_animation())
-        elif animation == 1:
-            self.is_animating = True
-            self.animation_timer = QTimer()
-            self.animation_timer.timeout.connect(self.animate_result)
-            self.animation_timer.start(animation_interval)
-            self.start_button.setEnabled(False)
-            QTimer.singleShot(
-                autoplay_count * animation_interval,
-                lambda: [
-                    self.animation_timer.stop(),
-                    self.stop_animation(),
-                    self.start_button.setEnabled(True),
-                ],
-            )
-            self.start_button.clicked.connect(lambda: self.start_draw())
-        elif animation == 2:
-            self.stop_animation()
-            self.start_button.clicked.connect(lambda: self.start_draw())
+        return roll_call_manager._update_remaining_list_delayed(self)
 
     def start_draw(self):
         """开始抽取"""
-        # 检查当前时间是否在非上课时间段内
-        if _is_non_class_time():
-            # 检查是否需要验证流程
-            if readme_settings_async("linkage_settings", "verification_required"):
-                # 如果需要验证流程，弹出密码验证窗口
-                logger.info("当前时间在非上课时间段内，需要密码验证")
-                require_and_run("roll_call_start", self, self._do_start_draw)
-            else:
-                # 如果不需要验证流程，直接禁止点击
-                logger.info("当前时间在非上课时间段内，禁止抽取")
-                return
-        else:
-            # 如果不在非上课时间段内，直接执行抽取
-            self._do_start_draw()
+        return roll_call_manager.start_draw(self)
 
     def stop_animation(self):
-        """停止动画"""
-        is_quick_draw = hasattr(self, "is_quick_draw") and self.is_quick_draw
-
-        if hasattr(self, "animation_timer") and self.animation_timer.isActive():
-            self.animation_timer.stop()
-        self.start_button.setText(
-            get_content_pushbutton_name_async("roll_call", "start_button")
-        )
-        self.is_animating = False
-
-        from app.common.behind_scenes.behind_scenes_utils import BehindScenesUtils
-
-        BehindScenesUtils.clear_cache()
-
-        try:
-            self.start_button.clicked.disconnect()
-        except Exception as e:
-            logger.exception(
-                "Error disconnecting start_button clicked during stop_animation (ignored): {}",
-                e,
-            )
-        self.start_button.clicked.connect(lambda: self.start_draw())
-
-        # 执行最终抽取
-        result = self.manager.draw_final_students(self.current_count)
-
-        if "reset_required" in result and result["reset_required"]:
-            class_name = self.list_combobox.currentText()
-            group_filter = self.range_combobox.currentText()
-            gender_filter = self.gender_combobox.currentText()
-            RollCallUtils.reset_drawn_records(
-                self, class_name, gender_filter, group_filter
-            )
-            return
-
-        self.final_selected_students = result["selected_students"]
-        self.final_class_name = result["class_name"]
-        self.final_selected_students_dict = result["selected_students_dict"]
-        self.final_group_filter = result["group_filter"]
-        self.final_gender_filter = result["gender_filter"]
-
-        # 保存结果
-        self.manager.save_result(
-            self.final_selected_students, self.final_selected_students_dict
-        )
-
-        half_repeat = readme_settings_async("roll_call_settings", "half_repeat")
-        if half_repeat > 0:
-            self.update_many_count_label()
-
-            if (
-                hasattr(self, "remaining_list_page")
-                and self.remaining_list_page is not None
-                and hasattr(self.remaining_list_page, "count_changed")
-            ):
-                self.remaining_list_page.count_changed.emit(self.remaining_count)
-
-            QTimer.singleShot(APP_INIT_DELAY, self._update_remaining_list_delayed)
-
-        if hasattr(self, "final_selected_students"):
-            if not is_quick_draw:
-                self.display_result(self.final_selected_students, self.final_class_name)
-                RollCallUtils.show_notification_if_enabled(
-                    class_name=self.final_class_name,
-                    selected_students=self.final_selected_students,
-                    draw_count=self.current_count,
-                    settings_group="roll_call_notification_settings",
-                )
-
-            self.play_voice_result()
-
-            music_player.stop_music(fade_out=True)
-
-            result_music = readme_settings_async("roll_call_settings", "result_music")
-            if result_music:
-                music_player.play_music(
-                    music_file=result_music,
-                    settings_group="roll_call_settings",
-                    loop=False,
-                    fade_in=True,
-                )
+        return roll_call_manager.stop_animation(self)
 
     def play_voice_result(self):
-        """播放语音结果"""
-        try:
-            # 准备语音设置
-            voice_settings = {
-                "voice_volume": readme_settings_async(
-                    "basic_voice_settings", "volume_size"
-                ),
-                "voice_speed": readme_settings_async(
-                    "basic_voice_settings", "speech_rate"
-                ),
-                "system_voice_name": readme_settings_async(
-                    "basic_voice_settings", "system_voice_name"
-                ),
-            }
-
-            # 准备学生名单（只取名字部分）
-            student_names = [name[1] for name in self.final_selected_students]
-
-            # 获取语音引擎类型
-            voice_engine = readme_settings_async("basic_voice_settings", "voice_engine")
-            engine_type = 1 if voice_engine == "Edge TTS" else 0
-
-            # 获取Edge TTS语音名称
-            edge_tts_voice_name = readme_settings_async(
-                "basic_voice_settings", "edge_tts_voice_name"
-            )
-
-            # 调用语音播放
-            self.tts_handler.voice_play(
-                config=voice_settings,
-                student_names=student_names,
-                engine_type=engine_type,
-                voice_name=edge_tts_voice_name,
-                class_name=self.list_combobox.currentText(),
-            )
-        except Exception as e:
-            logger.exception(f"播放语音失败: {e}", exc_info=True)
+        return roll_call_manager.play_voice_result(self)
 
     def animate_result(self):
         """动画过程中更新显示"""
-        self.draw_random()
+        return roll_call_manager.animate_result(self)
 
     def draw_random(self):
-        """抽取随机结果"""
-        # 动画模式下，使用管理器快速获取随机学生
-        if self.is_animating:
-            students = self.manager.get_random_students(self.current_count)
-            # 格式化为 UI 需要的格式 [(id, name, exist)]
-            selected_students = []
-            for s in students:
-                # s 是 [id, name, gender, group, exist]
-                exist = s[4] if len(s) > 4 else True
-                selected_students.append((s[0], s[1], exist))
-
-            self.display_result_animated(
-                selected_students, self.manager.current_class_name
-            )
-        else:
-            # 非动画模式（直接抽取），执行最终抽取
-            result = self.manager.draw_final_students(self.current_count)
-
-            if "reset_required" in result and result["reset_required"]:
-                class_name = self.list_combobox.currentText()
-                # Ensure manager filters are up to date
-                self.manager.reset_records()
-
-                show_notification(
-                    NotificationType.INFO,
-                    NotificationConfig(
-                        title="提示",
-                        content=f"已重置{class_name}已抽取记录",
-                        icon=FluentIcon.INFO,
-                    ),
-                    parent=self,
-                )
-                return
-
-            self.final_selected_students = result["selected_students"]
-            self.final_class_name = result["class_name"]
-            self.final_selected_students_dict = result["selected_students_dict"]
-            self.final_group_filter = result["group_filter"]
-            self.final_gender_filter = result["gender_filter"]
-
-            self.display_result(result["selected_students"], result["class_name"])
-
-            RollCallUtils.show_notification_if_enabled(
-                class_name=self.final_class_name,
-                selected_students=self.final_selected_students,
-                draw_count=self.current_count,
-                settings_group="roll_call_notification_settings",
-            )
+        return roll_call_manager.draw_random(self)
 
     def display_result(self, selected_students, class_name, display_settings=None):
-        """显示抽取结果
-
-        Args:
-            selected_students: 选中的学生列表
-            class_name: 班级名称
-            display_settings: 显示设置字典，如果提供则使用这些设置，否则使用默认的点名设置
-        """
-        group_index = self.range_combobox.currentIndex()
-        settings_group = (
-            "quick_draw_settings" if display_settings else "roll_call_settings"
-        )
-
-        RollCallUtils.display_result(
-            result_grid=self.result_grid,
-            class_name=class_name,
-            selected_students=selected_students,
-            draw_count=self.current_count,
-            group_index=group_index,
-            settings_group=settings_group,
-            display_settings=display_settings,
+        return roll_call_manager.display_result(
+            self, selected_students, class_name, display_settings
         )
 
     def display_result_animated(self, selected_students, class_name):
-        """动画过程中显示结果
-
-        Args:
-            selected_students: 选中的学生列表
-            class_name: 班级名称
-        """
-        group_index = self.range_combobox.currentIndex()
-        display_dict = RollCallUtils.create_display_settings("roll_call_settings")
-
-        student_labels = ResultDisplayUtils.create_student_label(
-            class_name=class_name,
-            selected_students=selected_students,
-            draw_count=self.current_count,
-            font_size=display_dict["font_size"],
-            animation_color=display_dict["animation_color"],
-            display_format=display_dict["display_format"],
-            show_student_image=display_dict["show_student_image"],
-            group_index=group_index,
-            show_random=display_dict["show_random"],
-            settings_group="roll_call_settings",
-        )
-
-        ResultDisplayUtils.display_results_in_grid(self.result_grid, student_labels)
-
-        # 发送动画到通知服务
-        RollCallUtils.show_notification_if_enabled(
-            class_name=class_name,
-            selected_students=selected_students,
-            draw_count=self.current_count,
-            settings_group="roll_call_notification_settings",
-            is_animating=True,
+        return roll_call_manager.display_result_animated(
+            self, selected_students, class_name
         )
 
     def _do_reset_count(self):
-        """实际执行重置人数的逻辑"""
-        self.current_count = 1
-        self.count_label.setText("1")
-        self.minus_button.setEnabled(False)
-        self.plus_button.setEnabled(True)
-        class_name = self.list_combobox.currentText()
-        gender = self.gender_combobox.currentText()
-        group = self.range_combobox.currentText()
-
-        self.manager.current_class_name = class_name
-        self.manager.current_gender_filter = gender
-        self.manager.current_group_filter = group
-        self.manager.reset_records()
-
-        clear_record = readme_settings_async("roll_call_settings", "clear_record")
-        if clear_record in [0, 1]:
-            show_notification(
-                NotificationType.INFO,
-                NotificationConfig(
-                    title="提示",
-                    content=f"已重置{class_name}已抽取记录",
-                    icon=FluentIcon.INFO,
-                ),
-                parent=self,
-            )
-        else:
-            show_notification(
-                NotificationType.INFO,
-                NotificationConfig(
-                    title="提示",
-                    content=f"当前处于重复抽取状态，无需清除{class_name}已抽取记录",
-                    icon=get_theme_icon("ic_fluent_warning_20_filled"),
-                ),
-                parent=self,
-            )
-
-        self.clear_result()
-        self.update_many_count_label()
-
-        # 更新剩余名单窗口
-        if (
-            hasattr(self, "remaining_list_page")
-            and self.remaining_list_page is not None
-        ):
-            QTimer.singleShot(APP_INIT_DELAY, self._update_remaining_list_delayed)
-
-        if (
-            hasattr(self, "remaining_list_page")
-            and self.remaining_list_page is not None
-            and hasattr(self.remaining_list_page, "count_changed")
-        ):
-            self.remaining_list_page.count_changed.emit(self.remaining_count)
+        return roll_call_manager.do_reset_count(self)
 
     def reset_count(self):
         """重置人数"""
-        # 检查当前时间是否在非上课时间段内
-        if _is_non_class_time():
-            # 检查是否需要验证流程
-            if readme_settings_async("linkage_settings", "verification_required"):
-                # 如果需要验证流程，弹出密码验证窗口
-                logger.info("当前时间在非上课时间段内，需要密码验证")
-                require_and_run("roll_call_reset", self, self._do_reset_count)
-            else:
-                # 如果不需要验证流程，直接禁止点击
-                logger.info("当前时间在非上课时间段内，禁止重置")
-                return
-        else:
-            # 如果不在非上课时间段内，直接执行重置
-            self._do_reset_count()
+        return roll_call_manager.reset_count(self)
 
     def clear_result(self):
         """清空结果显示"""
         ResultDisplayUtils.clear_grid(self.result_grid)
 
     def update_count(self, change):
-        """更新人数
-
-        Args:
-            change (int): 变化量，正数表示增加，负数表示减少
-        """
-        try:
-            self.total_count = RollCallUtils.get_total_count(
-                self.list_combobox.currentText(),
-                self.range_combobox.currentIndex(),
-                self.range_combobox.currentText(),
-            )
-            self.current_count = max(1, int(self.count_label.text()) + change)
-            self.count_label.setText(str(self.current_count))
-            self.minus_button.setEnabled(self.current_count > 1)
-            self.plus_button.setEnabled(self.current_count < self.total_count)
-        except (ValueError, TypeError):
-            self.count_label.setText("1")
-            self.minus_button.setEnabled(False)
-            self.plus_button.setEnabled(True)
+        return roll_call_manager.update_count(self, change)
 
     def get_total_count(self):
-        """获取总人数"""
-        return RollCallUtils.get_total_count(
-            self.list_combobox.currentText(),
-            self.range_combobox.currentIndex(),
-            self.range_combobox.currentText(),
-        )
+        return roll_call_manager.get_total_count(self)
 
     def update_many_count_label(self):
-        """更新多数量显示标签"""
-        total_count, remaining_count, formatted_text = (
-            RollCallUtils.update_many_count_label_text(
-                self.list_combobox.currentText(),
-                self.range_combobox.currentIndex(),
-                self.range_combobox.currentText(),
-                self.gender_combobox.currentText(),
-                readme_settings_async("roll_call_settings", "half_repeat"),
-            )
-        )
-
-        self.remaining_count = remaining_count
-        self.many_count_label.setText(formatted_text)
-
-        # 根据总人数是否为0，启用或禁用开始按钮
-        RollCallUtils.update_start_button_state(self.start_button, total_count)
+        return roll_call_manager.update_many_count_label(self)
 
     def update_remaining_list_window(self):
-        """更新剩余名单窗口的内容"""
-        if (
-            hasattr(self, "remaining_list_page")
-            and self.remaining_list_page is not None
-        ):
-            try:
-                class_name = self.list_combobox.currentText()
-                group_filter = self.range_combobox.currentText()
-                gender_filter = self.gender_combobox.currentText()
-                group_index = self.range_combobox.currentIndex()
-                gender_index = self.gender_combobox.currentIndex()
-                half_repeat = readme_settings_async("roll_call_settings", "half_repeat")
-
-                # 更新剩余名单页面内容
-                if hasattr(self.remaining_list_page, "update_remaining_list"):
-                    self.remaining_list_page.update_remaining_list(
-                        class_name,
-                        group_filter,
-                        gender_filter,
-                        half_repeat,
-                        group_index,
-                        gender_index,
-                        emit_signal=False,  # 不发出信号，避免循环更新
-                        source="roll_call",
-                    )
-            except Exception as e:
-                logger.exception(f"更新剩余名单窗口内容失败: {e}")
+        return roll_call_manager.update_remaining_list_window(self)
 
     def show_remaining_list(self):
-        """显示剩余名单窗口"""
-        # 如果窗口已存在，则激活该窗口并更新内容
-        if (
-            hasattr(self, "remaining_list_page")
-            and self.remaining_list_page is not None
-        ):
-            try:
-                # 获取窗口实例
-                window = self.remaining_list_page.window()
-                if window is not None:
-                    # 激活窗口并置于前台
-                    window.raise_()
-                    window.activateWindow()
-                    # 更新窗口内容
-                    self.update_remaining_list_window()
-                    return
-            except Exception as e:
-                logger.exception(f"激活剩余名单窗口失败: {e}")
-                # 如果激活失败，继续创建新窗口
-
-        # 创建新窗口
-        class_name = self.list_combobox.currentText()
-        group_filter = self.range_combobox.currentText()
-        gender_filter = self.gender_combobox.currentText()
-        group_index = self.range_combobox.currentIndex()
-        gender_index = self.gender_combobox.currentIndex()
-        half_repeat = readme_settings_async("roll_call_settings", "half_repeat")
-
-        window, get_page = create_remaining_list_window(
-            class_name,
-            group_filter,
-            gender_filter,
-            half_repeat,
-            group_index,
-            gender_index,
-            "roll_call",
-        )
-
-        def on_page_ready(page):
-            self.remaining_list_page = page
-
-            if page and hasattr(page, "count_changed"):
-                page.count_changed.connect(self.update_many_count_label)
-                self.update_many_count_label()
-
-        get_page(on_page_ready)
-
-        window.windowClosed.connect(lambda: setattr(self, "remaining_list_page", None))
-
-        window.show()
+        return roll_call_manager.show_remaining_list(self)
 
     def setup_file_watcher(self):
-        """设置文件监控器，监控名单文件夹的变化"""
-        try:
-            list_dir = get_data_path("list", "roll_call_list")
-
-            if not list_dir.exists():
-                list_dir.mkdir(parents=True, exist_ok=True)
-
-            self.file_watcher.addPath(str(list_dir))
-
-            self.file_watcher.directoryChanged.connect(self.on_directory_changed)
-            self.file_watcher.fileChanged.connect(self.on_file_changed)
-
-        except Exception as e:
-            logger.exception(f"设置文件监控器失败: {e}")
+        return roll_call_manager.setup_file_watcher(self)
 
     def on_directory_changed(self, path):
-        """当文件夹内容发生变化时触发"""
-        try:
-            QTimer.singleShot(500, self.refresh_class_list)
-        except Exception as e:
-            logger.exception(f"处理文件夹变化事件失败: {e}")
+        return roll_call_manager.on_directory_changed(self, path)
 
     def on_file_changed(self, path):
-        """当文件内容发生变化时触发"""
-        try:
-            QTimer.singleShot(500, self.refresh_class_list)
-        except Exception as e:
-            logger.exception(f"处理文件变化事件失败: {e}")
+        return roll_call_manager.on_file_changed(self, path)
 
     def refresh_class_list(self):
-        """刷新班级列表下拉框"""
-        try:
-            current_class = self.list_combobox.currentText()
-
-            new_class_list = get_class_name_list()
-
-            self.list_combobox.blockSignals(True)
-
-            self.list_combobox.clear()
-            self.list_combobox.addItems(new_class_list)
-
-            if current_class in new_class_list:
-                index = self.list_combobox.findText(current_class)
-                if index >= 0:
-                    self.list_combobox.setCurrentIndex(index)
-            elif new_class_list:
-                self.list_combobox.setCurrentIndex(0)
-
-            self.list_combobox.blockSignals(False)
-
-            self.on_class_changed()
-
-        except Exception as e:
-            logger.exception(f"刷新班级列表失败: {e}")
+        return roll_call_manager.refresh_class_list(self)
 
     def populate_lists(self):
-        """在后台填充班级/范围/性别下拉框并更新人数统计"""
-        try:
-            self._populate_class_list()
-            self._populate_range_combobox()
-            self._populate_gender_combobox()
-            self._update_count_label()
-            self._adjustControlWidgetWidths()
-
-        except Exception as e:
-            logger.exception(f"延迟填充列表失败: {e}")
+        return roll_call_manager.populate_lists(self)
 
     def _populate_class_list(self):
-        """填充班级列表"""
-        class_list = get_class_name_list()
-        self.list_combobox.blockSignals(True)
-        self.list_combobox.clear()
-        if class_list:
-            self.list_combobox.addItems(class_list)
-            default_class = readme_settings_async("roll_call_settings", "default_class")
-            if default_class and default_class in class_list:
-                index = class_list.index(default_class)
-                self.list_combobox.setCurrentIndex(index)
-                logger.debug(f"应用默认抽取名单: {default_class}")
-            else:
-                self.list_combobox.setCurrentIndex(0)
-        self.list_combobox.blockSignals(False)
+        return roll_call_manager._populate_class_list(self)
 
     def _populate_range_combobox(self):
-        """填充范围下拉框"""
-        self.range_combobox.blockSignals(True)
-        self.range_combobox.clear()
-
-        base_options = get_content_combo_name_async("roll_call", "range_combobox")
-        group_list = get_group_list(self.list_combobox.currentText())
-
-        if group_list:
-            self.range_combobox.addItems(base_options + group_list)
-        else:
-            self.range_combobox.addItems(base_options[:1])
-
-        self.range_combobox.blockSignals(False)
+        return roll_call_manager._populate_range_combobox(self)
 
     def _populate_gender_combobox(self):
-        """填充性别下拉框"""
-        self.gender_combobox.blockSignals(True)
-        self.gender_combobox.clear()
-        self.gender_combobox.addItems(
-            get_content_combo_name_async("roll_call", "gender_combobox")
-            + get_gender_list(self.list_combobox.currentText())
-        )
-        self.gender_combobox.blockSignals(False)
+        return roll_call_manager._populate_gender_combobox(self)
 
     def _update_count_label(self):
-        """更新人数统计标签"""
-        total_count, remaining_count, formatted_text = (
-            RollCallUtils.update_many_count_label_text(
-                self.list_combobox.currentText(),
-                self.range_combobox.currentIndex(),
-                self.range_combobox.currentText(),
-                self.gender_combobox.currentText(),
-                readme_settings("roll_call_settings", "half_repeat"),
-            )
-        )
-
-        self.remaining_count = remaining_count
-        self.many_count_label.setText(formatted_text)
-        RollCallUtils.update_start_button_state(self.start_button, total_count)
+        return roll_call_manager._update_count_label(self)
 
     def setupSettingsListener(self):
-        """设置设置监听器，监听页面管理设置变化"""
-        from app.tools.settings_access import get_settings_signals
-
-        settings_signals = get_settings_signals()
-        settings_signals.settingChanged.connect(self.onSettingsChanged)
+        return roll_call_manager.setup_settings_listener(self)
 
     def onSettingsChanged(self, first_level_key, second_level_key, value):
-        """当设置发生变化时的处理函数"""
-        # 只处理页面管理相关的设置变化
-        if first_level_key == "page_management" and second_level_key.startswith(
-            "roll_call"
-        ):
-            # 直接更新UI
-            self.updateUI()
-            # 发出信号让父组件处理
-            self.settingsChanged.emit()
+        return roll_call_manager.on_settings_changed(
+            self, first_level_key, second_level_key, value
+        )
 
     def updateUI(self):
         """更新UI控件的可见性"""
@@ -1372,23 +692,4 @@ class roll_call(QWidget):
         return super().eventFilter(obj, event)
 
     def _set_widget_font(self, widget, font_size):
-        """为控件设置字体"""
-        # 确保字体大小有效
-        try:
-            # 确保font_size是有效的整数
-            if not isinstance(font_size, (int, float)):
-                font_size = int(font_size) if str(font_size).isdigit() else 12
-
-            font_size = int(font_size)
-            if font_size <= 0:
-                font_size = 12  # 使用默认字体大小
-
-            custom_font = load_custom_font()
-            if custom_font:
-                widget.setFont(QFont(custom_font, font_size))
-        except (ValueError, TypeError) as e:
-            logger.warning(f"设置字体大小失败，使用默认值: {e}")
-            # 使用默认字体大小
-            custom_font = load_custom_font()
-            if custom_font:
-                widget.setFont(QFont(custom_font, 12))
+        return roll_call_manager.set_widget_font(widget, font_size)

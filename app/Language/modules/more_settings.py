@@ -82,6 +82,7 @@ about = {
         "website": {"name": "SecRandom 官网", "description": "访问SecRandom软件官网"},
         "copyright": {"name": "版权", "description": "SecRandom遵循GPL-3.0协议"},
         "version": {"name": "版本", "description": "显示当前软件版本号"},
+        "user_id": {"name": "用户ID", "description": "用于错误追踪的离线唯一标识"},
     },
     "EN_US": {
         "title": {"name": "About", "description": "APP about page"},
@@ -118,6 +119,10 @@ about = {
         },
         "copyright": {"name": "Copyright", "description": "SecRandom follows GPL-3.0"},
         "version": {"name": "Version", "description": "Show current version"},
+        "user_id": {
+            "name": "User ID",
+            "description": "Offline unique identifier for error tracking",
+        },
     },
 }
 

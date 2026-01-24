@@ -509,9 +509,17 @@ class RollCallUtils:
                 "display_format",
                 readme_settings_async(settings_group, "display_format"),
             )
+            display_style = display_settings.get(
+                "display_style",
+                readme_settings_async(settings_group, "display_style"),
+            )
             show_student_image = display_settings.get(
                 "student_image",
                 readme_settings_async(settings_group, "student_image"),
+            )
+            image_position = display_settings.get(
+                "student_image_position",
+                readme_settings_async(settings_group, "student_image_position"),
             )
             show_random = display_settings.get(
                 "show_random",
@@ -523,14 +531,20 @@ class RollCallUtils:
                 settings_group, "animation_color_theme"
             )
             display_format = readme_settings_async(settings_group, "display_format")
+            display_style = readme_settings_async(settings_group, "display_style")
             show_student_image = readme_settings_async(settings_group, "student_image")
+            image_position = readme_settings_async(
+                settings_group, "student_image_position"
+            )
             show_random = readme_settings_async(settings_group, "show_random")
 
         return {
             "font_size": font_size,
             "animation_color": animation_color,
             "display_format": display_format,
+            "display_style": display_style,
             "show_student_image": show_student_image,
+            "image_position": image_position,
             "show_random": show_random,
         }
 
@@ -567,7 +581,9 @@ class RollCallUtils:
             font_size=display_dict["font_size"],
             animation_color=display_dict["animation_color"],
             display_format=display_dict["display_format"],
+            display_style=display_dict["display_style"],
             show_student_image=display_dict["show_student_image"],
+            image_position=display_dict.get("image_position"),
             group_index=group_index,
             show_random=display_dict["show_random"],
             settings_group=settings_group,
@@ -632,7 +648,9 @@ class RollCallUtils:
             font_size = display_settings.get("font_size")
             animation_color_theme = display_settings.get("animation_color_theme")
             display_format = display_settings.get("display_format")
+            display_style = display_settings.get("display_style")
             student_image = display_settings.get("student_image")
+            image_position = display_settings.get("student_image_position")
             show_random = display_settings.get("show_random")
         else:
             font_size = get_safe_font_size(
@@ -647,9 +665,17 @@ class RollCallUtils:
                 settings_group.replace("_notification_settings", "_settings"),
                 "display_format",
             )
+            display_style = readme_settings_async(
+                settings_group.replace("_notification_settings", "_settings"),
+                "display_style",
+            )
             student_image = readme_settings_async(
                 settings_group.replace("_notification_settings", "_settings"),
                 "student_image",
+            )
+            image_position = readme_settings_async(
+                settings_group.replace("_notification_settings", "_settings"),
+                "student_image_position",
             )
             show_random = readme_settings_async(
                 settings_group.replace("_notification_settings", "_settings"),
@@ -660,7 +686,9 @@ class RollCallUtils:
             "font_size": font_size,
             "animation_color_theme": animation_color_theme,
             "display_format": display_format,
+            "display_style": display_style,
             "student_image": student_image,
+            "image_position": image_position,
             "show_random": show_random,
             "animation": readme_settings_async(settings_group, "animation"),
             "transparency": readme_settings_async(

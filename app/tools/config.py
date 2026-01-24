@@ -1,8 +1,8 @@
 import os
 import json
-import glob
 import shutil
 import zipfile
+import re
 from typing import Optional, Union, Callable
 from loguru import logger
 from pathlib import Path
@@ -24,6 +24,7 @@ if sys.platform.startswith("linux"):
 
 from app.tools.path_utils import (
     get_app_root,
+    get_audio_path,
     get_data_path,
     get_settings_path,
     get_path,
@@ -944,7 +945,7 @@ def _export_diagnostic_files(file_path: str, app_dir: Path) -> int:
         get_data_path("list"),
         get_data_path("Language"),
         get_data_path("history"),
-        get_data_path("audio"),
+        get_audio_path(),
         get_data_path("CSES"),
         get_data_path("images"),
         get_path(LOG_DIR),
@@ -1068,7 +1069,7 @@ def _collect_system_info(
                     get_data_path("list"),
                     get_data_path("Language"),
                     get_data_path("history"),
-                    get_data_path("audio"),
+                    get_audio_path(),
                     get_data_path("CSES"),
                     get_data_path("images"),
                     get_path(LOG_DIR),
@@ -1282,7 +1283,7 @@ def export_all_data(parent: Optional[QWidget] = None) -> None:
             ("list", get_data_path("list")),
             ("Language", get_data_path("Language")),
             ("history", get_data_path("history")),
-            ("audio", get_data_path("audio")),
+            ("audio", get_audio_path()),
             ("CSES", get_data_path("CSES")),
             ("images", get_data_path("images")),
             ("logs", get_path(LOG_DIR)),
@@ -1588,7 +1589,7 @@ def _check_existing_files(file_path: str) -> list:
         "list": get_data_path("list"),
         "Language": get_data_path("Language"),
         "history": get_data_path("history"),
-        "audio": get_data_path("audio"),
+        "audio": get_audio_path(),
         "CSES": get_data_path("CSES"),
         "images": get_data_path("images"),
         "logs": get_path(LOG_DIR),
@@ -1645,7 +1646,7 @@ def _extract_data_files(file_path: str) -> list:
         "history": get_data_path("history"),
         "CSES": get_data_path("CSES"),
         "images": get_data_path("images"),
-        "audio": get_data_path("audio"),
+        "audio": get_audio_path(),
         "logs": get_path(LOG_DIR),
     }
 
@@ -1714,7 +1715,19 @@ def _extract_data_files(file_path: str) -> list:
 # ==================== 记录管理模块 ====================
 
 
-def check_clear_record() -> Optional[str]:
+def _normalize_clear_record_mode(clear_record) -> Optional[str]:
+    try:
+        clear_record = int(clear_record)
+    except Exception:
+        return None
+    if clear_record == 0:
+        return "all"
+    if clear_record == 1:
+        return "until"
+    return None
+
+
+def check_clear_record(settings_group: str) -> Optional[str]:
     """检查是否需要清除已抽取记录
 
     Returns:
@@ -1722,13 +1735,41 @@ def check_clear_record() -> Optional[str]:
         "until": 直至全部抽取完
         None: 不清除记录
     """
-    clear_record = readme_settings_async("roll_call_settings", "clear_record")
-    if clear_record == 0:
-        return "all"
-    elif clear_record == 1:
-        return "until"
-    else:
+    draw_mode = readme_settings_async(settings_group, "draw_mode")
+    try:
+        draw_mode = int(draw_mode)
+    except Exception:
+        draw_mode = 0
+    if draw_mode == 0:
         return None
+    clear_record = readme_settings_async(settings_group, "clear_record")
+    normalized = _normalize_clear_record_mode(clear_record)
+    return normalized or "all"
+
+
+def _normalize_record_component(value, default_value: str = "unknown") -> str:
+    if value is None:
+        return default_value
+    text = str(value).strip()
+    if not text:
+        return default_value
+    text = re.sub(r'[\\/:*?"<>|]', "_", text)
+    text = re.sub(r"\s+", "_", text)
+    return text
+
+
+def _build_record_file_name(prefix: str, *parts) -> str:
+    normalized_parts = [_normalize_record_component(part) for part in parts]
+    if normalized_parts:
+        return f"{prefix}__{'__'.join(normalized_parts)}.json"
+    return f"{prefix}.json"
+
+
+def _get_roll_call_record_file_path(class_name: str, gender: str, group: str):
+    return get_data_path(
+        "TEMP",
+        _build_record_file_name("roll_call_record", class_name, gender, group),
+    )
 
 
 def record_drawn_student(
@@ -1742,8 +1783,8 @@ def record_drawn_student(
         group: 分组
         student_name: 学生名称或学生列表
     """
-    file_path = get_data_path("TEMP", f"draw_until_{class_name}_{gender}_{group}.json")
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    file_path = _get_roll_call_record_file_path(class_name, gender, group)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
 
     drawn_records = _load_drawn_records(file_path)
     students_to_add = _extract_student_names(student_name)
@@ -1783,20 +1824,21 @@ def _load_drawn_records(file_path: str) -> dict:
         drawn_records = {}
 
         if isinstance(data, dict):
-            for name, count in data.items():
-                if isinstance(name, str) and isinstance(count, int):
-                    drawn_records[name] = count
-        elif isinstance(data, list):
-            for item in data:
-                if isinstance(item, str):
-                    drawn_records[item] = 1
-                elif isinstance(item, dict) and "name" in item:
-                    name = item["name"]
-                    count = item.get("count", 1)
+            if "drawn_names" in data and isinstance(data["drawn_names"], list):
+                for item in data["drawn_names"]:
+                    if isinstance(item, str):
+                        drawn_records[item] = 1
+                    elif isinstance(item, dict) and "name" in item:
+                        name = item["name"]
+                        count = item.get("count", 1)
+                        if isinstance(name, str) and isinstance(count, int):
+                            drawn_records[name] = count
+            else:
+                for name, count in data.items():
                     if isinstance(name, str) and isinstance(count, int):
                         drawn_records[name] = count
-        elif isinstance(data, dict) and "drawn_names" in data:
-            for item in data["drawn_names"]:
+        elif isinstance(data, list):
+            for item in data:
                 if isinstance(item, str):
                     drawn_records[item] = 1
                 elif isinstance(item, dict) and "name" in item:
@@ -1863,7 +1905,7 @@ def read_drawn_record(class_name: str, gender: str, group: str) -> list:
     Returns:
         已抽取记录列表，每个元素为(名称, 次数)元组
     """
-    file_path = get_data_path("TEMP", f"draw_until_{class_name}_{gender}_{group}.json")
+    file_path = _get_roll_call_record_file_path(class_name, gender, group)
     drawn_records = _load_drawn_records(file_path)
     return list(drawn_records.items())
 
@@ -1877,31 +1919,32 @@ def remove_record(class_name: str, gender: str, group: str, _prefix: str = "0") 
         group: 分组
         _prefix: 前缀标识
     """
-    prefix = check_clear_record()
-    if prefix == "all" and _prefix == "restart":
+    prefix = check_clear_record("roll_call_settings")
+    if _prefix == "restart":
         prefix = "restart"
 
     logger.debug(f"清除记录前缀: {prefix}, _prefix: {_prefix}")
+
+    if not prefix:
+        return
 
     temp_dir = get_data_path("TEMP")
     if not temp_dir.exists():
         return
 
+    file_paths = []
+    if prefix == "restart":
+        file_paths = list(temp_dir.glob("roll_call_record__*.json"))
+    elif class_name and gender and group:
+        if prefix in ["all", "until"]:
+            file_paths = [_get_roll_call_record_file_path(class_name, gender, group)]
+
+    if not file_paths:
+        return
+
     try:
-        if prefix == "all":
-            pattern = f"draw_*_{class_name}_{gender}_{group}.json"
-            for file_path in temp_dir.glob(pattern):
-                file_path.unlink(missing_ok=True)
-                logger.info(f"已删除记录文件: {file_path.name}")
-        elif prefix == "until":
-            file_name = f"draw_{prefix}_{class_name}_{gender}_{group}.json"
-            file_path = temp_dir / file_name
-            if file_path.exists():
-                file_path.unlink()
-                logger.info(f"已删除记录文件: {file_name}")
-        elif prefix == "restart":
-            pattern = "draw_*.json"
-            for file_path in temp_dir.glob(pattern):
+        for file_path in file_paths:
+            if file_path.exists() and file_path.is_file():
                 file_path.unlink(missing_ok=True)
                 logger.info(f"已删除记录文件: {file_path.name}")
     except OSError as e:
@@ -1917,8 +1960,7 @@ def reset_drawn_record(self, class_name: str, gender: str, group: str) -> None:
         gender: 性别
         group: 分组
     """
-    clear_record = readme_settings_async("roll_call_settings", "clear_record")
-    if clear_record in [0, 1]:
+    if check_clear_record("roll_call_settings") in ["all", "until"]:
         remove_record(class_name, gender, group)
         show_notification(
             NotificationType.INFO,
@@ -1943,6 +1985,27 @@ def reset_drawn_record(self, class_name: str, gender: str, group: str) -> None:
         logger.info(
             f"当前处于重复抽取状态，无需清除{class_name}_{gender}_{group}已抽取记录"
         )
+
+
+def clear_temp_draw_records() -> int:
+    temp_dir = get_data_path("TEMP")
+    if not temp_dir.exists():
+        return 0
+
+    file_paths = list(temp_dir.glob("roll_call_record__*.json")) + list(
+        temp_dir.glob("lottery_prize_record__*.json")
+    )
+    deleted_count = 0
+    for file_path in file_paths:
+        try:
+            if file_path.exists() and file_path.is_file():
+                file_path.unlink(missing_ok=True)
+                deleted_count += 1
+        except OSError as e:
+            logger.exception(f"删除记录文件失败: {e}")
+    if deleted_count:
+        logger.info(f"已清除 {deleted_count} 个抽取临时记录文件")
+    return deleted_count
 
 
 def calculate_remaining_count(
@@ -2007,6 +2070,13 @@ def calculate_remaining_count(
         return total_count
 
 
+def _get_lottery_prize_record_file_path(pool_name: str):
+    return get_data_path(
+        "TEMP",
+        _build_record_file_name("lottery_prize_record", pool_name),
+    )
+
+
 def record_drawn_prize(pool_name: str, prize_names) -> None:
     """记录已抽取的奖品
 
@@ -2014,8 +2084,8 @@ def record_drawn_prize(pool_name: str, prize_names) -> None:
         pool_name: 奖池名称
         prize_names: 奖品名称或奖品列表
     """
-    file_path = get_data_path("TEMP", f"draw_until_prize_{pool_name}.json")
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    file_path = _get_lottery_prize_record_file_path(pool_name)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
     drawn_records = _load_drawn_records(file_path)
     names = _extract_student_names(prize_names)
     for name in names:
@@ -2035,8 +2105,8 @@ def read_drawn_record_simple(pool_name: str) -> list:
     Returns:
         已抽取记录列表，每个元素为(名称, 次数)元组
     """
-    file_path = get_data_path("TEMP", f"draw_until_prize_{pool_name}.json")
-    if os.path.exists(file_path):
+    file_path = _get_lottery_prize_record_file_path(pool_name)
+    if file_path.exists():
         try:
             with open(file_path, "r", encoding="utf-8") as file:
                 data = json.load(file)
@@ -2066,12 +2136,12 @@ def delete_drawn_prize_record_files(pool_name: str) -> bool:
         bool: 是否成功删除
     """
     try:
-        pattern = os.path.join("data", "TEMP", f"draw_*_prize_{pool_name}.json")
-        for fp in glob.glob(pattern):
+        file_path = _get_lottery_prize_record_file_path(pool_name)
+        if file_path.exists() and file_path.is_file():
             try:
-                os.remove(fp)
+                file_path.unlink(missing_ok=True)
             except OSError as e:
-                logger.error(f"删除文件{fp}失败: {e}")
+                logger.error(f"删除文件{file_path}失败: {e}")
         return True
     except Exception as e:
         logger.exception(f"重置奖池抽取记录失败: {e}")
@@ -2085,13 +2155,24 @@ def reset_drawn_prize_record(self, pool_name: str) -> None:
         self: 父窗口组件
         pool_name: 奖池名称
     """
-    if delete_drawn_prize_record_files(pool_name):
+    if check_clear_record("lottery_settings") in ["all", "until"]:
+        if delete_drawn_prize_record_files(pool_name):
+            show_notification(
+                NotificationType.INFO,
+                NotificationConfig(
+                    title="提示",
+                    content=f"已重置{pool_name}奖池抽取记录",
+                    icon=FluentIcon.INFO,
+                ),
+                parent=self,
+            )
+    else:
         show_notification(
             NotificationType.INFO,
             NotificationConfig(
                 title="提示",
-                content=f"已重置{pool_name}奖池抽取记录",
-                icon=FluentIcon.INFO,
+                content=f"当前处于重复抽取状态，无需清除{pool_name}奖池抽取记录",
+                icon=get_theme_icon("ic_fluent_warning_20_filled"),
             ),
             parent=self,
         )

@@ -270,7 +270,7 @@ class roll_call_extraction_function(GroupHeaderCardWidget):
             )
 
             # 检查保存的设置是否有效
-            if 0 <= saved_clear_record:
+            if 0 <= saved_clear_record < self.clear_record_combo.count():
                 self.clear_record_combo.setCurrentIndex(saved_clear_record)
             else:
                 self.clear_record_combo.setCurrentIndex(0)
@@ -370,6 +370,22 @@ class roll_call_display_settings(GroupHeaderCardWidget):
             )
         )
 
+        # 结果显示样式下拉框
+        self.display_style_combo = ComboBox()
+        self.display_style_combo.addItems(
+            get_content_combo_name_async("roll_call_settings", "display_style")
+        )
+        self.display_style_combo.setCurrentIndex(
+            readme_settings_async("roll_call_settings", "display_style")
+        )
+        self.display_style_combo.currentIndexChanged.connect(
+            lambda: update_settings(
+                "roll_call_settings",
+                "display_style",
+                self.display_style_combo.currentIndex(),
+            )
+        )
+
         # 显示随机组员格式下拉框
         self.show_random_format_combo = ComboBox()
         self.show_random_format_combo.addItems(
@@ -412,6 +428,12 @@ class roll_call_display_settings(GroupHeaderCardWidget):
             get_content_name_async("roll_call_settings", "display_format"),
             get_content_description_async("roll_call_settings", "display_format"),
             self.display_format_combo,
+        )
+        self.addGroup(
+            get_theme_icon("ic_fluent_style_guide_20_filled"),
+            get_content_name_async("roll_call_settings", "display_style"),
+            get_content_description_async("roll_call_settings", "display_style"),
+            self.display_style_combo,
         )
         self.addGroup(
             get_theme_icon("ic_fluent_group_list_20_filled"),
@@ -671,6 +693,21 @@ class roll_call_student_image_settings(GroupHeaderCardWidget):
             )
         )
 
+        self.student_image_position_combo = ComboBox()
+        self.student_image_position_combo.addItems(
+            get_content_combo_name_async("roll_call_settings", "student_image_position")
+        )
+        self.student_image_position_combo.setCurrentIndex(
+            readme_settings_async("roll_call_settings", "student_image_position")
+        )
+        self.student_image_position_combo.currentIndexChanged.connect(
+            lambda: update_settings(
+                "roll_call_settings",
+                "student_image_position",
+                self.student_image_position_combo.currentIndex(),
+            )
+        )
+
         # 打开学生图片文件夹按钮
         self.open_student_image_folder_button = PushButton(
             get_content_name_async("roll_call_settings", "open_student_image_folder")
@@ -685,6 +722,14 @@ class roll_call_student_image_settings(GroupHeaderCardWidget):
             get_content_name_async("roll_call_settings", "student_image"),
             get_content_description_async("roll_call_settings", "student_image"),
             self.student_image_switch,
+        )
+        self.addGroup(
+            get_theme_icon("ic_fluent_image_circle_20_filled"),
+            get_content_name_async("roll_call_settings", "student_image_position"),
+            get_content_description_async(
+                "roll_call_settings", "student_image_position"
+            ),
+            self.student_image_position_combo,
         )
         self.addGroup(
             get_theme_icon("ic_fluent_folder_open_20_filled"),
