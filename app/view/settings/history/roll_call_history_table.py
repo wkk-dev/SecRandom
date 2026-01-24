@@ -57,6 +57,7 @@ class roll_call_history_table(GroupHeaderCardWidget):
         self.cached_students_data = []  # 缓存的学生数据列表
         self.cached_sessions_data = []  # 缓存的会话数据列表
         self.cached_stats_data = []  # 缓存的统计数据列表
+        self.force_load_all = False
 
         # 创建班级选择区域
         QTimer.singleShot(APPLY_DELAY, self.create_class_selection)
@@ -207,6 +208,18 @@ class roll_call_history_table(GroupHeaderCardWidget):
         if current_value >= max_value - scroll_threshold:
             self._load_more_data()
 
+    def _ensure_scrollable_rows(self):
+        if not hasattr(self, "table"):
+            return
+        if self.current_row >= self.total_rows:
+            return
+        max_value = self.table.verticalScrollBar().maximum()
+        attempts = 0
+        while self.current_row < self.total_rows and max_value == 0 and attempts < 20:
+            self._load_more_data()
+            max_value = self.table.verticalScrollBar().maximum()
+            attempts += 1
+
     def _on_header_clicked(self, column):
         """处理表头点击事件，实现排序
 
@@ -241,6 +254,8 @@ class roll_call_history_table(GroupHeaderCardWidget):
         # 设置排序指示器
         self.table.horizontalHeader().setSortIndicator(column, new_sort_order)
         self.table.horizontalHeader().setSortIndicatorShown(True)
+
+        self.force_load_all = True
 
         # 重置数据加载状态
         self.current_row = 0
@@ -950,7 +965,11 @@ class roll_call_history_table(GroupHeaderCardWidget):
                     if students_count:
                         self.total_rows = students_count
                         # 设置初始行数为批次大小或总行数，取较小值
-                        initial_rows = min(self.batch_size, self.total_rows)
+                        initial_rows = (
+                            self.total_rows
+                            if self.force_load_all
+                            else min(self.batch_size, self.total_rows)
+                        )
                         self.table.setRowCount(initial_rows)
                         # 加载第一批数据
                         self._load_more_students_data()
@@ -960,10 +979,15 @@ class roll_call_history_table(GroupHeaderCardWidget):
                     if sessions_count:
                         self.total_rows = sessions_count
                         # 设置初始行数为批次大小或总行数，取较小值
-                        initial_rows = min(self.batch_size, self.total_rows)
+                        initial_rows = (
+                            self.total_rows
+                            if self.force_load_all
+                            else min(self.batch_size, self.total_rows)
+                        )
                         self.table.setRowCount(initial_rows)
                         # 加载第一批数据
                         self._load_more_sessions_data()
+                    self._ensure_scrollable_rows()
                 else:
                     # 当模式值大于等于2时，从设置中获取学生姓名
                     self.current_student_name = readme_settings_async(
@@ -976,10 +1000,15 @@ class roll_call_history_table(GroupHeaderCardWidget):
                     if stats_count:
                         self.total_rows = stats_count
                         # 设置初始行数为批次大小或总行数，取较小值
-                        initial_rows = min(self.batch_size, self.total_rows)
+                        initial_rows = (
+                            self.total_rows
+                            if self.force_load_all
+                            else min(self.batch_size, self.total_rows)
+                        )
                         self.table.setRowCount(initial_rows)
                         # 加载第一批数据
                         self._load_more_stats_data(self.current_student_name)
+                    self._ensure_scrollable_rows()
                 return
 
             self.current_mode = self.mode_comboBox.currentIndex()
@@ -989,20 +1018,31 @@ class roll_call_history_table(GroupHeaderCardWidget):
                 if students_count:
                     self.total_rows = students_count
                     # 设置初始行数为批次大小或总行数，取较小值
-                    initial_rows = min(self.batch_size, self.total_rows)
+                    initial_rows = (
+                        self.total_rows
+                        if self.force_load_all
+                        else min(self.batch_size, self.total_rows)
+                    )
                     self.table.setRowCount(initial_rows)
                     # 加载第一批数据
                     self._load_more_students_data()
+                    self._ensure_scrollable_rows()
             elif self.current_mode == 1:
                 # 获取会话记录数量
                 sessions_count = get_draw_sessions_history("roll_call", class_name)
                 if sessions_count:
                     self.total_rows = sessions_count
+                    self.total_rows = sessions_count
                     # 设置初始行数为批次大小或总行数，取较小值
-                    initial_rows = min(self.batch_size, self.total_rows)
+                    initial_rows = (
+                        self.total_rows
+                        if self.force_load_all
+                        else min(self.batch_size, self.total_rows)
+                    )
                     self.table.setRowCount(initial_rows)
                     # 加载第一批数据
                     self._load_more_sessions_data()
+                    self._ensure_scrollable_rows()
             else:
                 stats = get_individual_statistics(
                     "roll_call", class_name, self.mode_comboBox.currentText()
@@ -1010,11 +1050,16 @@ class roll_call_history_table(GroupHeaderCardWidget):
                 if stats:
                     self.total_rows = stats
                     # 设置初始行数为批次大小或总行数，取较小值
-                    initial_rows = min(self.batch_size, self.total_rows)
+                    initial_rows = (
+                        self.total_rows
+                        if self.force_load_all
+                        else min(self.batch_size, self.total_rows)
+                    )
                     self.table.setRowCount(initial_rows)
                     self.current_student_name = self.mode_comboBox.currentText()
                     # 加载第一批数据
                     self._load_more_stats_data(self.current_student_name)
+                    self._ensure_scrollable_rows()
 
             # 设置表格列属性
             for i in range(self.table.columnCount()):
@@ -1036,6 +1081,7 @@ class roll_call_history_table(GroupHeaderCardWidget):
             logger.exception(f"刷新表格数据失败: {str(e)}")
         finally:
             self.table.blockSignals(False)
+            self.force_load_all = False
 
     def update_table_headers(self):
         """更新表格标题"""

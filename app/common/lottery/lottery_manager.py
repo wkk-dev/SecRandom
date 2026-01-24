@@ -1005,7 +1005,19 @@ def display_result(widget, selected_students, pool_name):
         show_random=render_settings["show_random"],
         settings_group="lottery_settings",
     )
-    ResultDisplayUtils.display_results_in_grid(widget.result_grid, student_labels)
+    cached_widgets = ResultDisplayUtils.collect_grid_widgets(widget.result_grid)
+    if cached_widgets and len(cached_widgets) == len(student_labels):
+        updated = ResultDisplayUtils.update_grid_labels(
+            widget.result_grid, student_labels, cached_widgets
+        )
+        if updated:
+            ResultDisplayUtils.dispose_widgets(student_labels)
+        else:
+            ResultDisplayUtils.display_results_in_grid(
+                widget.result_grid, student_labels
+            )
+    else:
+        ResultDisplayUtils.display_results_in_grid(widget.result_grid, student_labels)
 
 
 def display_result_animated(widget, selected_students, pool_name):
@@ -1025,8 +1037,19 @@ def display_result_animated(widget, selected_students, pool_name):
         show_random=render_settings["show_random"],
         settings_group="lottery_settings",
     )
-
-    ResultDisplayUtils.display_results_in_grid(widget.result_grid, student_labels)
+    cached_widgets = ResultDisplayUtils.collect_grid_widgets(widget.result_grid)
+    if cached_widgets and len(cached_widgets) == len(student_labels):
+        updated = ResultDisplayUtils.update_grid_labels(
+            widget.result_grid, student_labels, cached_widgets
+        )
+        if updated:
+            ResultDisplayUtils.dispose_widgets(student_labels)
+        else:
+            ResultDisplayUtils.display_results_in_grid(
+                widget.result_grid, student_labels
+            )
+    else:
+        ResultDisplayUtils.display_results_in_grid(widget.result_grid, student_labels)
 
     settings = widget.manager.get_notification_settings(refresh=False)
     if settings is not None:

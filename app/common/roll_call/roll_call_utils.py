@@ -588,7 +588,17 @@ class RollCallUtils:
             show_random=display_dict["show_random"],
             settings_group=settings_group,
         )
-        ResultDisplayUtils.display_results_in_grid(result_grid, student_labels)
+        cached_widgets = ResultDisplayUtils.collect_grid_widgets(result_grid)
+        if cached_widgets and len(cached_widgets) == len(student_labels):
+            updated = ResultDisplayUtils.update_grid_labels(
+                result_grid, student_labels, cached_widgets
+            )
+            if updated:
+                ResultDisplayUtils.dispose_widgets(student_labels)
+            else:
+                ResultDisplayUtils.display_results_in_grid(result_grid, student_labels)
+        else:
+            ResultDisplayUtils.display_results_in_grid(result_grid, student_labels)
 
     @staticmethod
     def record_drawn_students(

@@ -55,6 +55,7 @@ class lottery_history_table(GroupHeaderCardWidget):
         self.cached_lotterys_data = []  # 缓存的奖品数据列表
         self.cached_sessions_data = []  # 缓存的会话数据列表
         self.cached_stats_data = []  # 缓存的统计数据列表
+        self.force_load_all = False
 
         # 创建奖池选择区域
         QTimer.singleShot(APPLY_DELAY, self.create_pool_selection)
@@ -196,10 +197,22 @@ class lottery_history_table(GroupHeaderCardWidget):
         max_value = self.table.verticalScrollBar().maximum()
         current_value = self.table.verticalScrollBar().value()
 
-        # 使用更精确的滚动检测，确保在滚动到底部时触发
-        scroll_threshold = max(20, max_value * 0.1)  # 至少20像素或10%的位置
-        if current_value >= max_value - scroll_threshold:
+        page_step = self.table.verticalScrollBar().pageStep()
+        trigger_distance = max(page_step * 2, max_value * 0.3)
+        if current_value >= max_value - trigger_distance:
             self._load_more_data()
+
+    def _ensure_scrollable_rows(self):
+        if not hasattr(self, "table"):
+            return
+        if self.current_row >= self.total_rows:
+            return
+        max_value = self.table.verticalScrollBar().maximum()
+        attempts = 0
+        while self.current_row < self.total_rows and max_value == 0 and attempts < 20:
+            self._load_more_data()
+            max_value = self.table.verticalScrollBar().maximum()
+            attempts += 1
 
     def _on_header_clicked(self, column):
         """处理表头点击事件，实现排序
@@ -235,6 +248,8 @@ class lottery_history_table(GroupHeaderCardWidget):
         # 设置排序指示器
         self.table.horizontalHeader().setSortIndicator(column, new_sort_order)
         self.table.horizontalHeader().setSortIndicatorShown(True)
+
+        self.force_load_all = True
 
         # 重置数据加载状态
         self.current_row = 0
@@ -733,7 +748,11 @@ class lottery_history_table(GroupHeaderCardWidget):
                     if lotterys_count:
                         self.total_rows = lotterys_count
                         # 设置初始行数为批次大小或总行数，取较小值
-                        initial_rows = min(self.batch_size, self.total_rows)
+                        initial_rows = (
+                            self.total_rows
+                            if self.force_load_all
+                            else min(self.batch_size, self.total_rows)
+                        )
                         self.table.setRowCount(initial_rows)
                         # 加载第一批数据
                         self._load_more_lotterys_data()
@@ -743,10 +762,15 @@ class lottery_history_table(GroupHeaderCardWidget):
                     if sessions_count:
                         self.total_rows = sessions_count
                         # 设置初始行数为批次大小或总行数，取较小值
-                        initial_rows = min(self.batch_size, self.total_rows)
+                        initial_rows = (
+                            self.total_rows
+                            if self.force_load_all
+                            else min(self.batch_size, self.total_rows)
+                        )
                         self.table.setRowCount(initial_rows)
                         # 加载第一批数据
                         self._load_more_sessions_data()
+                    self._ensure_scrollable_rows()
                 else:
                     # 当模式值大于等于2时，从设置中获取奖品名称
                     self.current_lottery_name = readme_settings_async(
@@ -759,10 +783,15 @@ class lottery_history_table(GroupHeaderCardWidget):
                     if stats_count:
                         self.total_rows = stats_count
                         # 设置初始行数为批次大小或总行数，取较小值
-                        initial_rows = min(self.batch_size, self.total_rows)
+                        initial_rows = (
+                            self.total_rows
+                            if self.force_load_all
+                            else min(self.batch_size, self.total_rows)
+                        )
                         self.table.setRowCount(initial_rows)
                         # 加载第一批数据
                         self._load_more_stats_data(self.current_lottery_name)
+                    self._ensure_scrollable_rows()
                 return
 
             self.current_mode = self.mode_comboBox.currentIndex()
@@ -772,20 +801,31 @@ class lottery_history_table(GroupHeaderCardWidget):
                 if lotterys_count:
                     self.total_rows = lotterys_count
                     # 设置初始行数为批次大小或总行数，取较小值
-                    initial_rows = min(self.batch_size, self.total_rows)
+                    initial_rows = (
+                        self.total_rows
+                        if self.force_load_all
+                        else min(self.batch_size, self.total_rows)
+                    )
                     self.table.setRowCount(initial_rows)
                     # 加载第一批数据
                     self._load_more_lotterys_data()
+                    self._ensure_scrollable_rows()
             elif self.current_mode == 1:
                 # 获取会话记录数量
                 sessions_count = get_draw_sessions_history("lottery", pool_name)
                 if sessions_count:
                     self.total_rows = sessions_count
+                    self.total_rows = sessions_count
                     # 设置初始行数为批次大小或总行数，取较小值
-                    initial_rows = min(self.batch_size, self.total_rows)
+                    initial_rows = (
+                        self.total_rows
+                        if self.force_load_all
+                        else min(self.batch_size, self.total_rows)
+                    )
                     self.table.setRowCount(initial_rows)
                     # 加载第一批数据
                     self._load_more_sessions_data()
+                    self._ensure_scrollable_rows()
             else:
                 # 获取个人统计记录数量
                 stats_count = get_individual_statistics(
@@ -794,11 +834,16 @@ class lottery_history_table(GroupHeaderCardWidget):
                 if stats_count:
                     self.total_rows = stats_count
                     # 设置初始行数为批次大小或总行数，取较小值
-                    initial_rows = min(self.batch_size, self.total_rows)
+                    initial_rows = (
+                        self.total_rows
+                        if self.force_load_all
+                        else min(self.batch_size, self.total_rows)
+                    )
                     self.table.setRowCount(initial_rows)
                     self.current_lottery_name = self.mode_comboBox.currentText()
                     # 加载第一批数据
                     self._load_more_stats_data(self.current_lottery_name)
+                    self._ensure_scrollable_rows()
 
             # 设置表格列属性
             for i in range(self.table.columnCount()):
@@ -820,6 +865,7 @@ class lottery_history_table(GroupHeaderCardWidget):
             logger.exception(f"刷新表格数据失败: {str(e)}")
         finally:
             self.table.blockSignals(False)
+            self.force_load_all = False
 
     def update_table_headers(self):
         """更新表格标题"""

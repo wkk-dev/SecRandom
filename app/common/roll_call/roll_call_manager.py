@@ -1,4 +1,12 @@
-from PySide6.QtCore import QObject, Signal, QTimer, QEasingCurve, QFileSystemWatcher
+from PySide6.QtCore import (
+    QObject,
+    Signal,
+    QTimer,
+    QEasingCurve,
+    QFileSystemWatcher,
+    QThreadPool,
+    QRunnable,
+)
 from PySide6.QtGui import QFont
 from dataclasses import dataclass
 from loguru import logger
@@ -72,6 +80,9 @@ class RollCallManager(QObject):
         self.current_group_index = 0
         self.current_gender_index = 0
         self.half_repeat = 0
+        self._precomputed_result = None
+        self._precompute_key = None
+        self._precompute_running = False
 
     def build_draw_context(
         self,
@@ -179,6 +190,9 @@ class RollCallManager(QObject):
         加载学生数据
         """
         try:
+            self._precomputed_result = None
+            self._precompute_key = None
+            self._precompute_running = False
             self.current_class_name = class_name
             self.current_group_filter = group_filter
             self.current_gender_filter = gender_filter
@@ -252,6 +266,9 @@ class RollCallManager(QObject):
         """
         执行最终抽取
         """
+        precomputed = self.take_precomputed_result(count)
+        if precomputed:
+            return precomputed
         # 使用RollCallUtils中的核心抽取逻辑，它处理了去重、权重等复杂逻辑
         result = RollCallUtils.draw_random_students(
             self.current_class_name,
@@ -276,6 +293,91 @@ class RollCallManager(QObject):
             self.current_group_filter,
             self.half_repeat,
         )
+
+    def _build_precompute_key(self, count):
+        try:
+            count = int(count or 0)
+        except Exception:
+            count = 0
+        return (
+            self.current_class_name,
+            self.current_group_filter,
+            self.current_gender_filter,
+            self.current_group_index,
+            self.current_gender_index,
+            self.half_repeat,
+            count,
+        )
+
+    def start_precompute_final(self, count):
+        try:
+            count = int(count or 0)
+        except Exception:
+            count = 0
+        if count <= 0 or not self.current_class_name:
+            return
+        key = self._build_precompute_key(count)
+        if self._precompute_running and self._precompute_key == key:
+            return
+        self._precompute_key = key
+        self._precomputed_result = None
+        self._precompute_running = True
+
+        class_name = self.current_class_name
+        group_index = self.current_group_index
+        group_filter = self.current_group_filter
+        gender_index = self.current_gender_index
+        gender_filter = self.current_gender_filter
+        half_repeat = self.half_repeat
+        draw_count = count
+
+        class _Signals(QObject):
+            loaded = Signal(object, object)
+
+        class _Loader(QRunnable):
+            def __init__(self, fn, signals, key):
+                super().__init__()
+                self.fn = fn
+                self.signals = signals
+                self.key = key
+
+            def run(self):
+                try:
+                    result = self.fn()
+                    self.signals.loaded.emit(self.key, result)
+                except Exception as e:
+                    logger.exception(f"预计算最终抽取结果失败: {e}")
+
+        def _collect():
+            return RollCallUtils.draw_random_students(
+                class_name,
+                group_index,
+                group_filter,
+                gender_index,
+                gender_filter,
+                draw_count,
+                half_repeat,
+            )
+
+        signals = _Signals()
+        signals.loaded.connect(self._on_precompute_loaded)
+        runnable = _Loader(_collect, signals, key)
+        QThreadPool.globalInstance().start(runnable)
+
+    def _on_precompute_loaded(self, key, result):
+        if key != self._precompute_key:
+            return
+        self._precomputed_result = result
+        self._precompute_running = False
+
+    def take_precomputed_result(self, count):
+        key = self._build_precompute_key(count)
+        if self._precomputed_result and self._precompute_key == key:
+            result = self._precomputed_result
+            self._precomputed_result = None
+            self._precompute_running = False
+            return result
+        return None
 
     def reset_records(self):
         """重置抽取记录"""
@@ -321,6 +423,8 @@ def start_roll_call_draw(widget):
     autoplay_count = plan.autoplay_count if plan else 0
     animation_interval = plan.animation_interval if plan else 0
     animation_music = plan.animation_music if plan else None
+    if animation in [0, 1]:
+        manager.start_precompute_final(widget.current_count)
 
     if animation == 0:
         if animation_music:
@@ -527,12 +631,18 @@ def play_voice_result(widget):
             "basic_voice_settings", "edge_tts_voice_name"
         )
 
+        class_name = (
+            widget.final_class_name
+            if hasattr(widget, "final_class_name") and widget.final_class_name
+            else widget.list_combobox.currentText()
+        )
+
         widget.tts_handler.voice_play(
             config=voice_settings,
             student_names=student_names,
             engine_type=engine_type,
             voice_name=edge_tts_voice_name,
-            class_name=widget.list_combobox.currentText(),
+            class_name=class_name,
         )
     except Exception as e:
         logger.exception(f"播放语音失败: {e}", exc_info=True)
@@ -584,7 +694,19 @@ def display_result_animated(widget, selected_students, class_name):
         settings_group="roll_call_settings",
     )
 
-    ResultDisplayUtils.display_results_in_grid(widget.result_grid, student_labels)
+    cached_widgets = ResultDisplayUtils.collect_grid_widgets(widget.result_grid)
+    if cached_widgets and len(cached_widgets) == len(student_labels):
+        updated = ResultDisplayUtils.update_grid_labels(
+            widget.result_grid, student_labels, cached_widgets
+        )
+        if updated:
+            ResultDisplayUtils.dispose_widgets(student_labels)
+        else:
+            ResultDisplayUtils.display_results_in_grid(
+                widget.result_grid, student_labels
+            )
+    else:
+        ResultDisplayUtils.display_results_in_grid(widget.result_grid, student_labels)
 
     RollCallUtils.show_notification_if_enabled(
         class_name=class_name,

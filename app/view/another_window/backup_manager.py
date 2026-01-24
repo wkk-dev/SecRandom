@@ -191,7 +191,7 @@ class BackupManagerWindow(QWidget):
         self.interval_spin.valueChanged.connect(self._on_interval_changed)
 
         self.max_count_spin = SpinBox()
-        self.max_count_spin.setRange(1, 512)
+        self.max_count_spin.setRange(0, 512)
         self.max_count_spin.setFixedWidth(120)
         self.max_count_spin.setValue(get_auto_backup_max_count())
         self.max_count_spin.valueChanged.connect(self._on_max_count_changed)

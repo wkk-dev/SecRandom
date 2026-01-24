@@ -715,6 +715,30 @@ class ResultDisplayUtils:
             parent_widget.updateGeometry()
 
     @staticmethod
+    def collect_grid_widgets(result_grid):
+        widgets = []
+        if not hasattr(result_grid, "count") or not hasattr(result_grid, "itemAt"):
+            return widgets
+        for i in range(result_grid.count()):
+            item = result_grid.itemAt(i)
+            if not item or not hasattr(item, "widget"):
+                continue
+            widget = item.widget()
+            if widget:
+                widgets.append(widget)
+        return widgets
+
+    @staticmethod
+    def dispose_widgets(widgets):
+        if not widgets:
+            return
+        for widget in widgets:
+            if widget:
+                widget.hide()
+                widget.setParent(None)
+                widget.deleteLater()
+
+    @staticmethod
     def update_grid_labels(result_grid, new_labels, cached_labels):
         """
         更新网格布局中的标签内容（优化动画性能）
@@ -725,10 +749,12 @@ class ResultDisplayUtils:
             cached_labels: 缓存的旧标签列表
         """
         if not new_labels:
-            return
+            return False
 
         count = result_grid.count()
         min_count = min(len(new_labels), len(cached_labels))
+        if min_count == 0:
+            return False
 
         for i in range(min_count):
             old_widget = cached_labels[i]
@@ -737,6 +763,12 @@ class ResultDisplayUtils:
             if old_widget and new_widget:
                 old_layout = old_widget.layout()
                 new_layout = new_widget.layout()
+
+                if not old_layout or not new_layout:
+                    return False
+
+                if old_layout.count() != new_layout.count():
+                    return False
 
                 if old_layout and new_layout:
                     for j in range(min(old_layout.count(), new_layout.count())):
@@ -747,10 +779,16 @@ class ResultDisplayUtils:
                             old_content = old_item.widget()
                             new_content = new_item.widget()
 
+                            if old_content is None or new_content is None:
+                                return False
+
                             # 如果内容是容器（带头像的情况），更新其内部组件
                             if old_content.layout() and new_content.layout():
                                 old_inner_layout = old_content.layout()
                                 new_inner_layout = new_content.layout()
+
+                                if old_inner_layout.count() != new_inner_layout.count():
+                                    return False
 
                                 for k in range(
                                     min(
@@ -764,6 +802,11 @@ class ResultDisplayUtils:
                                     if old_inner_item and new_inner_item:
                                         old_inner_widget = old_inner_item.widget()
                                         new_inner_widget = new_inner_item.widget()
+                                        if (
+                                            old_inner_widget is None
+                                            or new_inner_widget is None
+                                        ):
+                                            return False
 
                                         # 更新文本标签
                                         if isinstance(
@@ -788,6 +831,23 @@ class ResultDisplayUtils:
                                             new_image = new_inner_widget.getImage()
                                             if old_image != new_image:
                                                 old_inner_widget.setImage(new_image)
+                                            if hasattr(
+                                                old_inner_widget, "setText"
+                                            ) and hasattr(new_inner_widget, "text"):
+                                                old_text = (
+                                                    old_inner_widget.text()
+                                                    if hasattr(old_inner_widget, "text")
+                                                    else ""
+                                                )
+                                                new_text = new_inner_widget.text()
+                                                if old_text != new_text:
+                                                    old_inner_widget.setText(new_text)
+                                        if not isinstance(
+                                            old_inner_widget, (BodyLabel, AvatarWidget)
+                                        ) or not isinstance(
+                                            new_inner_widget, (BodyLabel, AvatarWidget)
+                                        ):
+                                            return False
 
                             # 如果内容是直接标签（不带头像的情况）
                             elif isinstance(old_content, BodyLabel) and isinstance(
@@ -795,8 +855,13 @@ class ResultDisplayUtils:
                             ):
                                 old_content.setText(new_content.text())
                                 old_content.setStyleSheet(new_content.styleSheet())
+                            else:
+                                return False
+            else:
+                return False
 
         cached_labels[:] = new_labels
+        return True
 
     @staticmethod
     def clear_grid(result_grid, log_debug=False):

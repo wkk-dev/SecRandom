@@ -147,6 +147,8 @@ class QuickDrawAnimation(QObject):
         animation_mode = quick_draw_settings["animation"]
         animation_interval = quick_draw_settings["animation_interval"]
         autoplay_count = quick_draw_settings["autoplay_count"]
+        if animation_mode in [0, 1]:
+            self.roll_call_widget.manager.start_precompute_final(current_count)
 
         if animation_mode == 1:
             logger.debug(
@@ -170,6 +172,8 @@ class QuickDrawAnimation(QObject):
     def stop_animation(self):
         """停止闪抽动画"""
         logger.debug("stop_animation: 停止闪抽动画")
+        if self.animation_timer and self.animation_timer.isActive():
+            self.animation_timer.stop()
         self.is_animating = False
         self.roll_call_widget.is_quick_draw = False
 
@@ -222,6 +226,8 @@ class QuickDrawAnimation(QObject):
 
     def _animate_result(self):
         """动画过程中更新显示"""
+        if not self.is_animating:
+            return
         self.draw_random_students()
 
         # 检查是否成功抽取到学生，如果没有则停止动画
@@ -360,6 +366,7 @@ class QuickDrawAnimation(QObject):
                     APP_INIT_DELAY, self.roll_call_widget._update_remaining_list_delayed
                 )
 
+                self._sync_final_result_to_widget()
                 self.roll_call_widget.play_voice_result()
 
                 RollCallUtils.show_notification_if_enabled(
@@ -440,6 +447,20 @@ class QuickDrawAnimation(QObject):
             settings_group="quick_draw_settings",
         )
 
-        ResultDisplayUtils.display_results_in_grid(
-            self.roll_call_widget.result_grid, student_labels
+        cached_widgets = ResultDisplayUtils.collect_grid_widgets(
+            self.roll_call_widget.result_grid
         )
+        if cached_widgets and len(cached_widgets) == len(student_labels):
+            updated = ResultDisplayUtils.update_grid_labels(
+                self.roll_call_widget.result_grid, student_labels, cached_widgets
+            )
+            if updated:
+                ResultDisplayUtils.dispose_widgets(student_labels)
+            else:
+                ResultDisplayUtils.display_results_in_grid(
+                    self.roll_call_widget.result_grid, student_labels
+                )
+        else:
+            ResultDisplayUtils.display_results_in_grid(
+                self.roll_call_widget.result_grid, student_labels
+            )

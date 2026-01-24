@@ -113,7 +113,7 @@ basic_settings = {
         },
         "backup_auto_max_count": {
             "name": "自动备份上限",
-            "description": "设置自动备份最多保留数量（个）",
+            "description": "设置自动备份最多保留数量（个），0为不限制",
         },
         "backup_last_success": {
             "name": "上次成功备份",
@@ -438,7 +438,7 @@ basic_settings = {
         },
         "backup_auto_max_count": {
             "name": "Backup limit",
-            "description": "Maximum number of backups to keep",
+            "description": "Maximum number of backups to keep (0 = unlimited)",
         },
         "backup_last_success": {
             "name": "Last successful backup",

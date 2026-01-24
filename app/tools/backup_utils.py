@@ -136,8 +136,10 @@ def prune_backups(max_count: int) -> list[Path]:
         max_count_int = int(max_count)
     except Exception:
         max_count_int = 16
-    if max_count_int <= 0:
-        max_count_int = 1
+    if max_count_int < 0:
+        max_count_int = 16
+    if max_count_int == 0:
+        return []
 
     files = list_backup_files()
     to_delete = files[max_count_int:]
@@ -193,7 +195,7 @@ def get_auto_backup_max_count() -> int:
         c = int(v)
     except Exception:
         c = 16
-    return max(1, c)
+    return max(0, c)
 
 
 def is_backup_due(now: Optional[datetime] = None) -> bool:

@@ -1,6 +1,10 @@
 # ==================================================
 # 导入库
 # ==================================================
+import os
+import subprocess
+import sys
+import loguru
 from loguru import logger
 from PySide6.QtWidgets import QApplication, QWidget
 from PySide6.QtGui import QIcon
@@ -12,7 +16,6 @@ from app.common.shortcut import ShortcutManager
 from app.tools.variable import (
     MINIMUM_WINDOW_SIZE,
     APP_INIT_DELAY,
-    EXIT_CODE_RESTART,
     PRE_CLASS_RESET_INTERVAL_MS,
     RESIZE_TIMER_DELAY_MS,
     MAXIMIZE_RESTORE_DELAY_MS,
@@ -1008,7 +1011,29 @@ class MainWindow(FluentWindow):
 
         self.cleanup_shortcuts()
 
-        QApplication.exit(EXIT_CODE_RESTART)
+        try:
+            working_dir = os.getcwd()
+            filtered_args = [arg for arg in sys.argv if not arg.startswith("--")]
+            startup_info = subprocess.STARTUPINFO()
+            startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            subprocess.Popen(
+                [sys.executable] + filtered_args,
+                cwd=working_dir,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+                | subprocess.DETACHED_PROCESS,
+                startupinfo=startup_info,
+            )
+        except Exception as e:
+            logger.error(f"启动新进程失败: {e}")
+            return
+
+        try:
+            loguru.logger.remove()
+        except Exception as e:
+            logger.error(f"日志系统关闭出错: {e}")
+
+        QApplication.quit()
+        sys.exit(0)
 
     def close_window_secrandom(self):
         """关闭窗口
