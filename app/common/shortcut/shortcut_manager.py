@@ -1,9 +1,15 @@
-import keyboard
+import sys
 from PySide6.QtCore import QObject, Signal
 
 from loguru import logger
 
 from app.tools.settings_access import readme_settings_async
+
+try:
+    import keyboard
+except Exception as e:
+    keyboard = None
+    logger.warning(f"keyboard 库不可用: {e}")
 
 
 class ShortcutManager(QObject):
@@ -27,6 +33,7 @@ class ShortcutManager(QObject):
         super().__init__(parent)
         self.shortcuts = {}
         self._enabled = False
+        self._available = keyboard is not None and sys.platform != "darwin"
         logger.debug("快捷键管理器初始化中...")
         logger.info("快捷键管理器初始化完成，等待回调函数设置...")
 
@@ -36,6 +43,10 @@ class ShortcutManager(QObject):
         self._enabled = enabled
 
         logger.debug(f"快捷键功能状态: {'启用' if enabled else '禁用'}")
+
+        if not self._available:
+            logger.warning("快捷键功能不可用")
+            return
 
         if not enabled:
             logger.debug("快捷键功能未启用")
@@ -125,6 +136,9 @@ class ShortcutManager(QObject):
         """重新加载所有快捷键"""
         logger.info("重新加载快捷键")
 
+        if not self._available:
+            return
+
         for config_key, hotkey in self.shortcuts.items():
             try:
                 keyboard.remove_hotkey(hotkey)
@@ -151,7 +165,7 @@ class ShortcutManager(QObject):
             except Exception as e:
                 logger.exception(f"注销快捷键失败 {config_key}: {e}")
 
-        if shortcut_str and self._enabled:
+        if shortcut_str and self._enabled and self._available:
             try:
                 hotkey = self._convert_to_hotkey(shortcut_str)
                 if hotkey:
@@ -200,6 +214,10 @@ class ShortcutManager(QObject):
         """
         self._enabled = enabled
 
+        if not self._available:
+            self.shortcuts.clear()
+            return
+
         if enabled:
             self.reload_shortcuts()
         else:
@@ -222,6 +240,9 @@ class ShortcutManager(QObject):
     def cleanup(self):
         """清理所有快捷键（快速清理）"""
         logger.info("清理所有快捷键")
+        if not self._available:
+            self.shortcuts.clear()
+            return
         try:
             # 使用 keyboard.unhook_all() 一次性清理所有钩子，比逐个 remove_hotkey 快得多
             keyboard.unhook_all()

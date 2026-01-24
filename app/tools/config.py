@@ -552,7 +552,11 @@ def set_autostart(enabled: bool) -> bool:
 
 def _set_windows_autostart(enabled: bool) -> bool:
     """设置Windows开机自启动"""
-    import winreg
+    try:
+        import winreg
+    except Exception as e:
+        logger.warning(f"无法加载 winreg: {e}")
+        return False
 
     key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
     try:

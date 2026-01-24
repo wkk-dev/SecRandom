@@ -8,34 +8,35 @@ from app.tools.path_utils import get_data_path
 
 CSHARP_AVAILABLE = False
 
-try:
-    # 添加 dlls path
-    sys.path.append(str(get_data_path("dlls")))
+if sys.platform == "win32":
+    try:
+        sys.path.append(str(get_data_path("dlls")))
 
-    # 导入 Python.NET
-    from pythonnet import load
+        from pythonnet import load
 
-    load("coreclr", runtime_config=get_data_path("dlls", "dotnet.runtimeconfig.json"))
+        load(
+            "coreclr", runtime_config=get_data_path("dlls", "dotnet.runtimeconfig.json")
+        )
 
-    # 加载 .NET CoreCLR 程序集
-    import clr
+        import clr
 
-    clr.AddReference("ClassIsland.Shared.IPC")
-    clr.AddReference("SecRandom4Ci.Interface")
+        clr.AddReference("ClassIsland.Shared.IPC")
+        clr.AddReference("SecRandom4Ci.Interface")
 
-    # 导入程序集
-    from System import Action, DateTime
-    from ClassIsland.Shared.Enums import TimeState
-    from ClassIsland.Shared.IPC import IpcClient, IpcRoutedNotifyIds
-    from ClassIsland.Shared.IPC.Abstractions.Services import IPublicLessonsService
-    from dotnetCampus.Ipc.CompilerServices.GeneratedProxies import GeneratedIpcFactory
-    from SecRandom4Ci.Interface.Services import ISecRandomService
-    from SecRandom4Ci.Interface.Models import CallResult, Student
+        from System import Action, DateTime
+        from ClassIsland.Shared.Enums import TimeState
+        from ClassIsland.Shared.IPC import IpcClient, IpcRoutedNotifyIds
+        from ClassIsland.Shared.IPC.Abstractions.Services import IPublicLessonsService
+        from dotnetCampus.Ipc.CompilerServices.GeneratedProxies import (
+            GeneratedIpcFactory,
+        )
+        from SecRandom4Ci.Interface.Services import ISecRandomService
+        from SecRandom4Ci.Interface.Models import CallResult, Student
 
-    CSHARP_AVAILABLE = True
-except Exception as e:
-    logger.warning("无法加载 Python.NET，将会回滚！")
-    logger.warning(e)
+        CSHARP_AVAILABLE = True
+    except Exception as e:
+        logger.warning("无法加载 Python.NET，将会回滚！")
+        logger.warning(e)
 
 
 if CSHARP_AVAILABLE:

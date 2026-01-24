@@ -238,6 +238,8 @@ async def get_best_source() -> dict:
         dict: 延迟最低的镜像源配置
     """
     try:
+        if SYSTEM == "macos":
+            return UPDATE_SOURCES[0]
         logger.info("开始测试所有镜像源的延迟...")
 
         # 并发测试所有镜像源
@@ -381,28 +383,28 @@ async def get_metadata_info_async() -> dict | None:
 
     # 如果选择自动检测延迟（索引0），则测试所有镜像源
     if update_source == 0:
-        # 测试所有镜像源的延迟
-        logger.info("开始测试镜像源延迟以获取 metadata.yaml...")
-        tasks = []
-        for source in UPDATE_SOURCES:
-            task = test_source_latency(source["url"])
-            tasks.append(task)
+        if SYSTEM == "macos":
+            logger.info("macOS 系统跳过镜像源延迟测试")
+            sorted_sources = [(0.0, UPDATE_SOURCES[0])]
+        else:
+            logger.info("开始测试镜像源延迟以获取 metadata.yaml...")
+            tasks = []
+            for source in UPDATE_SOURCES:
+                task = test_source_latency(source["url"])
+                tasks.append(task)
 
-        # 等待所有测试完成
-        latencies = await asyncio.gather(*tasks, return_exceptions=True)
+            latencies = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # 按延迟排序镜像源
-        sorted_sources = []
-        for i, latency in enumerate(latencies):
-            if isinstance(latency, Exception):
-                logger.debug(
-                    f"镜像源 {UPDATE_SOURCES[i]['name']} 测试失败，延迟设为无穷大"
-                )
-                latency = float("inf")
-            sorted_sources.append((latency, UPDATE_SOURCES[i]))
+            sorted_sources = []
+            for i, latency in enumerate(latencies):
+                if isinstance(latency, Exception):
+                    logger.debug(
+                        f"镜像源 {UPDATE_SOURCES[i]['name']} 测试失败，延迟设为无穷大"
+                    )
+                    latency = float("inf")
+                sorted_sources.append((latency, UPDATE_SOURCES[i]))
 
-        # 按延迟升序排序
-        sorted_sources.sort(key=lambda x: x[0])
+            sorted_sources.sort(key=lambda x: x[0])
 
         # 按延迟顺序尝试获取 metadata.yaml
         for latency, source in sorted_sources:

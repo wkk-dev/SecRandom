@@ -177,7 +177,7 @@ class roll_call_list(GroupHeaderCardWidget):
 
     # 班级名称设置
     def set_class_name(self):
-        create_set_class_name_window()
+        create_set_class_name_window(parent=self._get_window_parent())
         # 显示通知
         config = NotificationConfig(
             title=get_any_position_value_async(
@@ -201,7 +201,9 @@ class roll_call_list(GroupHeaderCardWidget):
     # 学生名单导入功能
     def import_student_name(self):
         class_name = self.class_name_combo.currentText()
-        create_import_student_name_window(class_name=class_name)
+        create_import_student_name_window(
+            class_name=class_name, parent=self._get_window_parent()
+        )
         # 显示通知
         config = NotificationConfig(
             title=get_any_position_value_async(
@@ -224,7 +226,10 @@ class roll_call_list(GroupHeaderCardWidget):
 
     # 姓名设置
     def name_setting(self):
-        create_name_setting_window(list_name=self.class_name_combo.currentText())
+        create_name_setting_window(
+            list_name=self.class_name_combo.currentText(),
+            parent=self._get_window_parent(),
+        )
         # 显示通知
         config = NotificationConfig(
             title=get_any_position_value_async(
@@ -243,7 +248,10 @@ class roll_call_list(GroupHeaderCardWidget):
 
     # 性别设置
     def gender_setting(self):
-        create_gender_setting_window(list_name=self.class_name_combo.currentText())
+        create_gender_setting_window(
+            list_name=self.class_name_combo.currentText(),
+            parent=self._get_window_parent(),
+        )
         # 显示通知
         config = NotificationConfig(
             title=get_any_position_value_async(
@@ -266,8 +274,10 @@ class roll_call_list(GroupHeaderCardWidget):
 
     # 小组设置
     def group_setting(self):
-        create_group_setting_window(list_name=self.class_name_combo.currentText())
-        # 显示通知
+        create_group_setting_window(
+            list_name=self.class_name_combo.currentText(),
+            parent=self._get_window_parent(),
+        )
         config = NotificationConfig(
             title=get_any_position_value_async(
                 "notification", "roll_call", "group_setting", "title", "name"
@@ -282,6 +292,19 @@ class roll_call_list(GroupHeaderCardWidget):
             duration=3000,
         )
         show_notification(NotificationType.INFO, config, parent=self)
+
+    def _get_window_parent(self):
+        parent_window = self.window()
+        try:
+            if parent_window is None:
+                return None
+            if parent_window.__class__.__name__ == "GuideWindow":
+                return None
+            if parent_window.windowTitle() == "SecRandom Setup":
+                return None
+        except Exception:
+            return parent_window
+        return parent_window
 
     # 学生名单导出功能
     def export_student_list(self):

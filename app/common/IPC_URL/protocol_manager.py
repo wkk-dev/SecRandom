@@ -5,8 +5,8 @@
 
 import os
 import sys
-import winreg
 import subprocess
+import plistlib
 from pathlib import Path
 from loguru import logger
 
@@ -26,6 +26,7 @@ class ProtocolManager:
         self.protocol_name = protocol_name
         self.is_windows = sys.platform.startswith("win")
         self.is_linux = sys.platform.startswith("linux")
+        self.is_macos = sys.platform.startswith("darwin")
 
     def register_protocol(self) -> bool:
         """
@@ -38,6 +39,8 @@ class ProtocolManager:
             return self._register_windows_protocol()
         elif self.is_linux:
             return self._register_linux_protocol()
+        elif self.is_macos:
+            return self._register_macos_protocol()
         else:
             logger.exception(f"不支持的操作系统: {sys.platform}")
             return False
@@ -53,6 +56,8 @@ class ProtocolManager:
             return self._unregister_windows_protocol()
         elif self.is_linux:
             return self._unregister_linux_protocol()
+        elif self.is_macos:
+            return self._unregister_macos_protocol()
         else:
             logger.exception(f"不支持的操作系统: {sys.platform}")
             return False
@@ -68,6 +73,8 @@ class ProtocolManager:
             return self._is_windows_protocol_registered()
         elif self.is_linux:
             return self._is_linux_protocol_registered()
+        elif self.is_macos:
+            return self._is_macos_protocol_registered()
         else:
             return False
 
@@ -87,6 +94,12 @@ class ProtocolManager:
     def _register_windows_protocol_current_user(self, exe_path: str) -> bool:
         """注册到当前用户的Windows协议（无需管理员权限）"""
         try:
+            try:
+                import winreg
+            except Exception as e:
+                logger.warning(f"无法加载 winreg: {e}")
+                return False
+
             # 注册协议到HKEY_CURRENT_USER\Software\Classes
             key_path = f"Software\\Classes\\{self.protocol_name}"
             with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path) as key:
@@ -121,6 +134,12 @@ class ProtocolManager:
     def _unregister_windows_protocol_current_user(self) -> bool:
         """注销当前用户的Windows协议"""
         try:
+            try:
+                import winreg
+            except Exception as e:
+                logger.warning(f"无法加载 winreg: {e}")
+                return False
+
             # 删除当前用户注册表项
             key_path = f"Software\\Classes\\{self.protocol_name}\\shell\\open\\command"
             winreg.DeleteKey(winreg.HKEY_CURRENT_USER, key_path)
@@ -144,6 +163,12 @@ class ProtocolManager:
     def _is_windows_protocol_registered(self) -> bool:
         """检查Windows协议是否已注册（单用户模式）"""
         try:
+            try:
+                import winreg
+            except Exception as e:
+                logger.warning(f"无法加载 winreg: {e}")
+                return False
+
             # 检查HKEY_CURRENT_USER（用户级）
             key_path = f"Software\\Classes\\{self.protocol_name}"
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path) as key:
@@ -201,6 +226,71 @@ class ProtocolManager:
         """检查Linux协议是否已注册"""
         desktop_file_path = self._get_linux_desktop_file_path()
         return os.path.exists(desktop_file_path)
+
+    def _register_macos_protocol(self) -> bool:
+        try:
+            bundle_path = self._get_macos_bundle_path()
+            if bundle_path is None:
+                logger.warning("未检测到 macOS 应用包，无法注册协议")
+                return False
+            return self._run_macos_lsregister(bundle_path, register=True)
+        except Exception as e:
+            logger.exception(f"macOS 协议注册失败: {e}")
+            return False
+
+    def _unregister_macos_protocol(self) -> bool:
+        try:
+            bundle_path = self._get_macos_bundle_path()
+            if bundle_path is None:
+                logger.warning("未检测到 macOS 应用包，无法注销协议")
+                return False
+            return self._run_macos_lsregister(bundle_path, register=False)
+        except Exception as e:
+            logger.exception(f"macOS 协议注销失败: {e}")
+            return False
+
+    def _is_macos_protocol_registered(self) -> bool:
+        bundle_path = self._get_macos_bundle_path()
+        if bundle_path is None:
+            return False
+        return self._app_supports_macos_protocol(bundle_path)
+
+    def _get_macos_bundle_path(self) -> Path | None:
+        exe_path = Path(self._get_executable_path())
+        for parent in exe_path.parents:
+            if parent.suffix == ".app":
+                return parent
+        return None
+
+    def _read_macos_info_plist(self, bundle_path: Path) -> dict | None:
+        plist_path = bundle_path / "Contents" / "Info.plist"
+        if not plist_path.exists():
+            return None
+        with open(plist_path, "rb") as f:
+            return plistlib.load(f)
+
+    def _app_supports_macos_protocol(self, bundle_path: Path) -> bool:
+        plist_data = self._read_macos_info_plist(bundle_path)
+        if not plist_data:
+            return False
+        url_types = plist_data.get("CFBundleURLTypes", [])
+        for item in url_types:
+            schemes = item.get("CFBundleURLSchemes", [])
+            if self.protocol_name in schemes:
+                return True
+        return False
+
+    def _get_macos_lsregister_path(self) -> str:
+        return "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+
+    def _run_macos_lsregister(self, bundle_path: Path, register: bool) -> bool:
+        lsregister_path = self._get_macos_lsregister_path()
+        if not os.path.exists(lsregister_path):
+            logger.warning("lsregister 不存在，无法更新 macOS 协议注册")
+            return False
+        args = [lsregister_path, "-f" if register else "-u", str(bundle_path)]
+        subprocess.run(args, check=False, capture_output=True)
+        return True
 
     def _get_linux_desktop_file_path(self) -> str:
         """获取Linux桌面文件路径"""

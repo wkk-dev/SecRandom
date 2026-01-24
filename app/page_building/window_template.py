@@ -61,6 +61,8 @@ class SimpleWindowTemplate(FramelessWindow):
 
     # 信号定义
     windowClosed = Signal()
+    _DEFAULT_TITLEBAR_HEIGHT = 32
+    _TITLEBAR_LEFT_OFFSET_PX = 5
 
     def __init__(
         self,
@@ -90,7 +92,7 @@ class SimpleWindowTemplate(FramelessWindow):
 
         # 创建主布局
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(0, self.titleBar.height(), 0, 0)
+        self._sync_layout_margins_with_titlebar()
         self.main_layout.setSpacing(0)
 
         # 创建堆叠窗口
@@ -106,9 +108,218 @@ class SimpleWindowTemplate(FramelessWindow):
         # 初始化窗口
         self.initWindow(title, width, height)
 
+    def _sync_layout_margins_with_titlebar(self) -> None:
+        top = 0
+        try:
+            top = int(self.titleBar.height()) if self.titleBar else 0
+        except Exception:
+            top = 0
+
+        if top <= 1:
+            try:
+                top = int(self.titleBar.sizeHint().height()) if self.titleBar else 0
+            except Exception:
+                top = 0
+
+        if top <= 1:
+            top = self._DEFAULT_TITLEBAR_HEIGHT
+
+        self.main_layout.setContentsMargins(0, top, 0, 0)
+
+    def _apply_titlebar_font(self) -> None:
+        custom_font = load_custom_font()
+        try:
+            if getattr(self, "_sr_title_text_label", None) is not None:
+                if custom_font:
+                    self._sr_title_text_label.setFont(QFont(custom_font, 9))
+                else:
+                    f = self._sr_title_text_label.font()
+                    f.setPointSize(9)
+                    self._sr_title_text_label.setFont(f)
+        except Exception:
+            pass
+
+        for child in self.titleBar.findChildren(QLabel):
+            if not isinstance(child, QLabel):
+                continue
+            label_text = child.text() if hasattr(child, "text") else ""
+            if not label_text:
+                continue
+            if custom_font:
+                child.setFont(QFont(custom_font, 9))
+            else:
+                f = child.font()
+                f.setPointSize(9)
+                child.setFont(f)
+            break
+
+    def _ensure_sr_title_overlay(self) -> None:
+        if getattr(self, "_sr_title_overlay", None) is not None:
+            return
+
+        self._sr_title_overlay = QWidget(self.titleBar)
+        self._sr_title_overlay.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents
+        )
+        self._sr_title_overlay.setObjectName("srTitleOverlay")
+
+        layout = QHBoxLayout(self._sr_title_overlay)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
+        self._sr_title_icon_label = QLabel(self._sr_title_overlay)
+        self._sr_title_icon_label.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents
+        )
+        self._sr_title_icon_label.setObjectName("srTitleIcon")
+        self._sr_title_icon_label.setFixedSize(16, 16)
+
+        self._sr_title_text_label = QLabel(self._sr_title_overlay)
+        self._sr_title_text_label.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents
+        )
+        self._sr_title_text_label.setObjectName("srTitleLabel")
+        self._sr_title_text_label.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
+        )
+
+        layout.addWidget(self._sr_title_icon_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(self._sr_title_text_label, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        try:
+            self.windowTitleChanged.connect(self._update_sr_title_overlay)
+            self.windowIconChanged.connect(self._update_sr_title_overlay)
+        except Exception:
+            pass
+
+    def _update_sr_title_overlay(self, *args) -> None:
+        try:
+            if getattr(self, "_sr_title_text_label", None) is None:
+                return
+
+            title = self.windowTitle() or ""
+            self._sr_title_text_label.setText(title)
+
+            icon = self.windowIcon()
+            pixmap = None
+            try:
+                if icon and not icon.isNull():
+                    pixmap = icon.pixmap(16, 16)
+            except Exception:
+                pixmap = None
+
+            if pixmap is not None and not pixmap.isNull():
+                self._sr_title_icon_label.setPixmap(pixmap)
+                self._sr_title_icon_label.show()
+            else:
+                self._sr_title_icon_label.hide()
+
+            self._sr_title_overlay.adjustSize()
+        except Exception as e:
+            logger.exception(f"更新自定义标题栏失败: {e}")
+
+    def _position_sr_title_overlay(self) -> None:
+        try:
+            if getattr(self, "_sr_title_overlay", None) is None:
+                return
+            self._sr_title_overlay.adjustSize()
+            x = int(self._TITLEBAR_LEFT_OFFSET_PX)
+            y = max(
+                0, int((self.titleBar.height() - self._sr_title_overlay.height()) / 2)
+            )
+            self._sr_title_overlay.move(x, y)
+            self._sr_title_overlay.raise_()
+        except Exception as e:
+            logger.exception(f"定位自定义标题栏失败: {e}")
+
+    def _rebuild_titlebar_title_and_icon(self) -> None:
+        try:
+            if not self.titleBar:
+                return
+
+            current_title = self.windowTitle() or ""
+            for child in self.titleBar.findChildren(QLabel):
+                if child.objectName() in {"srTitleIcon", "srTitleLabel"}:
+                    continue
+
+                try:
+                    pixmap = child.pixmap()
+                except Exception:
+                    pixmap = None
+
+                label_text = child.text() if hasattr(child, "text") else ""
+                is_original_icon = pixmap is not None and not pixmap.isNull()
+                is_original_title = bool(current_title) and label_text == current_title
+
+                if is_original_icon or is_original_title:
+                    child.hide()
+
+            self._ensure_sr_title_overlay()
+            self._update_sr_title_overlay()
+            self._apply_titlebar_font()
+            self._position_sr_title_overlay()
+        except Exception as e:
+            logger.exception(f"重建标题栏标题失败: {e}")
+
+    def _apply_titlebar_left_offset(self) -> None:
+        try:
+            for child in self.titleBar.findChildren(QWidget):
+                if (
+                    isinstance(child, QWidget)
+                    and child.property("srTitleOffset") is not None
+                ):
+                    child.setProperty("srTitleOffset", None)
+
+            icon_label = None
+            title_label = None
+
+            labels = self.titleBar.findChildren(QLabel)
+            current_title = self.windowTitle() or ""
+
+            for child in labels:
+                try:
+                    pixmap = child.pixmap()
+                except Exception:
+                    pixmap = None
+
+                if pixmap is not None and not pixmap.isNull():
+                    icon_label = child
+
+                label_text = child.text() if hasattr(child, "text") else ""
+                if current_title and label_text == current_title:
+                    title_label = child
+                if label_text and title_label is None:
+                    title_label = child
+
+            if icon_label is None and title_label is None:
+                return
+
+            offset = int(self._TITLEBAR_LEFT_OFFSET_PX)
+            if icon_label is not None:
+                icon_label.setProperty("srTitleOffset", "true")
+                m = icon_label.contentsMargins()
+                icon_label.setContentsMargins(offset, m.top(), m.right(), m.bottom())
+            if title_label is not None:
+                title_label.setProperty("srTitleOffset", "true")
+                m = title_label.contentsMargins()
+                title_label.setContentsMargins(offset, m.top(), m.right(), m.bottom())
+            self.titleBar.style().unpolish(self.titleBar)
+            self.titleBar.style().polish(self.titleBar)
+        except Exception as e:
+            logger.exception(f"设置标题栏偏移失败: {e}")
+
     def initWindow(self, title: str, width: int = 700, height: int = 500) -> None:
         """初始化窗口"""
-        self.setTitleBar(StandardTitleBar(self))
+        self.setTitleBar(FluentTitleBar(self))
+        try:
+            fixed_h = max(
+                int(self.titleBar.sizeHint().height()), self._DEFAULT_TITLEBAR_HEIGHT
+            )
+            self.titleBar.setFixedHeight(fixed_h)
+        except Exception:
+            self.titleBar.setFixedHeight(self._DEFAULT_TITLEBAR_HEIGHT)
+
+        self._sync_layout_margins_with_titlebar()
         self.setMinimumSize(MINIMUM_WINDOW_SIZE[0], MINIMUM_WINDOW_SIZE[1])
         self.resize(width, height)
         window_icon = QIcon(
@@ -117,53 +328,9 @@ class SimpleWindowTemplate(FramelessWindow):
         self.setWindowIcon(window_icon)
         self.setWindowTitle(title)
         self.titleBar.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
-
-        # 获取自定义字体
-        custom_font = load_custom_font()
-
-        # 保存原始标题文本
-        original_title = title
-
-        # 遍历标题栏的子控件，找到标题标签并替换为BodyLabel
-        # 计数，只处理第一个标题标签
-        count = 0
-        for child in self.titleBar.children():
-            if isinstance(child, QLabel):
-                # 获取原始标签的属性
-                old_label = child
-                old_parent = old_label.parent()
-
-                # 删除控件
-                old_label.deleteLater()
-
-                # 创建新的BodyLabel
-                body_label = BodyLabel(original_title)
-
-                # 设置新标签的属性
-                body_label.setObjectName("titleLabel")
-                body_label.setAlignment(Qt.AlignCenter)
-                body_label.setContentsMargins(5, 0, 5, 0)
-
-                # 设置字体
-                if custom_font:
-                    title_font = QFont(custom_font, 9)
-                    body_label.setFont(title_font)
-
-                # 添加到父控件
-                if old_parent and old_parent.layout():
-                    layout = old_parent.layout()
-                    count += 1
-                    if count == 0:
-                        continue
-                    elif count == 1:
-                        icon_label = BodyLabel()
-                        icon_label.setPixmap(window_icon.pixmap(16, 16))
-                        icon_label.setContentsMargins(10, 0, 5, 0)
-                        layout.insertWidget(0, icon_label)
-                        layout.insertWidget(1, body_label)
-                    else:
-                        # 退出循环
-                        break
+        self.titleBar.raise_()
+        self._apply_titlebar_font()
+        self._rebuild_titlebar_title_and_icon()
 
         # 确保在设置标题栏后应用当前主题和自定义字体
         self._apply_current_theme()
@@ -172,6 +339,16 @@ class SimpleWindowTemplate(FramelessWindow):
             screen = QApplication.primaryScreen().availableGeometry()
             w, h = screen.width(), screen.height()
             self.move(w // 2 - self.width() // 2, h // 2 - self.height() // 2)
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        QTimer.singleShot(0, self._sync_layout_margins_with_titlebar)
+        QTimer.singleShot(0, self._rebuild_titlebar_title_and_icon)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._sync_layout_margins_with_titlebar()
+        self._position_sr_title_overlay()
 
     def __connectSignalToSlot(self) -> None:
         """连接信号与槽"""
@@ -189,47 +366,37 @@ class SimpleWindowTemplate(FramelessWindow):
         except Exception as e:
             logger.exception(f"主题变化时更新窗口背景失败: {e}")
 
-    def _apply_current_theme(self) -> None:
-        """应用当前主题设置到窗口"""
+    def _is_dark_mode_by_settings(self) -> bool:
         try:
-            # 获取当前主题设置
             current_theme = readme_settings("basic_settings", "theme")
-
-            # 根据主题设置窗口背景色
             if current_theme == "DARK":
-                # 深色主题 - 设置深色背景
-                self.setStyleSheet("background-color: #202020;")
-                self.default_page.setStyleSheet("background-color: transparent;")
-            elif current_theme == "AUTO":
-                # 自动主题 - 根据系统设置
+                return True
+            if current_theme == "AUTO":
                 try:
                     from darkdetect import isDark
 
-                    if isDark():
-                        self.setStyleSheet("background-color: #202020;")
-                        self.default_page.setStyleSheet(
-                            "background-color: transparent;"
-                        )
-                    else:
-                        self.setStyleSheet("background-color: #ffffff;")
-                        self.default_page.setStyleSheet(
-                            "background-color: transparent;"
-                        )
+                    return bool(isDark())
                 except Exception as e:
                     logger.exception(
                         "Error detecting dark mode with darkdetect (fallback to light): {}",
                         e,
                     )
-                    # 如果检测失败，使用浅色主题
-                    self.setStyleSheet("background-color: #ffffff;")
-                    self.default_page.setStyleSheet("background-color: transparent;")
-            else:
-                # 浅色主题
-                self.setStyleSheet("background-color: #ffffff;")
-                self.default_page.setStyleSheet("background-color: transparent;")
+                    return False
+            return False
+        except Exception:
+            return False
 
-            # 应用标题栏自定义字体和颜色
-            self._set_titlebar_colors()
+    def _apply_current_theme(self) -> None:
+        """应用当前主题设置到窗口"""
+        try:
+            current_theme = readme_settings("basic_settings", "theme")
+            is_dark = self._is_dark_mode_by_settings()
+            background_color = "#202020" if is_dark else "#ffffff"
+
+            self.setStyleSheet(f"background-color: {background_color};")
+            self.default_page.setStyleSheet("background-color: transparent;")
+
+            self._set_titlebar_colors(is_dark)
 
             logger.debug(f"窗口主题已更新为: {current_theme}")
         except Exception as e:
@@ -238,50 +405,77 @@ class SimpleWindowTemplate(FramelessWindow):
             self.setStyleSheet("background-color: #ffffff;")
             self.default_page.setStyleSheet("background-color: transparent;")
 
-    def _set_titlebar_colors(self) -> None:
+    def _set_titlebar_colors(self, is_dark: bool) -> None:
         """设置标题栏颜色"""
         try:
-            # 判断是否为深色主题
-            is_dark = is_dark_theme(qconfig)
-
             if is_dark:
-                # 深色主题
                 title_color = "#ffffff"  # 白色文字
                 background_color = "#202020"
             else:
-                # 浅色主题
                 title_color = "#000000"  # 黑色文字
                 background_color = "#ffffff"
 
-            # 设置标题栏颜色样式
-            titlebar_style = f"""
-                QWidget {{
-                    color: {title_color};
-                    background-color: {background_color};
-                }}
-                QLabel {{
-                    color: {title_color};
-                    background-color: transparent;
-                }}
-                QPushButton {{
-                    color: {title_color};
-                    background-color: transparent;
-                }}
-                QToolButton {{
-                    color: {title_color};
-                    background-color: transparent;
-                }}
-                #minimizeButton, #maximizeButton, #closeButton {{
-                    color: {title_color};
-                    background-color: transparent;
-                }}
-                #minimizeButton:hover, #maximizeButton:hover, #closeButton:hover {{
-                    background-color: rgba(255, 255, 255, 0.1);
-                }}
-                #closeButton:hover {{
-                    background-color: rgba(232, 17, 35, 0.8);
-                }}
-            """
+            if hasattr(self.titleBar, "setTitle") and hasattr(self.titleBar, "setIcon"):
+                titlebar_style = f"""
+                    QWidget {{
+                        background-color: {background_color};
+                    }}
+                    QLabel {{
+                        background-color: transparent;
+                    }}
+                    QLabel#srTitleLabel {{
+                        color: {title_color};
+                        background-color: transparent;
+                    }}
+                    *[srTitleOffset="true"] {{
+                        margin-left: {self._TITLEBAR_LEFT_OFFSET_PX}px;
+                    }}
+                """
+            else:
+                titlebar_style = f"""
+                    QWidget {{
+                        color: {title_color};
+                        background-color: {background_color};
+                    }}
+                    QLabel {{
+                        color: {title_color};
+                        background-color: transparent;
+                    }}
+                    QLabel#srTitleLabel {{
+                        color: {title_color};
+                        background-color: transparent;
+                    }}
+                    *[srTitleOffset="true"] {{
+                        margin-left: {self._TITLEBAR_LEFT_OFFSET_PX}px;
+                    }}
+                    QPushButton {{
+                        color: {title_color};
+                        background-color: transparent;
+                    }}
+                    QToolButton {{
+                        color: {title_color};
+                        background-color: transparent;
+                    }}
+                    QAbstractButton {{
+                        color: {title_color};
+                        background-color: transparent;
+                    }}
+                    #minimizeButton, #maximizeButton, #closeButton,
+                    #minBtn, #maxBtn, #closeBtn,
+                    #minimizeBtn, #maximizeBtn, #closeBtn {{
+                        color: {title_color};
+                        background-color: transparent;
+                    }}
+                    #minimizeButton:hover, #maximizeButton:hover, #closeButton:hover,
+                    #minBtn:hover, #maxBtn:hover, #closeBtn:hover,
+                    #minimizeBtn:hover, #maximizeBtn:hover, #closeBtn:hover {{
+                        background-color: rgba(255, 255, 255, 0.1);
+                    }}
+                    #closeButton:hover, #closeBtn:hover {{
+                        background-color: rgba(232, 17, 35, 0.8);
+                    }}
+                """
+
             self.titleBar.setStyleSheet(titlebar_style)
 
             logger.debug(

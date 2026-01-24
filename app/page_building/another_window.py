@@ -34,7 +34,7 @@ class set_class_name_window_template(PageTemplate):
         super().__init__(content_widget_class=SetClassNameWindow, parent=parent)
 
 
-def create_set_class_name_window():
+def create_set_class_name_window(parent=None):
     """
     创建班级名称设置窗口
 
@@ -42,7 +42,7 @@ def create_set_class_name_window():
         创建的窗口实例
     """
     title = get_content_name_async("set_class_name", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600)
+    window = SimpleWindowTemplate(title, width=800, height=600, parent=parent)
     window.add_page_from_template("set_class_name", set_class_name_window_template)
     window.switch_to_page("set_class_name")
     _window_instances["set_class_name"] = window
@@ -66,7 +66,7 @@ class import_student_name_window_template(PageTemplate):
         super().__init__(content_widget_class=factory, parent=parent)
 
 
-def create_import_student_name_window(class_name=None):
+def create_import_student_name_window(class_name=None, parent=None):
     """
     创建学生名单导入窗口
 
@@ -77,7 +77,7 @@ def create_import_student_name_window(class_name=None):
         创建的窗口实例
     """
     title = get_content_name_async("import_student_name", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600)
+    window = SimpleWindowTemplate(title, width=800, height=600, parent=parent)
     window.add_page_from_template(
         "import_student_name",
         lambda parent: import_student_name_window_template(
@@ -108,7 +108,7 @@ class name_setting_window_template(PageTemplate):
         super().__init__(content_widget_class=factory, parent=parent)
 
 
-def create_name_setting_window(list_name=None):
+def create_name_setting_window(list_name=None, parent=None):
     """
     创建姓名设置窗口
 
@@ -116,7 +116,7 @@ def create_name_setting_window(list_name=None):
         创建的窗口实例
     """
     title = get_content_name_async("name_setting", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600)
+    window = SimpleWindowTemplate(title, width=800, height=600, parent=parent)
     window.add_page_from_template(
         "name_setting",
         lambda parent: name_setting_window_template(parent=parent, list_name=list_name),
@@ -143,7 +143,7 @@ class gender_setting_window_template(PageTemplate):
         super().__init__(content_widget_class=factory, parent=parent)
 
 
-def create_gender_setting_window(list_name=None):
+def create_gender_setting_window(list_name=None, parent=None):
     """
     创建性别设置窗口
 
@@ -151,7 +151,7 @@ def create_gender_setting_window(list_name=None):
         创建的窗口实例
     """
     title = get_content_name_async("gender_setting", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600)
+    window = SimpleWindowTemplate(title, width=800, height=600, parent=parent)
     window.add_page_from_template(
         "gender_setting",
         lambda parent: gender_setting_window_template(
@@ -180,7 +180,7 @@ class group_setting_window_template(PageTemplate):
         super().__init__(content_widget_class=factory, parent=parent)
 
 
-def create_group_setting_window(list_name=None):
+def create_group_setting_window(list_name=None, parent=None):
     """
     创建小组设置窗口
 
@@ -188,7 +188,7 @@ def create_group_setting_window(list_name=None):
         创建的窗口实例
     """
     title = get_content_name_async("group_setting", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600)
+    window = SimpleWindowTemplate(title, width=800, height=600, parent=parent)
     window.add_page_from_template(
         "group_setting",
         lambda parent: group_setting_window_template(

@@ -41,6 +41,7 @@ class SettingsWindow(FluentWindow):
     showMainPageRequested = Signal(str)  # 请求显示主页面
 
     def __init__(self, parent=None, is_preview=False):
+        self.resize_timer = None
         super().__init__()
         self.setObjectName("settingWindow")
         self.parent = parent
@@ -232,7 +233,9 @@ class SettingsWindow(FluentWindow):
         Args:
             event: 大小变化事件对象
         """
-        self.resize_timer.start(RESIZE_TIMER_DELAY_MS)
+        resize_timer = getattr(self, "resize_timer", None)
+        if resize_timer is not None:
+            resize_timer.start(RESIZE_TIMER_DELAY_MS)
         super().resizeEvent(event)
 
     def changeEvent(self, event):

@@ -80,9 +80,20 @@ about = {
         },
         "donation": {"name": "捐赠支持", "description": "支持项目发展，感谢您的捐赠"},
         "website": {"name": "SecRandom 官网", "description": "访问SecRandom软件官网"},
+        "organization_website": {
+            "name": "SECTL 组织主站",
+            "description": "访问 SECTL 组织官网",
+        },
         "copyright": {"name": "版权", "description": "SecRandom遵循GPL-3.0协议"},
         "version": {"name": "版本", "description": "显示当前软件版本号"},
         "user_id": {"name": "用户ID", "description": "用于错误追踪的离线唯一标识"},
+        "user_info": {"name": "用户信息", "description": "显示本机与使用信息"},
+        "user_name": {"name": "当前电脑用户名"},
+        "first_use_time": {"name": "首次使用时间"},
+        "runtime": {"name": "软件运行时长"},
+        "total_draw_count": {"name": "软件总抽取次数"},
+        "roll_call_total_count": {"name": "点名总次数"},
+        "lottery_total_count": {"name": "抽奖总次数"},
     },
     "EN_US": {
         "title": {"name": "About", "description": "APP about page"},
@@ -112,6 +123,10 @@ about = {
             "name": "SecRandom Website",
             "description": "Visit SecRandom's official website",
         },
+        "organization_website": {
+            "name": "SECTL Organization Website",
+            "description": "Visit SECTL's official website",
+        },
         "channel": {
             "name": "Update channel",
             "description": "Select SecRandom software update channel",
@@ -123,6 +138,13 @@ about = {
             "name": "User ID",
             "description": "Offline unique identifier for error tracking",
         },
+        "user_info": {"name": "User Info", "description": "Show device and usage info"},
+        "user_name": {"name": "Device Username"},
+        "first_use_time": {"name": "First Use Time"},
+        "runtime": {"name": "App Runtime"},
+        "total_draw_count": {"name": "Total Draws"},
+        "roll_call_total_count": {"name": "Pick Draws"},
+        "lottery_total_count": {"name": "Lottery Draws"},
     },
 }
 

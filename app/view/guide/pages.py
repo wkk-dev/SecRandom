@@ -306,9 +306,12 @@ class LanguagePage(QWidget):
 
         # 设置当前语言
         current_lang = readme_settings_async("basic_settings", "language")
+        self.initial_lang = current_lang if current_lang in self.available_langs else ""
         if current_lang in self.available_langs:
             self.langCombo.setCurrentText(current_lang)
-            self.initial_lang = current_lang
+        elif self.available_langs:
+            self.langCombo.setCurrentIndex(0)
+            self.initial_lang = self.langCombo.currentText()
 
         self.langCombo.currentIndexChanged.connect(self._on_lang_changed)
 
@@ -320,7 +323,7 @@ class LanguagePage(QWidget):
     def _on_lang_changed(self, index):
         new_lang = self.langCombo.currentText()
         if new_lang != self.initial_lang:
-            w = MessageDialog(
+            w = MessageBox(
                 get_any_position_value_async(
                     "guide", "language_page", "restart_dialog_title"
                 ),
@@ -328,6 +331,12 @@ class LanguagePage(QWidget):
                     "guide", "language_page", "restart_dialog_content"
                 ),
                 self.window(),
+            )
+            w.yesButton.setText(
+                get_any_position_value_async("guide", "language_page", "restart_btn")
+            )
+            w.cancelButton.setText(
+                get_any_position_value_async("guide", "language_page", "cancel_btn")
             )
             if w.exec():
                 update_settings("basic_settings", "language", new_lang)
@@ -1231,6 +1240,11 @@ class LinksPage(QWidget):
             get_any_position_value_async("guide", "links_page", "docs"),
         )
 
+        self.organizationLink = HyperlinkButton(
+            SECTL_WEBDITE,
+            get_any_position_value_async("guide", "links_page", "organization_website"),
+        )
+
         self.issuesLink = HyperlinkButton(
             f"{GITHUB_WEB}/issues",
             get_any_position_value_async("guide", "links_page", "issues"),
@@ -1248,6 +1262,7 @@ class LinksPage(QWidget):
         self.linksRowLayout.setSpacing(16)
         self.linksRowLayout.addWidget(self.githubLink)
         self.linksRowLayout.addWidget(self.bilibiliLink)
+        self.linksRowLayout.addWidget(self.organizationLink)
         self.linksRowLayout.addWidget(self.docsLink)
         self.linksRowLayout.addWidget(self.issuesLink)
 

@@ -7,6 +7,7 @@ from PySide6.QtGui import QFont, QIcon
 from qfluentwidgets import *
 from qframelesswindow import FramelessWindow
 from app.view.guide.pages import *
+from loguru import logger
 from app.Language.obtain_language import get_any_position_value_async
 from app.tools.settings_access import update_settings
 from app.tools.personalised import load_custom_font
@@ -18,23 +19,35 @@ from app.tools.path_utils import get_data_path
 # ==================================================
 class GuideWindow(FramelessWindow):
     guideFinished = Signal()
+    _DEFAULT_TITLEBAR_HEIGHT = 32
+    _TITLEBAR_LEFT_OFFSET_PX = 5
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setTitleBar(FluentTitleBar(self))
+        try:
+            fixed_h = max(
+                int(self.titleBar.sizeHint().height()), self._DEFAULT_TITLEBAR_HEIGHT
+            )
+            self.titleBar.setFixedHeight(fixed_h)
+        except Exception:
+            self.titleBar.setFixedHeight(self._DEFAULT_TITLEBAR_HEIGHT)
         self.setWindowIcon(
             QIcon(str(get_data_path("assets/icon", "secrandom-icon-paper.png")))
         )
-        self.setWindowTitle("SecRandom Setup")
+        self.setWindowTitle("SecRandom")
         self.resize(800, 600)
-        self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self.setWindowModality(Qt.WindowModality.NonModal)
 
         # 标题栏
+        self.titleBar.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
         self.titleBar.raise_()
         self._apply_titlebar_font()
+        self._rebuild_titlebar_title_and_icon()
 
         # 主布局
         self.vBoxLayout = QVBoxLayout(self)
-        self.vBoxLayout.setContentsMargins(0, 32, 0, 0)  # 留出标题栏高度
+        self._sync_layout_margins_with_titlebar()
 
         # 页面容器
         self.stackedWidget = QStackedWidget(self)
@@ -76,6 +89,8 @@ class GuideWindow(FramelessWindow):
 
     def showEvent(self, event):
         super().showEvent(event)
+        QTimer.singleShot(0, self._sync_layout_margins_with_titlebar)
+        QTimer.singleShot(0, self._rebuild_titlebar_title_and_icon)
         if self._initial_show_animated:
             return
         self._initial_show_animated = True
@@ -130,18 +145,156 @@ class GuideWindow(FramelessWindow):
 
     def _apply_titlebar_font(self):
         custom_font = load_custom_font()
-        for child in self.titleBar.children():
-            if isinstance(child, QLabel):
-                label_text = child.text() if hasattr(child, "text") else ""
-                if not label_text:
-                    continue
+        try:
+            if getattr(self, "_sr_title_text_label", None) is not None:
                 if custom_font:
-                    child.setFont(QFont(custom_font, 9))
+                    self._sr_title_text_label.setFont(QFont(custom_font, 9))
                 else:
-                    f = child.font()
+                    f = self._sr_title_text_label.font()
                     f.setPointSize(9)
-                    child.setFont(f)
-                break
+                    self._sr_title_text_label.setFont(f)
+        except Exception:
+            pass
+
+        for child in self.titleBar.findChildren(QLabel):
+            if not isinstance(child, QLabel):
+                continue
+            label_text = child.text() if hasattr(child, "text") else ""
+            if not label_text:
+                continue
+            if custom_font:
+                child.setFont(QFont(custom_font, 9))
+            else:
+                f = child.font()
+                f.setPointSize(9)
+                child.setFont(f)
+            break
+
+    def _sync_layout_margins_with_titlebar(self) -> None:
+        top = 0
+        try:
+            top = int(self.titleBar.height()) if self.titleBar else 0
+        except Exception:
+            top = 0
+
+        if top <= 1:
+            try:
+                top = int(self.titleBar.sizeHint().height()) if self.titleBar else 0
+            except Exception:
+                top = 0
+
+        if top <= 1:
+            top = self._DEFAULT_TITLEBAR_HEIGHT
+
+        self.vBoxLayout.setContentsMargins(0, top, 0, 0)
+
+    def _ensure_sr_title_overlay(self) -> None:
+        if getattr(self, "_sr_title_overlay", None) is not None:
+            return
+
+        self._sr_title_overlay = QWidget(self.titleBar)
+        self._sr_title_overlay.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents
+        )
+        self._sr_title_overlay.setObjectName("srTitleOverlay")
+
+        layout = QHBoxLayout(self._sr_title_overlay)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
+        self._sr_title_icon_label = QLabel(self._sr_title_overlay)
+        self._sr_title_icon_label.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents
+        )
+        self._sr_title_icon_label.setObjectName("srTitleIcon")
+        self._sr_title_icon_label.setFixedSize(16, 16)
+
+        self._sr_title_text_label = QLabel(self._sr_title_overlay)
+        self._sr_title_text_label.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents
+        )
+        self._sr_title_text_label.setObjectName("srTitleLabel")
+        self._sr_title_text_label.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
+        )
+
+        layout.addWidget(self._sr_title_icon_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(self._sr_title_text_label, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        try:
+            self.windowTitleChanged.connect(self._update_sr_title_overlay)
+            self.windowIconChanged.connect(self._update_sr_title_overlay)
+        except Exception:
+            pass
+
+    def _update_sr_title_overlay(self, *args) -> None:
+        try:
+            if getattr(self, "_sr_title_text_label", None) is None:
+                return
+
+            title = self.windowTitle() or ""
+            self._sr_title_text_label.setText(title)
+
+            icon = self.windowIcon()
+            pixmap = None
+            try:
+                if icon and not icon.isNull():
+                    pixmap = icon.pixmap(16, 16)
+            except Exception:
+                pixmap = None
+
+            if pixmap is not None and not pixmap.isNull():
+                self._sr_title_icon_label.setPixmap(pixmap)
+                self._sr_title_icon_label.show()
+            else:
+                self._sr_title_icon_label.hide()
+
+            self._sr_title_overlay.adjustSize()
+        except Exception as e:
+            logger.exception(f"更新自定义标题栏失败: {e}")
+
+    def _position_sr_title_overlay(self) -> None:
+        try:
+            if getattr(self, "_sr_title_overlay", None) is None:
+                return
+            self._sr_title_overlay.adjustSize()
+            x = int(self._TITLEBAR_LEFT_OFFSET_PX)
+            y = max(
+                0, int((self.titleBar.height() - self._sr_title_overlay.height()) / 2)
+            )
+            self._sr_title_overlay.move(x, y)
+            self._sr_title_overlay.raise_()
+        except Exception as e:
+            logger.exception(f"定位自定义标题栏失败: {e}")
+
+    def _rebuild_titlebar_title_and_icon(self) -> None:
+        try:
+            if not self.titleBar:
+                return
+
+            current_title = self.windowTitle() or ""
+            for child in self.titleBar.findChildren(QLabel):
+                if child.objectName() in {"srTitleIcon", "srTitleLabel"}:
+                    continue
+
+                try:
+                    pixmap = child.pixmap()
+                except Exception:
+                    pixmap = None
+
+                label_text = child.text() if hasattr(child, "text") else ""
+                is_original_icon = pixmap is not None and not pixmap.isNull()
+                is_original_title = bool(current_title) and label_text == current_title
+
+                if is_original_icon or is_original_title:
+                    child.hide()
+
+            self._ensure_sr_title_overlay()
+            self._update_sr_title_overlay()
+            self._apply_titlebar_font()
+            self._position_sr_title_overlay()
+        except Exception as e:
+            logger.exception(f"重建标题栏标题失败: {e}")
 
     def _start_page_transition(self, target_index: int):
         if target_index < 0 or target_index >= len(self.pages):
@@ -232,6 +385,11 @@ class GuideWindow(FramelessWindow):
 
         self._page_transition_anim = group
         group.start()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._sync_layout_margins_with_titlebar()
+        self._position_sr_title_overlay()
 
     def init_pages(self):
         self.welcomePage = WelcomePage(self)

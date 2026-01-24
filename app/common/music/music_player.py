@@ -6,9 +6,19 @@ import threading
 import time
 from typing import Optional
 import numpy as np
-import sounddevice as sd
-import soundfile as sf
 from loguru import logger
+
+try:
+    import sounddevice as sd
+except Exception as e:
+    sd = None
+    logger.warning(f"sounddevice 不可用: {e}")
+
+try:
+    import soundfile as sf
+except Exception as e:
+    sf = None
+    logger.warning(f"soundfile 不可用: {e}")
 
 from app.tools.path_utils import *
 from app.tools.settings_default import *
@@ -60,6 +70,11 @@ class MusicPlayer:
             "music_settings", "no_music"
         ):
             logger.debug("音乐文件为空或选择无音乐，不播放")
+            return False
+
+        if sd is None or sf is None:
+            self._last_error = "Audio dependencies not available"
+            logger.warning("音频播放依赖不可用，无法播放音乐")
             return False
 
         # 停止当前播放的音乐

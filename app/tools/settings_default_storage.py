@@ -496,6 +496,12 @@ DEFAULT_SETTINGS = {
     "behind_scenes_settings": {
         "title": {"default_value": None},
     },
+    "user_info": {
+        "first_use_time": {"default_value": ""},
+        "total_draw_count": {"default_value": 0},
+        "roll_call_total_count": {"default_value": 0},
+        "lottery_total_count": {"default_value": 0},
+    },
     "about": {
         "title": {"default_value": None},
         "github": {"default_value": None},

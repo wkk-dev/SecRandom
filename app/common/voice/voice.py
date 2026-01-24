@@ -22,9 +22,19 @@ import edge_tts
 import numpy as np
 import psutil
 import pyttsx3
-import sounddevice as sd
-import soundfile as sf
 from loguru import logger
+
+try:
+    import sounddevice as sd
+except Exception as e:
+    sd = None
+    logger.warning(f"sounddevice 不可用: {e}")
+
+try:
+    import soundfile as sf
+except Exception as e:
+    sf = None
+    logger.warning(f"soundfile 不可用: {e}")
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
@@ -137,6 +147,9 @@ class VoicePlaybackSystem:
         """流式播放音频文件（低内存占用）"""
         stream = None
         sf_file = None
+        if sd is None or sf is None:
+            logger.warning("音频播放依赖不可用，无法播放音频")
+            return
         try:
             # 打开音频文件
             sf_file = sf.SoundFile(file_path)
@@ -206,6 +219,9 @@ class VoicePlaybackSystem:
     def _safe_play_memory(self, data: np.ndarray, fs: int) -> None:
         """安全播放内存数据实现"""
         stream = None
+        if sd is None:
+            logger.warning("sounddevice 不可用，无法播放音频")
+            return
         try:
             # 计算语速调整因子，1.0表示正常语速
             speed_factor: float = self._speed / 100.0
@@ -635,6 +651,25 @@ class TTSHandler:
                         self.voice_engine = None
                 except Exception as e:
                     logger.warning(f"Linux系统TTS引擎初始化失败: {e}，语音功能将不可用")
+                    self.voice_engine = None
+
+            elif system == "Darwin":
+                try:
+                    if not hasattr(
+                        QApplication.instance(), "pumping_reward_voice_engine"
+                    ):
+                        QApplication.instance().pumping_reward_voice_engine = (
+                            pyttsx3.init()
+                        )
+                        QApplication.instance().pumping_reward_voice_engine.startLoop(
+                            False
+                        )
+                    self.voice_engine = (
+                        QApplication.instance().pumping_reward_voice_engine
+                    )
+                    logger.info("macOS 系统TTS引擎初始化成功")
+                except Exception as e:
+                    logger.warning(f"macOS系统TTS引擎初始化失败: {e}，语音功能将不可用")
                     self.voice_engine = None
 
             else:

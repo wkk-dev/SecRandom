@@ -56,6 +56,7 @@ class MainWindow(FluentWindow):
     classIslandDataReceived = Signal(dict)  # 接收ClassIsland数据信号
 
     def __init__(self, float_window: LevitationWindow, url_handler_instance=None):
+        self.resize_timer = None
         super().__init__()
         self.setObjectName("MainWindow")
 
@@ -237,7 +238,8 @@ class MainWindow(FluentWindow):
     def _position_window(self):
         """窗口定位
         根据屏幕尺寸和用户设置自动计算最佳位置"""
-        self.resize_timer.stop()
+        if self.resize_timer is not None:
+            self.resize_timer.stop()
 
         is_maximized = readme_settings_async("window", "is_maximized")
         if is_maximized:
@@ -354,7 +356,9 @@ class MainWindow(FluentWindow):
         Args:
             event: 大小变化事件对象
         """
-        self.resize_timer.start(RESIZE_TIMER_DELAY_MS)
+        resize_timer = getattr(self, "resize_timer", None)
+        if resize_timer is not None:
+            resize_timer.start(RESIZE_TIMER_DELAY_MS)
         super().resizeEvent(event)
 
     def changeEvent(self, event):

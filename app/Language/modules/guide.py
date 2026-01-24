@@ -38,6 +38,8 @@ guide = {
             "restart_hint": "切换语言后需要重启软件生效",
             "restart_dialog_title": "需要重启",
             "restart_dialog_content": "语言设置已更改，是否立即重启软件？",
+            "restart_btn": "重启",
+            "cancel_btn": "取消",
         },
         "basic_settings_page": {
             "title": "基本设置",
@@ -375,6 +377,7 @@ Sentry 的数据处理遵循其自身的隐私政策，详情请参阅 `https://
             "github": "GitHub 仓库",
             "bilibili": "哔哩哔哩",
             "docs": "使用文档",
+            "organization_website": "组织主站",
             "issues": "反馈问题",
             "finish_btn": "开始使用",
         },
@@ -417,6 +420,8 @@ Sentry 的数据处理遵循其自身的隐私政策，详情请参阅 `https://
             "restart_hint": "Restart required to apply language changes",
             "restart_dialog_title": "Restart Required",
             "restart_dialog_content": "Language settings changed. Restart now?",
+            "restart_btn": "Restart",
+            "cancel_btn": "Cancel",
         },
         "basic_settings_page": {
             "title": "Basic Settings",
@@ -647,6 +652,7 @@ This disclaimer is a supplement to the project's open source license (GNU Genera
             "github": "GitHub Repository",
             "bilibili": "Bilibili",
             "docs": "Documentation",
+            "organization_website": "Organization Website",
             "issues": "Feedback",
             "finish_btn": "Get Started",
         },

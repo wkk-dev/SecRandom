@@ -1,5 +1,6 @@
 # 定义非设置项的初始变量
-import os
+import platform
+import sys
 from datetime import datetime
 
 # ==================================================
@@ -12,9 +13,61 @@ VERSION = "v0.0.0"  # 软件当前版本
 NEXT_VERSION = "v2.2.6"  # 软件下一个版本
 CODENAME = "Koharu"  # 软件代号
 SPECIAL_VERSION = VERSION if VERSION != "v0.0.0" else NEXT_VERSION
-SYSTEM = "windows" if os.name == "nt" else "linux"  # 软件系统
-ARCH = "x64" if SYSTEM == "windows" else "amd64"  # 软件架构
-STRUCT = "dir" if SYSTEM == "windows" else "deb"  # 软件结构
+
+
+def _detect_system() -> str:
+    platform_key = sys.platform.lower()
+    if platform_key.startswith(("win", "cygwin", "msys")):
+        return "windows"
+    if platform_key.startswith("darwin"):
+        return "macos"
+    if platform_key.startswith("linux"):
+        return "linux"
+    value = platform.system().lower()
+    return value if value else "unknown"
+
+
+def _normalize_arch(machine: str) -> str:
+    machine = (machine or "").lower()
+    arch_map = {
+        "amd64": "x64",
+        "x86_64": "x64",
+        "x64": "x64",
+        "i386": "x86",
+        "i686": "x86",
+        "arm64": "arm64",
+        "aarch64": "arm64",
+        "armv7l": "armv7",
+        "armv7": "armv7",
+        "armv6l": "armv6",
+        "armv6": "armv6",
+        "arm": "arm",
+        "ppc64le": "ppc64le",
+        "s390x": "s390x",
+        "riscv64": "riscv64",
+    }
+    if machine in arch_map:
+        return arch_map[machine]
+    if "arm" in machine and "64" in machine:
+        return "arm64"
+    if "arm" in machine:
+        return "arm"
+    if not machine:
+        return "x64" if sys.maxsize > 2**32 else "x86"
+    return machine
+
+
+SYSTEM = _detect_system()
+ARCH = _normalize_arch(platform.machine())
+STRUCT = (
+    "exe"
+    if SYSTEM == "windows"
+    else "dmg"
+    if SYSTEM == "macos"
+    else "deb"
+    if SYSTEM == "linux"
+    else "tar"
+)
 INITIAL_AUTHORING_YEAR = 2025  # 软件发布年份
 CURRENT_YEAR = datetime.now().year  # 软件当前年份
 AUTHOR = "lzy98276"  # 软件作者
@@ -26,12 +79,13 @@ APP_COPYRIGHT = (
     f"Copyright © {INITIAL_AUTHORING_YEAR} {COPYRIGHT_HOLDER}"  # 软件版权信息
 )
 APP_LICENSE = "GPL-3.0 License"  # 软件许可证
-APP_EMAIL = "lzy.12@foxmail.com"  # 软件作者邮箱
+APP_EMAIL = "lzy98276@sectl.com"  # 软件作者邮箱
 
 # -------------------- 联系与链接信息 --------------------
 GITHUB_WEB = "https://github.com/SECTL/SecRandom"  # 软件GitHub仓库
 BILIBILI_WEB = "https://space.bilibili.com/520571577"  # 软件作者Bilibili空间
-WEBSITE = "https://secrandom.netlify.app"  # 软件官方网站
+WEBSITE = "https://secrandom.sectl.top"  # 软件官方网站
+SECTL_WEBDITE = "https://sectl.top"  # 软件所属组织网站
 DONATION_URL = "https://afdian.com/a/lzy0983"  # 捐赠链接
 
 
