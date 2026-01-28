@@ -87,7 +87,10 @@ def create_sentry_before_send_filter():
                 value = exc.get("value", "")
 
                 # 过滤 Qt 常见无害错误 (通常是由于对象在 C++ 侧已销毁但 Python 侧仍在尝试访问)
-                if type_ == "RuntimeError" and ("Internal C++ object" in str(value) or "has been deleted" in str(value)):
+                if type_ == "RuntimeError" and (
+                    "Internal C++ object" in str(value)
+                    or "has been deleted" in str(value)
+                ):
                     return None
 
                 # 过滤 COM 相关

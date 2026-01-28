@@ -19,8 +19,14 @@ class URLHandler(QObject):
 
     # 信号定义
     showSettingsRequested = Signal(str)  # 请求显示设置页面
+    showSettingsPreviewRequested = Signal(str)  # 请求以预览模式显示设置页面
     showMainPageRequested = Signal(str)  # 请求显示主页面
     showTrayActionRequested = Signal(str)  # 请求执行托盘操作
+    rollCallActionRequested = Signal(str, object)  # 点名页控制请求
+    lotteryActionRequested = Signal(str, object)  # 抽奖页控制请求
+    windowActionRequested = Signal(
+        str, object
+    )  # 窗口显示隐藏请求（主窗口/设置窗口/浮窗）
 
     def __init__(self, app_name: str = "SecRandom", protocol_name: str = "secrandom"):
         """
@@ -41,11 +47,23 @@ class URLHandler(QObject):
         self.command_handler.showSettingsRequested.connect(
             self.showSettingsRequested.emit
         )
+        self.command_handler.showSettingsPreviewRequested.connect(
+            self.showSettingsPreviewRequested.emit
+        )
         self.command_handler.showMainPageRequested.connect(
             self.showMainPageRequested.emit
         )
         self.command_handler.showTrayActionRequested.connect(
             self.showTrayActionRequested.emit
+        )
+        self.command_handler.rollCallActionRequested.connect(
+            self.rollCallActionRequested.emit
+        )
+        self.command_handler.lotteryActionRequested.connect(
+            self.lotteryActionRequested.emit
+        )
+        self.command_handler.windowActionRequested.connect(
+            self.windowActionRequested.emit
         )
         self._setup_ipc_setting_listener()
 

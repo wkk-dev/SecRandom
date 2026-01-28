@@ -69,10 +69,38 @@ class WindowManager:
                 should_require_password, require_and_run
             )
         )
+        if hasattr(self.main_window, "showSettingsPreviewRequested"):
+            self.main_window.showSettingsPreviewRequested.connect(
+                lambda page_name: self.show_settings_window(page_name, is_preview=True)
+            )
         self.main_window.showSettingsRequestedAbout.connect(
             self.show_settings_window_about
         )
         self.main_window.showFloatWindowRequested.connect(self.show_float_window)
+        if hasattr(self.main_window, "url_command_handler"):
+            try:
+                if hasattr(
+                    self.main_window.url_command_handler, "rollCallActionRequested"
+                ):
+                    self.main_window.url_command_handler.rollCallActionRequested.connect(
+                        self._handle_roll_call_action
+                    )
+                if hasattr(
+                    self.main_window.url_command_handler, "lotteryActionRequested"
+                ):
+                    self.main_window.url_command_handler.lotteryActionRequested.connect(
+                        self._handle_lottery_action
+                    )
+                if hasattr(
+                    self.main_window.url_command_handler, "windowActionRequested"
+                ):
+                    self.main_window.url_command_handler.windowActionRequested.connect(
+                        self._handle_window_action
+                    )
+            except Exception as e:
+                logger.exception(
+                    "连接主窗口 URLCommandHandler 控制信号失败（已忽略）: {}", e
+                )
 
     def _create_settings_request_handler(
         self, should_require_password_func, require_and_run_func
@@ -154,6 +182,380 @@ class WindowManager:
             lambda action: self.main_window._handle_tray_action_requested(action)
         )
         self.url_handler.showSettingsRequested.connect(self.show_settings_window)
+        if hasattr(self.url_handler, "showSettingsPreviewRequested"):
+            self.url_handler.showSettingsPreviewRequested.connect(
+                lambda page_name: self.show_settings_window(page_name, is_preview=True)
+            )
+        if hasattr(self.url_handler, "rollCallActionRequested"):
+            self.url_handler.rollCallActionRequested.connect(
+                self._handle_roll_call_action
+            )
+        if hasattr(self.url_handler, "lotteryActionRequested"):
+            self.url_handler.lotteryActionRequested.connect(self._handle_lottery_action)
+        if hasattr(self.url_handler, "windowActionRequested"):
+            self.url_handler.windowActionRequested.connect(self._handle_window_action)
+
+    def _ensure_main_window_pages_created(self) -> None:
+        if self.main_window is None:
+            return
+        try:
+            roll_call_page = getattr(self.main_window, "roll_call_page", None)
+            lottery_page = getattr(self.main_window, "lottery_page", None)
+            if roll_call_page is not None or lottery_page is not None:
+                return
+            if hasattr(self.main_window, "createSubInterface"):
+                self.main_window.createSubInterface()
+        except Exception as e:
+            logger.exception("确保主窗口页面创建失败（已忽略）: {}", e)
+
+    def _get_roll_call_widget(self):
+        if self.main_window is None:
+            return None
+        try:
+            if hasattr(self.main_window, "_get_roll_call_widget"):
+                return self.main_window._get_roll_call_widget(
+                    getattr(self.main_window, "roll_call_page", None)
+                )
+        except Exception:
+            pass
+
+        roll_call_page = getattr(self.main_window, "roll_call_page", None)
+        if roll_call_page is None:
+            return None
+        if (
+            hasattr(roll_call_page, "roll_call_widget")
+            and roll_call_page.roll_call_widget
+        ):
+            return roll_call_page.roll_call_widget
+        if hasattr(roll_call_page, "contentWidget") and roll_call_page.contentWidget:
+            return roll_call_page.contentWidget
+        try:
+            from PySide6.QtWidgets import QApplication
+
+            roll_call_page.create_content()
+            QApplication.processEvents()
+        except Exception:
+            return None
+        if (
+            hasattr(roll_call_page, "roll_call_widget")
+            and roll_call_page.roll_call_widget
+        ):
+            return roll_call_page.roll_call_widget
+        if hasattr(roll_call_page, "contentWidget") and roll_call_page.contentWidget:
+            return roll_call_page.contentWidget
+        return None
+
+    def _get_lottery_widget(self):
+        if self.main_window is None:
+            return None
+        lottery_page = getattr(self.main_window, "lottery_page", None)
+        if lottery_page is None:
+            return None
+        if hasattr(lottery_page, "lottery_widget") and lottery_page.lottery_widget:
+            return lottery_page.lottery_widget
+        if hasattr(lottery_page, "contentWidget") and lottery_page.contentWidget:
+            return lottery_page.contentWidget
+        try:
+            from PySide6.QtWidgets import QApplication
+
+            lottery_page.create_content()
+            QApplication.processEvents()
+        except Exception:
+            return None
+        if hasattr(lottery_page, "lottery_widget") and lottery_page.lottery_widget:
+            return lottery_page.lottery_widget
+        if hasattr(lottery_page, "contentWidget") and lottery_page.contentWidget:
+            return lottery_page.contentWidget
+        return None
+
+    def _handle_roll_call_action(self, action: str, payload) -> None:
+        def impl():
+            self._ensure_main_window_pages_created()
+            data = payload if isinstance(payload, dict) else {}
+            if action == "quick_draw":
+                if hasattr(self.main_window, "_handle_quick_draw"):
+                    self.main_window._handle_quick_draw()
+                return
+
+            widget = self._get_roll_call_widget()
+            if widget is None:
+                return
+
+            if (
+                hasattr(widget, "populate_lists")
+                and getattr(widget, "list_combobox", None) is not None
+            ):
+                try:
+                    if widget.list_combobox.count() <= 0:
+                        widget.populate_lists()
+                except Exception:
+                    pass
+
+            if action == "start":
+                widget.start_draw()
+            elif action == "stop":
+                if hasattr(widget, "stop_animation"):
+                    widget.stop_animation()
+            elif action == "reset":
+                if hasattr(widget, "reset_count"):
+                    widget.reset_count()
+            elif action == "set_count":
+                count = data.get("count")
+                try:
+                    desired = int(count)
+                except Exception:
+                    return
+                if desired <= 0:
+                    return
+                try:
+                    max_count = int(widget.get_total_count() or 0)
+                except Exception:
+                    max_count = 0
+                if max_count <= 0:
+                    return
+                desired = min(desired, max_count)
+                try:
+                    current = int(widget.count_label.text())
+                except Exception:
+                    current = int(getattr(widget, "current_count", 1) or 1)
+                widget.update_count(desired - current)
+            elif action == "set_group":
+                idx = data.get("index")
+                text = data.get("group")
+                if idx is not None:
+                    try:
+                        i = int(idx)
+                    except Exception:
+                        i = None
+                    if i is not None and i >= 0 and i < widget.range_combobox.count():
+                        widget.range_combobox.setCurrentIndex(i)
+                elif isinstance(text, str) and text:
+                    found = widget.range_combobox.findText(text)
+                    if found >= 0:
+                        widget.range_combobox.setCurrentIndex(found)
+            elif action == "set_gender":
+                idx = data.get("index")
+                text = data.get("gender")
+                if idx is not None and str(idx).lstrip("-").isdigit():
+                    widget.gender_combobox.setCurrentIndex(int(idx))
+                elif isinstance(text, str) and text:
+                    found = widget.gender_combobox.findText(text)
+                    if found >= 0:
+                        widget.gender_combobox.setCurrentIndex(found)
+            elif action == "set_list":
+                idx = data.get("index")
+                text = data.get("class_name")
+                if idx is not None and str(idx).lstrip("-").isdigit():
+                    widget.list_combobox.setCurrentIndex(int(idx))
+                elif isinstance(text, str) and text:
+                    found = widget.list_combobox.findText(text)
+                    if found >= 0:
+                        widget.list_combobox.setCurrentIndex(found)
+
+        safe_execute(impl, error_message="执行点名控制失败")
+
+    def _handle_lottery_action(self, action: str, payload) -> None:
+        def impl():
+            self._ensure_main_window_pages_created()
+            data = payload if isinstance(payload, dict) else {}
+            widget = self._get_lottery_widget()
+            if widget is None:
+                return
+
+            if hasattr(widget, "populate_lists"):
+                try:
+                    if (
+                        getattr(widget, "pool_list_combobox", None) is not None
+                        and widget.pool_list_combobox.count() <= 0
+                    ):
+                        widget.populate_lists()
+                except Exception:
+                    pass
+
+            if action == "start":
+                widget.start_draw()
+            elif action == "stop":
+                if hasattr(widget, "stop_animation"):
+                    widget.stop_animation()
+            elif action == "reset":
+                if hasattr(widget, "reset_count"):
+                    widget.reset_count()
+            elif action == "set_count":
+                count = data.get("count")
+                try:
+                    desired = int(count)
+                except Exception:
+                    return
+                if desired <= 0:
+                    return
+                try:
+                    max_count = int(
+                        widget.manager.get_pool_total_count(
+                            widget.pool_list_combobox.currentText()
+                        )
+                        or 0
+                    )
+                except Exception:
+                    max_count = 0
+                if max_count <= 0:
+                    return
+                desired = min(desired, max_count)
+                try:
+                    current = int(widget.count_label.text())
+                except Exception:
+                    current = int(getattr(widget, "current_count", 1) or 1)
+                widget.update_count(desired - current)
+            elif action == "set_pool":
+                idx = data.get("index")
+                text = data.get("pool_name")
+                if idx is not None and str(idx).lstrip("-").isdigit():
+                    widget.pool_list_combobox.setCurrentIndex(int(idx))
+                elif isinstance(text, str) and text:
+                    found = widget.pool_list_combobox.findText(text)
+                    if found >= 0:
+                        widget.pool_list_combobox.setCurrentIndex(found)
+            elif action == "set_range":
+                idx = data.get("index")
+                text = data.get("range")
+                if idx is not None:
+                    try:
+                        i = int(idx)
+                    except Exception:
+                        i = None
+                    if i is not None and i >= 0 and i < widget.range_combobox.count():
+                        widget.range_combobox.setCurrentIndex(i)
+                elif isinstance(text, str) and text:
+                    found = widget.range_combobox.findText(text)
+                    if found >= 0:
+                        widget.range_combobox.setCurrentIndex(found)
+            elif action == "set_gender":
+                idx = data.get("index")
+                text = data.get("gender")
+                if idx is not None and str(idx).lstrip("-").isdigit():
+                    widget.gender_combobox.setCurrentIndex(int(idx))
+                elif isinstance(text, str) and text:
+                    found = widget.gender_combobox.findText(text)
+                    if found >= 0:
+                        widget.gender_combobox.setCurrentIndex(found)
+            elif action == "set_list":
+                idx = data.get("index")
+                text = data.get("class_name")
+                if idx is not None and str(idx).lstrip("-").isdigit():
+                    widget.list_combobox.setCurrentIndex(int(idx))
+                elif isinstance(text, str) and text:
+                    found = widget.list_combobox.findText(text)
+                    if found >= 0:
+                        widget.list_combobox.setCurrentIndex(found)
+
+        safe_execute(impl, error_message="执行抽奖控制失败")
+
+    def _handle_window_action(self, target: str, payload) -> None:
+        def impl():
+            data = payload if isinstance(payload, dict) else {}
+            action = str(data.get("action") or "toggle").strip().lower()
+
+            if target == "main":
+                if self.main_window is None:
+                    return
+                page = data.get("page")
+                if not page:
+                    query = data.get("query")
+                    if isinstance(query, dict):
+                        page = (
+                            query.get("page")
+                            or query.get("page_name")
+                            or query.get("name")
+                            or query.get("value")
+                        )
+                page_name = None
+                if page is not None:
+                    text = str(page).strip()
+                    if text:
+                        page_name = text
+
+                if action == "toggle":
+                    if page_name:
+                        is_minimized = (
+                            getattr(self.main_window, "isMinimized", None)
+                            and self.main_window.isMinimized()
+                        )
+                        if self.main_window.isVisible() and not is_minimized:
+                            self.main_window.hide()
+                        elif hasattr(self.main_window, "_handle_main_page_requested"):
+                            self.main_window._handle_main_page_requested(page_name)
+                        elif hasattr(self.main_window, "toggle_window"):
+                            self.main_window.toggle_window()
+                        else:
+                            self.main_window.show()
+                    elif hasattr(self.main_window, "toggle_window"):
+                        self.main_window.toggle_window()
+                    return
+                if action == "hide":
+                    self.main_window.hide()
+                    return
+                if action == "show":
+                    if page_name and hasattr(
+                        self.main_window, "_handle_main_page_requested"
+                    ):
+                        self.main_window._handle_main_page_requested(page_name)
+                        return
+                    if (
+                        getattr(self.main_window, "isMinimized", None)
+                        and self.main_window.isMinimized()
+                    ):
+                        if hasattr(self.main_window, "toggle_window"):
+                            self.main_window.toggle_window()
+                    elif not self.main_window.isVisible():
+                        if hasattr(self.main_window, "toggle_window"):
+                            self.main_window.toggle_window()
+                        else:
+                            self.main_window.show()
+                    if hasattr(self.main_window, "activateWindow"):
+                        self.main_window.activateWindow()
+                    if hasattr(self.main_window, "raise_"):
+                        self.main_window.raise_()
+                    return
+
+            if target == "settings":
+                page = str(data.get("page") or "basicSettingsInterface")
+                is_preview = bool(data.get("is_preview") or False)
+                win = self.settings_window
+                if action == "hide":
+                    if win is not None and win.isVisible():
+                        win.hide()
+                    return
+                if action == "toggle":
+                    if win is not None and win.isVisible():
+                        win.hide()
+                        return
+                    self.show_settings_window(page, is_preview=is_preview)
+                    return
+                if action == "show":
+                    self.show_settings_window(page, is_preview=is_preview)
+                    return
+
+            if target == "float":
+                if action == "toggle":
+                    self.show_float_window()
+                    return
+
+                if self.float_window is None:
+                    self.create_float_window()
+                win = self.float_window
+                if win is None:
+                    return
+                if action == "hide":
+                    if win.isVisible():
+                        win.hide()
+                    return
+                if action == "show":
+                    if not win.isVisible():
+                        win.show()
+                    win.raise_()
+                    win.activateWindow()
+                    return
+
+        safe_execute(impl, error_message="执行窗口控制失败")
 
     def _log_startup_time(self) -> None:
         """记录启动时间"""
@@ -301,7 +703,9 @@ class WindowManager:
         if self.float_window is None:
             self.create_float_window()
 
-        if self.float_window is not None:
+        if self.float_window.isVisible():
+            self.float_window.hide()
+        else:
             self.float_window.show()
 
     def show_guide_window(self) -> None:

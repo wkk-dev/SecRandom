@@ -15,7 +15,7 @@ SecRandom IPC URL 发送脚本
   python secrandom_ipc_send_url.py "SecRandom://main/lottery"
 
 使用 uv 运行（项目已配置 uv）
-- uv run d:\\GitHub\\SecRandom\\secrandom_ipc_send_url.py "SecRandom://settings"
+- uv run secrandom_ipc_send_url.py "SecRandom://settings"
 
 参数说明
 - url：要发送的 URL（大小写不敏感），例如：

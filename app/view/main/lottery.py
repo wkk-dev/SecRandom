@@ -105,7 +105,7 @@ class Lottery(QWidget):
 
         self.result_widget = QWidget()
         self.result_layout = QVBoxLayout(self.result_widget)
-        self.result_grid = FlowLayout(self.result_widget)
+        self.result_grid = FlowLayout()
         self.result_grid.setContentsMargins(0, 0, 0, 0)
         self.result_grid.setVerticalSpacing(GRID_ITEM_SPACING)
         self.result_grid.setHorizontalSpacing(GRID_ITEM_SPACING)

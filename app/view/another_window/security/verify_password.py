@@ -17,6 +17,7 @@ from app.common.safety.totp import (
 )
 from app.common.safety.usb import is_bound_connected, is_bound_present
 from app.tools.settings_access import readme_settings_async
+from app.view.components.touch_password_line_edit import TouchPasswordLineEdit
 
 
 class UsbStatusThread(QThread):
@@ -83,7 +84,7 @@ class VerifyPasswordWindow(QWidget):
         self.password_label = BodyLabel(
             get_content_name_async("basic_safety_settings", "current_password")
         )
-        self.password_edit = PasswordLineEdit()
+        self.password_edit = TouchPasswordLineEdit()
         try:
             self.password_edit.setPlaceholderText(
                 get_content_name_async(

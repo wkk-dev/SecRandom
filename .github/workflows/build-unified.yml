@@ -35,7 +35,13 @@ jobs:
             platform: windows
           # Linux PyInstaller 构建
           - os: ubuntu-22.04
-            arch: x64
+            arch: amd64
+            pack_mode: dir
+            packager: pyinstaller
+            platform: linux
+          # Linux PyInstaller 构建 (arm64)
+          - os: ubuntu-22.04-arm64
+            arch: arm64
             pack_mode: dir
             packager: pyinstaller
             platform: linux
@@ -104,6 +110,10 @@ jobs:
             libxcb-randr0 \
             libxcb-render-util0 \
             libxcb-shape0 \
+            libfuse2 \
+            squashfs-tools \
+            appstream \
+            desktop-file-utils \
             dpkg-dev
           echo "Linux系统依赖安装完成"
         timeout-minutes: 10
@@ -141,6 +151,9 @@ jobs:
           uv sync --frozen
           echo "依赖同步完成，开始打包..."
           uv run build_pyinstaller.py
+        env:
+          SECRANDOM_DEB_FILENAME_ARCH: ${{ matrix.arch }}
+          SECRANDOM_DEB_CONTROL_ARCH: ${{ matrix.arch == 'amd64' && 'amd64' || 'arm64' }}
 
       # Windows 打包操作
       - name: Windows 打包操作
@@ -249,6 +262,61 @@ jobs:
 
           echo "deb包构建完成，位于zip目录下"
 
+          echo "开始构建 AppImage..."
+          APPDIR="appimage/AppDir"
+          rm -rf "$APPDIR"
+          mkdir -p "$APPDIR/usr/share"
+          mkdir -p "$APPDIR/usr/bin"
+
+          cp -r "dist/SecRandom" "$APPDIR/usr/share/SecRandom"
+
+          cat > "$APPDIR/AppRun" << 'EOF'
+          #!/bin/sh
+          set -e
+          HERE="$(dirname "$(readlink -f "$0")")"
+          exec "$HERE/usr/share/SecRandom/SecRandom.bin" "$@"
+          EOF
+          chmod +x "$APPDIR/AppRun"
+
+          cat > "$APPDIR/SecRandom.desktop" << 'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=SecRandom
+          Exec=SecRandom
+          Icon=SecRandom
+          Categories=Education;Utility;
+          Terminal=false
+          EOF
+
+          cp "data/assets/icon/secrandom-icon-paper.png" "$APPDIR/SecRandom.png"
+          ln -sf "../share/SecRandom/SecRandom.bin" "$APPDIR/usr/bin/SecRandom"
+
+          if [ "${{ matrix.arch }}" = "amd64" ]; then
+            TOOL_URL="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+            TOOL_ARCH="x86_64"
+          else
+            TOOL_URL="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage"
+            TOOL_ARCH="aarch64"
+          fi
+
+          mkdir -p appimage/tools
+          curl -L "$TOOL_URL" -o appimage/tools/appimagetool.AppImage
+          chmod +x appimage/tools/appimagetool.AppImage
+          (cd appimage/tools && ./appimagetool.AppImage --appimage-extract >/dev/null 2>&1)
+
+          OUT="zip/SecRandom-Linux-AppImage-${{ github.ref_name }}-${{ matrix.arch }}.AppImage"
+          ARCH="$TOOL_ARCH" appimage/tools/squashfs-root/AppRun "$APPDIR" "$OUT"
+          chmod +x "$OUT" || true
+
+          echo "AppImage 构建完成: $OUT"
+          echo "zip目录内容："
+          ls -la zip/
+
+          if ! ls zip/*.AppImage 2>/dev/null | grep -q .; then
+            echo "错误：AppImage 未生成"
+            exit 1
+          fi
+
       - name: 上传应用程序
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4.4.2
@@ -289,7 +357,8 @@ jobs:
           # Windows 构建产物
           mv artifacts/windows-x64-dir/* release/ 2>/dev/null || echo "未找到 Windows x64 构建产物"
           # Linux 构建产物
-          mv artifacts/linux-x64-dir/* release/ 2>/dev/null || echo "未找到 Linux x64 构建产物"
+          mv artifacts/linux-amd64-dir/* release/ 2>/dev/null || echo "未找到 Linux amd64 构建产物"
+          mv artifacts/linux-arm64-dir/* release/ 2>/dev/null || echo "未找到 Linux arm64 构建产物"
           echo "构建产物整理完成"
           ls -la release/
 
@@ -325,26 +394,31 @@ jobs:
       - name: 生成 需发布 的表格信息
         run: |
           cd release
+          version_no_v="${{ github.ref_name }}"
+          version_no_v="${version_no_v#v}"
           # 创建CHANGELOG目录结构
           mkdir -p ../CHANGELOG/${{ github.ref_name }}
           # 创建CHANGELOG.md文件（如果不存在）
           touch ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "**国内 下载链接**" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
-          echo "| 平台/打包方式 | 支持架构  | 安装程序 |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
+          echo "| 平台/打包方式 | 支持架构  | 便携版 | 安装程序 |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "| --- | --- | --- | --- |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
-          echo "| Windows | x64 | [下载](https://www.123684.com/s/9529jv-U4Fxh) |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
-          echo "| Linux | x64 | [下载](https://www.123684.com/s/9529jv-U4Fxh) |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
+          echo "| Windows | x64 | [下载](https://www.123684.com/s/9529jv-U4Fxh) | [下载](https://www.123684.com/s/9529jv-U4Fxh) |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
+          echo "| Linux | amd64 | [下载](https://www.123684.com/s/9529jv-U4Fxh) | [下载](https://www.123684.com/s/9529jv-U4Fxh) |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
+          echo "| Linux | arm64 | [下载](https://www.123684.com/s/9529jv-U4Fxh) | [下载](https://www.123684.com/s/9529jv-U4Fxh) |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "**Github 镜像 下载链接**" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "| 镜像源 | 平台 | 支持架构 | 便携版 | 安装程序 |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "| --- | --- | --- | --- | --- |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "| ghfast.top | Windows | x64 | N/A | [下载 ${{ github.ref_name }}](https://ghfast.top/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Windows-Setup-${{ github.ref_name }}-x64.exe) |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "| ghfast.top | Windows | x64 | [下载 ${{ github.ref_name }}](https://ghfast.top/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Windows-Portable-${{ github.ref_name }}-x64.exe) | N/A |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
-          echo "| ghfast.top | Linux | x64 | N/A | [下载 ${{ github.ref_name }}](https://ghfast.top/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-linux-Setup-$version_no_v-amd64.deb) |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
+          echo "| ghfast.top | Linux | amd64 | [下载 ${{ github.ref_name }}](https://ghfast.top/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Linux-AppImage-${{ github.ref_name }}-amd64.AppImage) | [下载 ${{ github.ref_name }}](https://ghfast.top/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-linux-Setup-$version_no_v-amd64.deb) |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
+          echo "| ghfast.top | Linux | arm64 | [下载 ${{ github.ref_name }}](https://ghfast.top/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Linux-AppImage-${{ github.ref_name }}-arm64.AppImage) | [下载 ${{ github.ref_name }}](https://ghfast.top/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-linux-Setup-$version_no_v-arm64.deb) |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "| gh-proxy.com | Windows | x64 | N/A | [下载 ${{ github.ref_name }}](https://gh-proxy.com/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Windows-Setup-${{ github.ref_name }}-x64.exe) |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "| gh-proxy.com | Windows | x64 | [下载 ${{ github.ref_name }}](https://gh-proxy.com/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Windows-Portable-${{ github.ref_name }}-x64.exe) | N/A |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
-          echo "| gh-proxy.com | Linux | x64 | N/A | [下载 ${{ github.ref_name }}](https://gh-proxy.com/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-linux-Setup-$version_no_v-amd64.deb) |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
+          echo "| gh-proxy.com | Linux | amd64 | [下载 ${{ github.ref_name }}](https://gh-proxy.com/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Linux-AppImage-${{ github.ref_name }}-amd64.AppImage) | [下载 ${{ github.ref_name }}](https://gh-proxy.com/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-linux-Setup-$version_no_v-amd64.deb) |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
+          echo "| gh-proxy.com | Linux | arm64 | [下载 ${{ github.ref_name }}](https://gh-proxy.com/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-Linux-AppImage-${{ github.ref_name }}-arm64.AppImage) | [下载 ${{ github.ref_name }}](https://gh-proxy.com/https://github.com/SECTL/SecRandom/releases/download/${{ github.ref_name }}/SecRandom-linux-Setup-$version_no_v-arm64.deb) |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "**SHA256 校验值-请核对下载的文件的SHA256值是否正确**" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md
           echo "| 文件名 | SHA256 值 |" >> ../CHANGELOG/${{ github.ref_name }}/CHANGELOG.md

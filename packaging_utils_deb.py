@@ -5,11 +5,37 @@ Debian 包构建工具，用于简化 PyInstaller 和 Nuitka 构建的 deb 包�
 import os
 import shutil
 import subprocess
+import platform
 from pathlib import Path
 
 
 class DebBuilder:
     """Debian 包构建器类"""
+
+    @staticmethod
+    def _normalize_arch(machine: str) -> str:
+        m = (machine or "").lower()
+        if m in ("x86_64", "amd64"):
+            return "amd64"
+        if m in ("aarch64", "arm64"):
+            return "arm64"
+        return "amd64"
+
+    @staticmethod
+    def _normalize_arch_for_control(value: str | None, fallback: str) -> str:
+        v = (value or "").strip().lower()
+        if v in ("amd64", "arm64"):
+            return v
+        return fallback
+
+    @staticmethod
+    def _normalize_arch_for_filename(value: str | None, fallback: str) -> str:
+        v = (value or "").strip().lower()
+        if v == "arch64":
+            return "arm64"
+        if v in ("amd64", "arm64"):
+            return v
+        return fallback
 
     def __init__(
         self,
@@ -47,10 +73,17 @@ class DebBuilder:
         # 临时构建目录
         self.deb_root = project_root / "deb_build"
 
-        # deb包文件名
-        self.deb_filename = (
-            f"{self.app_name}-Linux-Portable-{self.deb_version}-amd64.deb"
+        machine = platform.machine()
+        default_arch = self._normalize_arch(machine)
+        self.deb_arch = self._normalize_arch_for_control(
+            os.environ.get("SECRANDOM_DEB_CONTROL_ARCH"), default_arch
         )
+        self.deb_filename_arch = self._normalize_arch_for_filename(
+            os.environ.get("SECRANDOM_DEB_FILENAME_ARCH"), self.deb_arch
+        )
+
+        # deb包文件名
+        self.deb_filename = f"{self.app_name}-linux-Setup-{self.deb_version}-{self.deb_filename_arch}.deb"
         self.deb_path = self.output_dir / self.deb_filename
 
     def _normalize_version(self, version: str) -> str:
@@ -136,7 +169,7 @@ Categories=Education;Utility;
         with open(control_file, "w") as f:
             f.write(f"""Package: {self.app_name}
 Version: {self.deb_version}
-Architecture: amd64
+Architecture: {self.deb_arch}
 Maintainer: {self.author}
 Installed-Size: {self._get_installed_size()}
 Depends: libc6, libgcc-s1, libgl1, libglib2.0-0, libgstreamer-plugins-base1.0-0, libgstreamer1.0-0, libpulse0, libqt5core5a, libqt5dbus5, libqt5gui5, libqt5network5, libqt5widgets5, libstdc++6, libxcb1

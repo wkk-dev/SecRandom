@@ -22,42 +22,53 @@ class URLCommandHandler(QObject):
 
     # 信号定义
     showSettingsRequested = Signal(str)  # 请求显示设置页面
+    showSettingsPreviewRequested = Signal(str)  # 请求以预览模式显示设置页面
     showMainPageRequested = Signal(str)  # 请求显示主页面
     showTrayActionRequested = Signal(str)  # 请求执行托盘操作
+    rollCallActionRequested = Signal(str, object)  # 点名页控制请求
+    lotteryActionRequested = Signal(str, object)  # 抽奖页控制请求
+    windowActionRequested = Signal(
+        str, object
+    )  # 窗口显示隐藏请求（主窗口/设置窗口/浮窗）
 
     def __init__(self, main_window=None):
         super().__init__()
         self.main_window = main_window
         self.security_verifier = None
+        self.secure_commands: List[str] = []
 
         logger.debug(f"初始化URLCommandHandler - main_window: {main_window}")
 
         # 定义所有支持的命令映射
         self.command_map = {
-            # 设置页面命令
-            "settings/basic": self._handle_basic_settings,
-            "settings/list": self._handle_list_settings,
-            "settings/extraction": self._handle_extraction_settings,
-            "settings/floating": self._handle_floating_settings,
-            "settings/notification": self._handle_notification_settings,
-            "settings/safety": self._handle_safety_settings,
-            "settings/custom": self._handle_custom_settings,
-            "settings/voice": self._handle_voice_settings,
-            "settings/history": self._handle_history_settings,
-            "settings/more": self._handle_more_settings,
-            "settings/update": self._handle_update_settings,
-            "settings/about": self._handle_about_settings,
-            "settings": self._handle_settings,
-            # 主界面页面命令
-            "main/roll": self._handle_roll_call,
-            "main/lottery": self._handle_lottery,
-            "main": self._handle_main_window,
+            # 点名控制命令
+            "roll_call/quick_draw": self._handle_roll_call_quick_draw,
+            "roll_call/start": self._handle_roll_call_start,
+            "roll_call/stop": self._handle_roll_call_stop,
+            "roll_call/reset": self._handle_roll_call_reset,
+            "roll_call/set_count": self._handle_roll_call_set_count,
+            "roll_call/set_group": self._handle_roll_call_set_group,
+            "roll_call/set_gender": self._handle_roll_call_set_gender,
+            "roll_call/set_list": self._handle_roll_call_set_list,
+            # 抽奖控制命令
+            "lottery/start": self._handle_lottery_start,
+            "lottery/stop": self._handle_lottery_stop,
+            "lottery/reset": self._handle_lottery_reset,
+            "lottery/set_count": self._handle_lottery_set_count,
+            "lottery/set_pool": self._handle_lottery_set_pool,
+            "lottery/set_range": self._handle_lottery_set_range,
+            "lottery/set_gender": self._handle_lottery_set_gender,
+            "lottery/set_list": self._handle_lottery_set_list,
             # 托盘功能命令
             "tray/toggle": self._handle_tray_toggle,
             "tray/settings": self._handle_tray_settings,
             "tray/float": self._handle_tray_float,
             "tray/restart": self._handle_tray_restart,
             "tray/exit": self._handle_tray_exit,
+            # 窗口控制命令
+            "window/main": self._handle_window_main,
+            "window/settings": self._handle_window_settings,
+            "window/float": self._handle_window_float,
             # 数据获取命令（只读）
             "data/roll_call_list": self._handle_get_roll_call_list,
             "data/lottery_list": self._handle_get_lottery_list,
@@ -85,6 +96,7 @@ class URLCommandHandler(QObject):
         self.main_page_map = {
             "roll": "roll_call_page",
             "lottery": "lottery_page",
+            "history": "history_page",
         }
 
         logger.debug("URL命令处理器初始化完成")
@@ -254,25 +266,24 @@ class URLCommandHandler(QObject):
             logger.debug(f"命令无需验证（安全总开关关闭）：{command}")
             return False
 
+        if command in (self.secure_commands or []):
+            logger.debug(f"命令需验证（自定义受控命令）：{command}")
+            return True
+
         # 命令到操作类型的映射
         command_to_op = {
-            "settings/basic": "open_settings",
-            "settings/list": "open_settings",
-            "settings/extraction": "open_settings",
-            "settings/floating": "open_settings",
-            "settings/notification": "open_settings",
-            "settings/safety": "open_settings",
-            "settings/custom": "open_settings",
-            "settings/voice": "open_settings",
-            "settings/history": "open_settings",
-            "settings/more": "open_settings",
-            "settings/update": "open_settings",
-            "settings/about": "open_settings",
-            "settings": "open_settings",
             "tray/settings": "open_settings",
             "tray/float": "show_hide_floating_window",
+            "window/main": None,
+            "window/settings": "open_settings",
+            "window/float": "show_hide_floating_window",
             "tray/restart": "restart",
             "tray/exit": "exit",
+            "roll_call/quick_draw": None,
+            "roll_call/start": None,
+            "roll_call/reset": None,
+            "lottery/start": None,
+            "lottery/reset": None,
         }
 
         # 操作类型到开关的映射
@@ -281,13 +292,18 @@ class URLCommandHandler(QObject):
             "show_hide_floating_window": "show_hide_floating_window_switch",
             "restart": "restart_switch",
             "exit": "exit_switch",
+            "roll_call_start": "safety_switch",
+            "roll_call_reset": "safety_switch",
+            "lottery_start": "safety_switch",
+            "lottery_reset": "safety_switch",
+            "quick_draw": "safety_switch",
         }
 
         # 获取操作类型
-        op = command_to_op.get(command)
-        if not op:
-            logger.debug(f"命令需验证（默认受控）：{command}")
-            return True
+        op = command_to_op.get(command, None)
+        if op is None:
+            logger.debug(f"命令无需验证（默认放行）：{command}")
+            return False
 
         # 获取对应的开关
         switch = op_to_switch.get(op)
@@ -302,34 +318,94 @@ class URLCommandHandler(QObject):
         )
         return requires
 
+    def _resolve_settings_page(
+        self, command: str, params: Dict[str, Any]
+    ) -> Optional[str]:
+        if command == "tray/settings":
+            return "basicSettingsInterface"
+
+        if command == "settings":
+            args = (params or {}).get("args", []) or []
+            if not args or (args and args[0] == ""):
+                return "basicSettingsInterface"
+            page_name = args[0]
+            return self.settings_page_map.get(page_name)
+
+        if command.startswith("settings/"):
+            name = command.split("/", 1)[1]
+            return self.settings_page_map.get(name)
+
+        return None
+
+    def _get_op_and_switch(self, command: str) -> tuple[str, Optional[str]]:
+        command_to_op = {
+            "tray/settings": "open_settings",
+            "tray/float": "show_hide_floating_window",
+            "window/main": None,
+            "window/settings": "open_settings",
+            "window/float": "show_hide_floating_window",
+            "tray/restart": "restart",
+            "tray/exit": "exit",
+            "roll_call/quick_draw": "quick_draw",
+            "roll_call/start": "roll_call_start",
+            "roll_call/reset": "roll_call_reset",
+            "lottery/start": "lottery_start",
+            "lottery/reset": "lottery_reset",
+        }
+
+        op_to_switch = {
+            "open_settings": "open_settings_switch",
+            "show_hide_floating_window": "show_hide_floating_window_switch",
+            "restart": "restart_switch",
+            "exit": "exit_switch",
+            "roll_call_start": "safety_switch",
+            "roll_call_reset": "safety_switch",
+            "lottery_start": "safety_switch",
+            "lottery_reset": "safety_switch",
+            "quick_draw": "safety_switch",
+        }
+
+        op = command_to_op.get(command, command)
+        return op, op_to_switch.get(op)
+
+    def _get_linkage_verification_policy(self, kind: str) -> Dict[str, bool]:
+        from app.tools.settings_access import readme_settings_async
+
+        is_non_class_time = False
+        try:
+            if kind == "roll_call":
+                from app.common.roll_call.roll_call_manager import _is_non_class_time
+
+                is_non_class_time = bool(_is_non_class_time())
+            elif kind == "lottery":
+                from app.common.lottery.lottery_manager import _is_non_class_time
+
+                is_non_class_time = bool(_is_non_class_time())
+        except Exception:
+            is_non_class_time = False
+
+        verification_required = bool(
+            readme_settings_async("linkage_settings", "verification_required")
+        )
+
+        return {
+            "is_non_class_time": is_non_class_time,
+            "verification_required": verification_required,
+        }
+
     def _request_verification(
         self, command: str, params: Dict[str, Any]
     ) -> Dict[str, Any]:
         """请求验证"""
         logger.debug(f"请求验证 - 命令: {command}, 参数: {params}")
+        from app.tools.settings_access import readme_settings_async
 
-        # 获取操作类型
-        command_to_op = {
-            "settings/basic": "open_settings",
-            "settings/list": "open_settings",
-            "settings/extraction": "open_settings",
-            "settings/floating": "open_settings",
-            "settings/notification": "open_settings",
-            "settings/safety": "open_settings",
-            "settings/custom": "open_settings",
-            "settings/voice": "open_settings",
-            "settings/history": "open_settings",
-            "settings/more": "open_settings",
-            "settings/update": "open_settings",
-            "settings/about": "open_settings",
-            "settings": "open_settings",
-            "tray/settings": "open_settings",
-            "tray/float": "show_hide_floating_window",
-            "tray/restart": "restart",
-            "tray/exit": "exit",
-        }
-
-        op = command_to_op.get(command, command)
+        op, switch = self._get_op_and_switch(command)
+        switch_enabled = (
+            bool(readme_settings_async("basic_safety_settings", switch))
+            if switch
+            else None
+        )
 
         # 创建验证窗口
         from app.page_building.security_window import create_verify_password_window
@@ -343,8 +419,17 @@ class URLCommandHandler(QObject):
             except Exception as e:
                 logger.exception(f"验证后执行命令失败: {command}, 错误: {e}")
 
+        def preview_settings():
+            page = self._resolve_settings_page(command, params)
+            if page:
+                self.showSettingsPreviewRequested.emit(page)
+
         # 调用验证窗口
-        create_verify_password_window(on_verified=execute_command, operation_type=op)
+        create_verify_password_window(
+            on_verified=execute_command,
+            on_preview=preview_settings if op == "open_settings" else None,
+            operation_type=op,
+        )
 
         return {
             "success": False,
@@ -352,6 +437,9 @@ class URLCommandHandler(QObject):
             "requires_verification": True,
             "command": command,
             "params": params,
+            "operation_type": op,
+            "safety_setting_key": switch,
+            "safety_setting_enabled": switch_enabled,
             "message": "此命令需要安全验证",
         }
 
@@ -625,6 +713,92 @@ class URLCommandHandler(QObject):
             "page": "roll_call_page",
         }
 
+    def _handle_roll_call_quick_draw(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        logger.debug("请求执行闪抽")
+        policy = self._get_linkage_verification_policy("roll_call")
+        if policy.get("is_non_class_time") and not policy.get("verification_required"):
+            return {
+                "status": "error",
+                "message": "当前时间在非上课时间段内，禁止抽取",
+                **policy,
+            }
+        self.rollCallActionRequested.emit("quick_draw", params or {})
+        return {"status": "success", "message": "已请求执行闪抽", **policy}
+
+    def _handle_roll_call_start(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        logger.debug("请求开始点名")
+        policy = self._get_linkage_verification_policy("roll_call")
+        if policy.get("is_non_class_time") and not policy.get("verification_required"):
+            return {
+                "status": "error",
+                "message": "当前时间在非上课时间段内，禁止抽取",
+                **policy,
+            }
+        self.rollCallActionRequested.emit("start", params or {})
+        return {"status": "success", "message": "已请求开始点名", **policy}
+
+    def _handle_roll_call_stop(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        logger.debug("请求停止点名")
+        self.rollCallActionRequested.emit("stop", params or {})
+        return {"status": "success", "message": "已请求停止点名"}
+
+    def _handle_roll_call_reset(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        logger.debug("请求重置点名记录")
+        policy = self._get_linkage_verification_policy("roll_call")
+        if policy.get("is_non_class_time") and not policy.get("verification_required"):
+            return {
+                "status": "error",
+                "message": "当前时间在非上课时间段内，禁止重置",
+                **policy,
+            }
+        self.rollCallActionRequested.emit("reset", params or {})
+        return {"status": "success", "message": "已请求重置点名记录", **policy}
+
+    def _handle_roll_call_set_count(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        query = (params or {}).get("query", {}) or {}
+        raw = query.get("count") or query.get("value") or query.get("draw_count")
+        try:
+            count = int(raw)
+        except Exception:
+            return {"status": "error", "message": "参数无效: count"}
+        if count <= 0:
+            return {"status": "error", "message": "参数无效: count"}
+        self.rollCallActionRequested.emit(
+            "set_count", {"count": count, **(params or {})}
+        )
+        return {"status": "success", "message": "已请求设置点名人数", "count": count}
+
+    def _handle_roll_call_set_group(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        query = (params or {}).get("query", {}) or {}
+        group = query.get("group") or query.get("value") or query.get("text")
+        index = query.get("index") or query.get("group_index")
+        payload: Dict[str, Any] = {"group": group, "index": index}
+        self.rollCallActionRequested.emit("set_group", {**payload, **(params or {})})
+        return {"status": "success", "message": "已请求设置点名小组/范围", **payload}
+
+    def _handle_roll_call_set_gender(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        query = (params or {}).get("query", {}) or {}
+        gender = query.get("gender") or query.get("value") or query.get("text")
+        index = query.get("index") or query.get("gender_index")
+        payload: Dict[str, Any] = {"gender": gender, "index": index}
+        self.rollCallActionRequested.emit("set_gender", {**payload, **(params or {})})
+        return {"status": "success", "message": "已请求设置点名性别", **payload}
+
+    def _handle_roll_call_set_list(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        query = (params or {}).get("query", {}) or {}
+        class_name = (
+            query.get("class_name")
+            or query.get("class")
+            or query.get("name")
+            or query.get("className")
+            or query.get("value")
+            or query.get("text")
+        )
+        index = query.get("index")
+        payload: Dict[str, Any] = {"class_name": class_name, "index": index}
+        self.rollCallActionRequested.emit("set_list", {**payload, **(params or {})})
+        return {"status": "success", "message": "已请求设置点名名单", **payload}
+
     def _handle_lottery(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """处理抽奖功能"""
         logger.debug("URLCommandHandler._handle_lottery: 切换到抽奖页面")
@@ -637,6 +811,175 @@ class URLCommandHandler(QObject):
             "message": "已切换到抽奖页面",
             "page": "lottery_page",
         }
+
+    def _handle_lottery_start(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        logger.debug("请求开始抽奖")
+        policy = self._get_linkage_verification_policy("lottery")
+        if policy.get("is_non_class_time") and not policy.get("verification_required"):
+            return {
+                "status": "error",
+                "message": "当前时间在非上课时间段内，禁止抽取",
+                **policy,
+            }
+        self.lotteryActionRequested.emit("start", params or {})
+        return {"status": "success", "message": "已请求开始抽奖", **policy}
+
+    def _handle_lottery_stop(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        logger.debug("请求停止抽奖")
+        self.lotteryActionRequested.emit("stop", params or {})
+        return {"status": "success", "message": "已请求停止抽奖"}
+
+    def _handle_lottery_reset(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        logger.debug("请求重置抽奖记录")
+        policy = self._get_linkage_verification_policy("lottery")
+        if policy.get("is_non_class_time") and not policy.get("verification_required"):
+            return {
+                "status": "error",
+                "message": "当前时间在非上课时间段内，禁止重置",
+                **policy,
+            }
+        self.lotteryActionRequested.emit("reset", params or {})
+        return {"status": "success", "message": "已请求重置抽奖记录", **policy}
+
+    def _handle_lottery_set_count(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        query = (params or {}).get("query", {}) or {}
+        raw = query.get("count") or query.get("value") or query.get("draw_count")
+        try:
+            count = int(raw)
+        except Exception:
+            return {"status": "error", "message": "参数无效: count"}
+        if count <= 0:
+            return {"status": "error", "message": "参数无效: count"}
+        self.lotteryActionRequested.emit(
+            "set_count", {"count": count, **(params or {})}
+        )
+        return {"status": "success", "message": "已请求设置抽奖数量", "count": count}
+
+    def _handle_lottery_set_pool(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        query = (params or {}).get("query", {}) or {}
+        pool_name = (
+            query.get("pool_name")
+            or query.get("pool")
+            or query.get("name")
+            or query.get("poolName")
+            or query.get("value")
+            or query.get("text")
+        )
+        index = query.get("index")
+        payload: Dict[str, Any] = {"pool_name": pool_name, "index": index}
+        self.lotteryActionRequested.emit("set_pool", {**payload, **(params or {})})
+        return {"status": "success", "message": "已请求设置抽奖奖池", **payload}
+
+    def _handle_lottery_set_range(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        query = (params or {}).get("query", {}) or {}
+        value = query.get("range") or query.get("value") or query.get("text")
+        index = query.get("index") or query.get("range_index")
+        payload: Dict[str, Any] = {"range": value, "index": index}
+        self.lotteryActionRequested.emit("set_range", {**payload, **(params or {})})
+        return {"status": "success", "message": "已请求设置抽奖范围", **payload}
+
+    def _handle_lottery_set_gender(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        query = (params or {}).get("query", {}) or {}
+        value = query.get("gender") or query.get("value") or query.get("text")
+        index = query.get("index") or query.get("gender_index")
+        payload: Dict[str, Any] = {"gender": value, "index": index}
+        self.lotteryActionRequested.emit("set_gender", {**payload, **(params or {})})
+        return {"status": "success", "message": "已请求设置抽奖性别", **payload}
+
+    def _handle_lottery_set_list(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        query = (params or {}).get("query", {}) or {}
+        class_name = (
+            query.get("class_name")
+            or query.get("class")
+            or query.get("name")
+            or query.get("className")
+            or query.get("value")
+            or query.get("text")
+        )
+        index = query.get("index")
+        payload: Dict[str, Any] = {"class_name": class_name, "index": index}
+        self.lotteryActionRequested.emit("set_list", {**payload, **(params or {})})
+        return {"status": "success", "message": "已请求设置抽奖点名名单", **payload}
+
+    def _resolve_window_action(self, query: Dict[str, Any]) -> str:
+        raw = (
+            query.get("action")
+            or query.get("mode")
+            or query.get("op")
+            or query.get("do")
+            or ""
+        )
+        action = str(raw).strip().lower()
+        if action in ("toggle", "switch"):
+            return "toggle"
+        if action in ("show", "open", "1", "true", "yes", "on"):
+            return "show"
+        if action in ("hide", "close", "0", "false", "no", "off"):
+            return "hide"
+        visible = query.get("visible")
+        if visible is not None:
+            v = str(visible).strip().lower()
+            if v in ("1", "true", "yes", "on"):
+                return "show"
+            if v in ("0", "false", "no", "off"):
+                return "hide"
+        return "toggle"
+
+    def _handle_window_main(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        query = (params or {}).get("query", {}) or {}
+        action = self._resolve_window_action(query)
+        page = (
+            query.get("page")
+            or query.get("page_name")
+            or query.get("name")
+            or query.get("value")
+        )
+        page_name = None
+        if isinstance(page, str) and page.strip():
+            raw = page.strip()
+            page_name = self.main_page_map.get(raw, raw)
+
+        payload: Dict[str, Any] = {"action": action}
+        if page_name:
+            payload["page"] = page_name
+
+        self.windowActionRequested.emit("main", {**payload, **(params or {})})
+        result: Dict[str, Any] = {
+            "status": "success",
+            "message": "已请求主窗口操作",
+            "action": action,
+        }
+        if page_name:
+            result["page"] = page_name
+        return result
+
+    def _handle_window_settings(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        query = (params or {}).get("query", {}) or {}
+        action = self._resolve_window_action(query)
+        page = (
+            query.get("page")
+            or query.get("page_name")
+            or query.get("name")
+            or query.get("value")
+        )
+        preview = query.get("preview")
+        is_preview = False
+        if preview is not None:
+            v = str(preview).strip().lower()
+            is_preview = v in ("1", "true", "yes", "on")
+        payload: Dict[str, Any] = {
+            "action": action,
+            "page": page,
+            "is_preview": is_preview,
+        }
+        self.windowActionRequested.emit("settings", {**payload, **(params or {})})
+        return {"status": "success", "message": "已请求设置窗口操作", **payload}
+
+    def _handle_window_float(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        query = (params or {}).get("query", {}) or {}
+        action = self._resolve_window_action(query)
+        self.windowActionRequested.emit("float", {"action": action, **(params or {})})
+        return {"status": "success", "message": "已请求浮窗操作", "action": action}
 
     def _handle_main_window(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """处理主窗口命令"""
@@ -671,19 +1014,19 @@ class URLCommandHandler(QObject):
     def _handle_tray_float(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """处理托盘浮窗"""
         logger.debug("切换浮窗显示状态")
-        self.showTrayActionRequested.emit("toggle_float_window")
+        self.showTrayActionRequested.emit("float")
         return {"status": "success", "message": "浮窗显示状态已切换"}
 
     def _handle_tray_restart(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """处理托盘重启"""
         logger.debug("执行重启操作")
-        self.showTrayActionRequested.emit("restart_app")
+        self.showTrayActionRequested.emit("restart")
         return {"status": "success", "message": "应用重启中..."}
 
     def _handle_tray_exit(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """处理托盘退出"""
         logger.debug("执行退出操作")
-        self.showTrayActionRequested.emit("exit_app")
+        self.showTrayActionRequested.emit("exit")
         return {"status": "success", "message": "应用退出中..."}
 
     def _handle_get_roll_call_list(self, params: Dict[str, Any]) -> Dict[str, Any]:

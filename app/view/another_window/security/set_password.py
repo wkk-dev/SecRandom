@@ -12,6 +12,7 @@ from app.common.safety.password import (
     clear_password,
 )
 from app.tools.settings_access import update_settings
+from app.view.components.touch_password_line_edit import TouchPasswordLineEdit
 
 
 class SetPasswordWindow(QWidget):
@@ -56,15 +57,15 @@ class SetPasswordWindow(QWidget):
         self.current_label = BodyLabel(
             get_content_name_async("basic_safety_settings", "current_password")
         )
-        self.current_edit = PasswordLineEdit()
+        self.current_edit = TouchPasswordLineEdit()
         self.new_label = BodyLabel(
             get_content_name_async("basic_safety_settings", "new_password")
         )
-        self.new_edit = PasswordLineEdit()
+        self.new_edit = TouchPasswordLineEdit()
         self.confirm_label = BodyLabel(
             get_content_name_async("basic_safety_settings", "confirm_password")
         )
-        self.confirm_edit = PasswordLineEdit()
+        self.confirm_edit = TouchPasswordLineEdit()
 
         self.strength_label = BodyLabel(
             get_content_name_async("basic_safety_settings", "password_strength_title")

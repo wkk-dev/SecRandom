@@ -285,6 +285,8 @@ class ResultDisplayUtils:
         if display_format == 1:  # 仅显示姓名
             return f"{name}"
         elif display_format == 2:  # 仅显示学号
+            if not student_id_str:
+                return f"{name}"
             return f"{student_id_str}"
         else:  # 显示学号+姓名
             if draw_count == 1:
@@ -761,102 +763,96 @@ class ResultDisplayUtils:
             new_widget = new_labels[i]
 
             if old_widget and new_widget:
-                old_layout = old_widget.layout()
-                new_layout = new_widget.layout()
 
-                if not old_layout or not new_layout:
-                    return False
+                def sync_widgets(old_obj, new_obj):
+                    if old_obj is None or new_obj is None:
+                        return False
 
-                if old_layout.count() != new_layout.count():
-                    return False
+                    if isinstance(old_obj, BodyLabel) and isinstance(
+                        new_obj, BodyLabel
+                    ):
+                        old_obj.setText(new_obj.text())
+                        old_obj.setStyleSheet(new_obj.styleSheet())
+                        return True
 
-                if old_layout and new_layout:
-                    for j in range(min(old_layout.count(), new_layout.count())):
-                        old_item = old_layout.itemAt(j)
-                        new_item = new_layout.itemAt(j)
+                    if isinstance(old_obj, AvatarWidget) and isinstance(
+                        new_obj, AvatarWidget
+                    ):
 
-                        if old_item and new_item:
-                            old_content = old_item.widget()
-                            new_content = new_item.widget()
+                        def _safe_get_text(obj):
+                            text_attr = getattr(obj, "text", None)
+                            if callable(text_attr):
+                                try:
+                                    return text_attr()
+                                except Exception:
+                                    return ""
+                            if isinstance(text_attr, str):
+                                return text_attr
+                            return ""
 
-                            if old_content is None or new_content is None:
-                                return False
-
-                            # 如果内容是容器（带头像的情况），更新其内部组件
-                            if old_content.layout() and new_content.layout():
-                                old_inner_layout = old_content.layout()
-                                new_inner_layout = new_content.layout()
-
-                                if old_inner_layout.count() != new_inner_layout.count():
-                                    return False
-
-                                for k in range(
-                                    min(
-                                        old_inner_layout.count(),
-                                        new_inner_layout.count(),
-                                    )
-                                ):
-                                    old_inner_item = old_inner_layout.itemAt(k)
-                                    new_inner_item = new_inner_layout.itemAt(k)
-
-                                    if old_inner_item and new_inner_item:
-                                        old_inner_widget = old_inner_item.widget()
-                                        new_inner_widget = new_inner_item.widget()
-                                        if (
-                                            old_inner_widget is None
-                                            or new_inner_widget is None
-                                        ):
-                                            return False
-
-                                        # 更新文本标签
-                                        if isinstance(
-                                            old_inner_widget, BodyLabel
-                                        ) and isinstance(new_inner_widget, BodyLabel):
-                                            old_inner_widget.setText(
-                                                new_inner_widget.text()
-                                            )
-                                            old_inner_widget.setStyleSheet(
-                                                new_inner_widget.styleSheet()
-                                            )
-
-                                        # 更新头像组件
-                                        from qfluentwidgets import AvatarWidget
-
-                                        if isinstance(
-                                            old_inner_widget, AvatarWidget
-                                        ) and isinstance(
-                                            new_inner_widget, AvatarWidget
-                                        ):
-                                            old_image = old_inner_widget.getImage()
-                                            new_image = new_inner_widget.getImage()
-                                            if old_image != new_image:
-                                                old_inner_widget.setImage(new_image)
-                                            if hasattr(
-                                                old_inner_widget, "setText"
-                                            ) and hasattr(new_inner_widget, "text"):
-                                                old_text = (
-                                                    old_inner_widget.text()
-                                                    if hasattr(old_inner_widget, "text")
-                                                    else ""
-                                                )
-                                                new_text = new_inner_widget.text()
-                                                if old_text != new_text:
-                                                    old_inner_widget.setText(new_text)
-                                        if not isinstance(
-                                            old_inner_widget, (BodyLabel, AvatarWidget)
-                                        ) or not isinstance(
-                                            new_inner_widget, (BodyLabel, AvatarWidget)
-                                        ):
-                                            return False
-
-                            # 如果内容是直接标签（不带头像的情况）
-                            elif isinstance(old_content, BodyLabel) and isinstance(
-                                new_content, BodyLabel
+                        def _extract_image(obj):
+                            for name in (
+                                "imagePath",
+                                "_imagePath",
+                                "_pixmap",
+                                "pixmap",
+                                "_image",
+                                "image",
                             ):
-                                old_content.setText(new_content.text())
-                                old_content.setStyleSheet(new_content.styleSheet())
-                            else:
-                                return False
+                                value = getattr(obj, name, None)
+                                if callable(value):
+                                    try:
+                                        value = value()
+                                    except Exception:
+                                        continue
+                                if value is not None:
+                                    return value
+                            return None
+
+                        new_image = _extract_image(new_obj)
+                        if new_image is not None and hasattr(old_obj, "setImage"):
+                            try:
+                                old_obj.setImage(new_image)
+                            except Exception:
+                                pass
+
+                        if hasattr(old_obj, "setText"):
+                            old_text = _safe_get_text(old_obj)
+                            new_text = _safe_get_text(new_obj)
+                            if old_text != new_text:
+                                old_obj.setText(new_text)
+                        return True
+
+                    old_layout = (
+                        old_obj.layout() if isinstance(old_obj, QWidget) else None
+                    )
+                    new_layout = (
+                        new_obj.layout() if isinstance(new_obj, QWidget) else None
+                    )
+                    if old_layout is None or new_layout is None:
+                        return False
+
+                    if old_layout.count() != new_layout.count():
+                        return False
+
+                    for idx in range(old_layout.count()):
+                        old_item = old_layout.itemAt(idx)
+                        new_item = new_layout.itemAt(idx)
+                        if old_item is None or new_item is None:
+                            return False
+
+                        old_child = old_item.widget()
+                        new_child = new_item.widget()
+                        if old_child is None or new_child is None:
+                            return False
+
+                        if not sync_widgets(old_child, new_child):
+                            return False
+
+                    return True
+
+                if not sync_widgets(old_widget, new_widget):
+                    return False
             else:
                 return False
 

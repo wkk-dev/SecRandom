@@ -49,6 +49,7 @@ class MainWindow(FluentWindow):
     程序的核心控制中心"""
 
     showSettingsRequested = Signal(str)  # 请求显示设置页面
+    showSettingsPreviewRequested = Signal(str)  # 请求以预览模式显示设置页面
     showSettingsRequestedAbout = Signal()
     showFloatWindowRequested = Signal()
     showMainPageRequested = Signal(str)  # 请求显示主页面
@@ -157,6 +158,9 @@ class MainWindow(FluentWindow):
         )
         self.url_command_handler.showSettingsRequested.connect(
             self.showSettingsRequested.emit
+        )
+        self.url_command_handler.showSettingsPreviewRequested.connect(
+            self.showSettingsPreviewRequested.emit
         )
         self.url_command_handler.showTrayActionRequested.connect(
             self._handle_tray_action_requested
