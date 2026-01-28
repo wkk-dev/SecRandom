@@ -50,26 +50,49 @@ def create_sentry_before_send_filter():
     """
 
     def before_send(event, hint):
-        if "exception" not in event:
+        # 1. 检查是否有堆栈信息
+        has_stacktrace = False
+        if "exception" in event:
+            values = event.get("exception", {}).get("values", [])
+            for val in values:
+                if val.get("stacktrace"):
+                    has_stacktrace = True
+                    break
+
+        if not has_stacktrace and "threads" in event:
+            values = event.get("threads", {}).get("values", [])
+            for val in values:
+                if val.get("stacktrace"):
+                    has_stacktrace = True
+                    break
+
+        # 检查 loguru 的 log_record
+        log_record = hint.get("log_record")
+        if log_record:
+            if getattr(log_record, "exception", None):
+                has_stacktrace = True
+            elif hasattr(log_record, "extra") and log_record.extra.get("exc_info"):
+                has_stacktrace = True
+
+        # 如果没有堆栈信息，且是错误/严重级别，则丢弃 (logger.info 等低级别不会被丢弃，除非 event_level 设置)
+        if not has_stacktrace and event.get("level") in ("error", "fatal"):
             return None
 
-        exceptions = event.get("exception", {}).get("values", [])
-        if not exceptions:
-            return None
+        # 2. 过滤特定的错误类型或模块
+        if "exception" in event:
+            exceptions = event.get("exception", {}).get("values", [])
+            for exc in exceptions:
+                module = exc.get("module", "")
+                type_ = exc.get("type", "")
+                value = exc.get("value", "")
 
-        for exc in exceptions:
-            module = exc.get("module", "")
-            type_ = exc.get("type", "")
-            value = exc.get("value", "")
+                # 过滤 Qt 常见无害错误 (通常是由于对象在 C++ 侧已销毁但 Python 侧仍在尝试访问)
+                if type_ == "RuntimeError" and ("Internal C++ object" in str(value) or "has been deleted" in str(value)):
+                    return None
 
-            if module.startswith("qfluentwidgets"):
-                return None
-
-            if type_ == "RuntimeError" and "Internal C++ object" in str(value):
-                return None
-
-            if type_ == "COMError" and "没有注册类" in str(value):
-                return None
+                # 过滤 COM 相关
+                if type_ == "COMError" and "没有注册类" in str(value):
+                    return None
 
         return event
 
@@ -83,7 +106,7 @@ def initialize_sentry():
         integrations=[
             LoguruIntegration(
                 level=LoggingLevels.INFO.value,
-                event_level=LoggingLevels.CRITICAL.value,
+                event_level=LoggingLevels.ERROR.value,
             ),
         ],
         before_send=create_sentry_before_send_filter(),
