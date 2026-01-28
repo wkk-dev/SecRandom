@@ -358,23 +358,19 @@ def restart_application(program_dir):
 
         # Windows 平台使用 subprocess.Popen 启动新进程
         if platform.system() == "Windows":
-            try:
-                startup_info = subprocess.STARTUPINFO()
-                startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                subprocess.Popen(
-                    [executable] + filtered_args,
-                    cwd=program_dir,
-                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
-                    startupinfo=startup_info,
-                )
-                logger.info("Windows 平台：新进程已启动")
-                os._exit(0)
-            except Exception as e:
-                logger.exception(f"Windows 平台启动新进程失败: {e}")
-                os._exit(1)
+            startup_info = subprocess.STARTUPINFO()
+            startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            subprocess.Popen(
+                [executable] + filtered_args,
+                cwd=program_dir,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
+                startupinfo=startup_info,
+            )
+            logger.info("Windows 平台：新进程已启动")
+            os._exit(0)
         else:
-            # Linux/Unix 平台使用 os.execl 替换当前进程
-            logger.info("Linux 平台：使用 execl 重启应用程序")
+            # Linux/Unix/macOS 平台使用 os.execl 替换当前进程
+            logger.info("Linux/Unix/macOS 平台：使用 execl 重启应用程序")
             os.execl(executable, executable, *filtered_args)
     except Exception as e:
         logger.exception(f"重启应用程序失败: {e}")

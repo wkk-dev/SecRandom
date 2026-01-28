@@ -15,6 +15,7 @@ from app.tools.variable import (
     PRE_CLASS_RESET_INTERVAL_MS,
     RESIZE_TIMER_DELAY_MS,
     MAXIMIZE_RESTORE_DELAY_MS,
+    EXIT_CODE_RESTART,
 )
 from app.tools.path_utils import get_data_path
 from app.tools.personalised import get_theme_icon
@@ -1017,7 +1018,6 @@ class MainWindow(FluentWindow):
 
         # 使用 EXIT_CODE_RESTART 退出码来触发重启
         # main.py 中的 handle_exit() 函数会检测此退出码并执行重启逻辑
-        from app.tools.variable import EXIT_CODE_RESTART
         logger.info("正在退出以触发重启流程...")
         QApplication.exit(EXIT_CODE_RESTART)
 
