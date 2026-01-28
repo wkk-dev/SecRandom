@@ -2,6 +2,8 @@ import os
 import sys
 import time
 import gc
+import subprocess
+import platform
 
 import sentry_sdk
 from sentry_sdk.integrations.loguru import LoguruIntegration, LoggingLevels
@@ -342,16 +344,10 @@ def restart_application(program_dir):
     Args:
         program_dir: 程序目录路径
     """
-    import subprocess
-    import platform
-
     logger.info("检测到重启信号，正在重启应用程序...")
     filtered_args = [arg for arg in sys.argv if not arg.startswith("--")]
 
-    if getattr(sys, "frozen", False):
-        executable = sys.executable
-    else:
-        executable = sys.executable
+    executable = sys.executable
 
     if not os.path.exists(executable):
         logger.critical(f"重启失败：无法找到可执行文件: {executable}")
@@ -372,6 +368,7 @@ def restart_application(program_dir):
                     startupinfo=startup_info,
                 )
                 logger.info("Windows 平台：新进程已启动")
+                os._exit(0)
             except Exception as e:
                 logger.exception(f"Windows 平台启动新进程失败: {e}")
                 os._exit(1)
