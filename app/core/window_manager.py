@@ -1,3 +1,4 @@
+import os
 from typing import Optional, Callable, TYPE_CHECKING
 from loguru import logger
 from PySide6.QtCore import QTimer
@@ -9,6 +10,8 @@ if TYPE_CHECKING:
 
 
 app_start_time: float = 0.0
+pending_uiaccess_restart_after_show: bool = False
+_pending_uiaccess_restart_consumed: bool = False
 
 
 class WindowManager:
@@ -160,9 +163,16 @@ class WindowManager:
             if is_maximized:
                 from app.tools.variable import APP_INIT_DELAY
 
-                QTimer.singleShot(APP_INIT_DELAY, self.main_window.showMaximized)
+                def show_main_window():
+                    try:
+                        self.main_window.showMaximized()
+                    finally:
+                        self._schedule_main_window_shown_tasks()
+
+                QTimer.singleShot(APP_INIT_DELAY, show_main_window)
             else:
                 self.main_window.show()
+                self._schedule_main_window_shown_tasks()
 
         startup_display_float = readme_settings_async(
             "floating_window_management", "startup_display_floating_window"
@@ -172,6 +182,45 @@ class WindowManager:
                 self.create_float_window()
             if self.float_window is not None and not self.float_window.isVisible():
                 self.float_window.show()
+
+    def _schedule_main_window_shown_tasks(self) -> None:
+        try:
+            QTimer.singleShot(0, self._handle_main_window_shown)
+        except Exception:
+            pass
+
+    def _handle_main_window_shown(self) -> None:
+        global pending_uiaccess_restart_after_show
+        global _pending_uiaccess_restart_consumed
+
+        if not bool(pending_uiaccess_restart_after_show):
+            return
+        if bool(_pending_uiaccess_restart_consumed):
+            return
+        _pending_uiaccess_restart_consumed = True
+
+        try:
+            import platform
+
+            if platform.system() != "Windows":
+                return
+        except Exception:
+            return
+
+        try:
+            from PySide6.QtWidgets import QApplication
+            from app.tools.variable import EXIT_CODE_RESTART
+            from app.common.windows.uiaccess import (
+                UIACCESS_RESTART_ENV,
+                is_uiaccess_process,
+            )
+
+            if bool(is_uiaccess_process()):
+                return
+            os.environ[str(UIACCESS_RESTART_ENV)] = "1"
+            QApplication.exit(EXIT_CODE_RESTART)
+        except Exception as e:
+            logger.debug("主窗口显示后触发 UIAccess 重启失败（已忽略）: {}", e)
 
     def _connect_url_handler_signals(self) -> None:
         """连接URL处理器信号"""

@@ -17,6 +17,27 @@ floating_window_management = {
             "name": "浮窗透明度",
             "description": "调整浮窗透明度",
         },
+        "floating_window_topmost_mode": {
+            "name": "置顶模式",
+            "description": "选择浮窗置顶方式（UIA置顶需以管理员运行）",
+            "combo_items": ["关闭置顶", "置顶", "UIA置顶"],
+        },
+        "uia_topmost_restart_dialog_title": {
+            "name": "需要重启",
+            "description": "UIA置顶切换后重启提示标题",
+        },
+        "uia_topmost_restart_dialog_content": {
+            "name": "已切换为UIA置顶模式，需要重启生效，是否立即重启？",
+            "description": "UIA置顶切换后重启提示内容",
+        },
+        "uia_topmost_restart_dialog_restart_btn": {
+            "name": "重启",
+            "description": "UIA置顶切换后重启按钮文本",
+        },
+        "uia_topmost_restart_dialog_cancel_btn": {
+            "name": "取消",
+            "description": "UIA置顶切换后取消按钮文本",
+        },
         "reset_floating_window_position_button": {
             "name": "重置浮窗位置",
             "description": "将浮窗位置重置为默认位置",
@@ -107,6 +128,27 @@ floating_window_management = {
         "floating_window_opacity": {
             "name": "Floating window transparency",
             "description": "Adjust floating window transparency",
+        },
+        "floating_window_topmost_mode": {
+            "name": "Topmost mode",
+            "description": "Select floating window topmost mode (UIA requires run as administrator)",
+            "combo_items": ["Disable topmost", "Topmost", "UIA topmost"],
+        },
+        "uia_topmost_restart_dialog_title": {
+            "name": "Restart Required",
+            "description": "Restart dialog title after switching UIA topmost",
+        },
+        "uia_topmost_restart_dialog_content": {
+            "name": "UIA topmost mode has been enabled. Restart now to apply changes?",
+            "description": "Restart dialog content after switching UIA topmost",
+        },
+        "uia_topmost_restart_dialog_restart_btn": {
+            "name": "Restart",
+            "description": "Restart button text after switching UIA topmost",
+        },
+        "uia_topmost_restart_dialog_cancel_btn": {
+            "name": "Cancel",
+            "description": "Cancel button text after switching UIA topmost",
         },
         "reset_floating_window_position_button": {
             "name": "Reset floating window position",

@@ -1,4 +1,6 @@
 # 标准库导入
+import ctypes
+import os
 from typing import Dict, Any
 
 # 第三方库导入
@@ -17,6 +19,7 @@ from app.tools.settings_access import (
     get_settings_signals,
 )
 from app.tools.path_utils import *
+from app.tools.variable import EXIT_CODE_RESTART
 from app.Language.obtain_language import get_content_combo_name_async
 from app.common.extraction.extract import _is_non_class_time
 from app.common.safety.verify_ops import require_and_run
@@ -91,12 +94,10 @@ class LevitationWindow(QWidget):
     def _setup_window_properties(self):
         """设置窗口基础属性"""
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setWindowFlags(
-            Qt.FramelessWindowHint
-            | Qt.WindowStaysOnTopHint
-            | Qt.Tool
-            | Qt.NoDropShadowWindowHint
+        self._base_window_flags = (
+            Qt.FramelessWindowHint | Qt.Tool | Qt.NoDropShadowWindowHint
         )
+        self.setWindowFlags(self._base_window_flags | Qt.WindowStaysOnTopHint)
 
     def _init_drag_properties(self):
         """初始化拖拽相关属性"""
@@ -148,15 +149,171 @@ class LevitationWindow(QWidget):
         self._periodic_topmost_timer = QTimer(self)
         self._periodic_topmost_timer.timeout.connect(self._periodic_topmost)
         self._periodic_topmost_interval = 100
+        self._uia_topmost_timer = QTimer(self)
+        self._uia_topmost_timer.timeout.connect(self._uia_keep_topmost)
+        self._uia_topmost_interval = 250
+        self._uiaccess_funcs = None
+        self._uia_last_error_ms = 0
+        self._uia_last_error_text = ""
+        self._uiaccess_restart_requested = False
+
+    def _get_uiaccess_funcs(self):
+        if self._uiaccess_funcs is not None:
+            return self._uiaccess_funcs
+        try:
+            from app.common.windows.uiaccess import (
+                UIACCESS_RESTART_ENV,
+                is_uiaccess_process,
+                set_window_band_uiaccess,
+            )
+
+            self._uiaccess_funcs = (
+                UIACCESS_RESTART_ENV,
+                is_uiaccess_process,
+                set_window_band_uiaccess,
+            )
+        except Exception:
+            self._uiaccess_funcs = (None, None, None)
+        return self._uiaccess_funcs
+
+    def _request_uiaccess_restart(self):
+        if getattr(self, "_uiaccess_restart_requested", False):
+            return
+        self._uiaccess_restart_requested = True
+
+        env_key, _, _ = self._get_uiaccess_funcs()
+        if env_key:
+            try:
+                os.environ[str(env_key)] = "1"
+            except Exception:
+                pass
+        try:
+            if not bool(self._is_admin()):
+                from app.common.windows.uiaccess import ELEVATE_RESTART_ENV
+
+                os.environ[str(ELEVATE_RESTART_ENV)] = "1"
+        except Exception:
+            pass
+
+        app = QApplication.instance()
+        if app is not None:
+            app.exit(EXIT_CODE_RESTART)
+            return
+        os._exit(EXIT_CODE_RESTART)
 
     def _start_periodic_topmost(self):
         """启动周期性置顶定时器"""
-        self._periodic_topmost_timer.start(self._periodic_topmost_interval)
+        self._apply_topmost_runtime()
 
     def _periodic_topmost(self):
         """周期性将窗口置顶"""
-        if self.isVisible():
+        if self.isVisible() and getattr(self, "_topmost_mode", 1) != 0:
             self.raise_()
+
+    def _is_admin(self) -> bool:
+        try:
+            return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        except Exception:
+            return False
+
+    def _refresh_window_flags(self):
+        flags = self._base_window_flags
+        if getattr(self, "_topmost_mode", 1) != 0:
+            flags |= Qt.WindowStaysOnTopHint
+        if getattr(self, "_do_not_steal_focus", False):
+            flags |= Qt.WindowDoesNotAcceptFocus
+        self.setWindowFlags(flags)
+        if self.isVisible():
+            self.hide()
+            self.show()
+
+    def _apply_topmost_runtime(self):
+        mode = int(getattr(self, "_topmost_mode", 1) or 0)
+        try:
+            state = (mode, bool(self.isVisible()), bool(self._is_admin()))
+            if getattr(self, "_last_topmost_runtime_state", None) != state:
+                self._last_topmost_runtime_state = state
+                logger.debug(
+                    "置顶运行态: mode={}, visible={}, admin={}",
+                    state[0],
+                    state[1],
+                    state[2],
+                )
+        except Exception:
+            pass
+        if mode == 0:
+            if self._periodic_topmost_timer.isActive():
+                self._periodic_topmost_timer.stop()
+            if self._uia_topmost_timer.isActive():
+                self._uia_topmost_timer.stop()
+        else:
+            if not self._periodic_topmost_timer.isActive():
+                self._periodic_topmost_timer.start(self._periodic_topmost_interval)
+            if mode == 2 and self.isVisible():
+                _, is_uiaccess, _ = self._get_uiaccess_funcs()
+                if is_uiaccess is not None:
+                    try:
+                        if not bool(is_uiaccess()):
+                            logger.debug("需要UIAccess置顶，准备重启切换为UIAccess进程")
+                            self._request_uiaccess_restart()
+                            return
+                    except Exception:
+                        pass
+                if not self._uia_topmost_timer.isActive():
+                    self._uia_topmost_timer.start(self._uia_topmost_interval)
+            else:
+                if self._uia_topmost_timer.isActive():
+                    self._uia_topmost_timer.stop()
+
+        if hasattr(self, "arrow_widget") and self.arrow_widget:
+            try:
+                arrow_flags = (
+                    Qt.FramelessWindowHint | Qt.Tool | Qt.NoDropShadowWindowHint
+                )
+                if mode != 0:
+                    arrow_flags |= Qt.WindowStaysOnTopHint
+                if self._do_not_steal_focus:
+                    arrow_flags |= Qt.WindowDoesNotAcceptFocus
+                self.arrow_widget.setWindowFlags(arrow_flags)
+                if hasattr(self.arrow_widget, "set_keep_on_top_enabled"):
+                    self.arrow_widget.set_keep_on_top_enabled(mode != 0)
+                if self.arrow_widget.isVisible():
+                    self.arrow_widget.hide()
+                    self.arrow_widget.show()
+            except Exception as e:
+                logger.exception("更新箭头按钮置顶状态失败（已忽略）: {}", e)
+
+    def _uia_keep_topmost(self):
+        if not self.isVisible() or int(getattr(self, "_topmost_mode", 1) or 0) != 2:
+            return
+
+        _, _, set_band = self._get_uiaccess_funcs()
+        if set_band is None:
+            return
+
+        hwnds = [int(self.winId())]
+        if (
+            hasattr(self, "arrow_widget")
+            and self.arrow_widget
+            and self.arrow_widget.isVisible()
+        ):
+            try:
+                hwnds.append(int(self.arrow_widget.winId()))
+            except Exception:
+                pass
+
+        for hwnd in hwnds:
+            try:
+                set_band(hwnd)
+            except Exception as e:
+                now_ms = int(QDateTime.currentMSecsSinceEpoch())
+                text = str(e)
+                if now_ms - int(
+                    getattr(self, "_uia_last_error_ms", 0) or 0
+                ) > 5000 or text != (getattr(self, "_uia_last_error_text", "") or ""):
+                    self._uia_last_error_ms = now_ms
+                    self._uia_last_error_text = text
+                    logger.exception("UIA置顶执行失败（已忽略）: {}", e)
 
     def _connect_signals(self):
         """连接信号"""
@@ -318,7 +475,10 @@ class LevitationWindow(QWidget):
         self._do_not_steal_focus = self._get_bool_setting(
             "floating_window_management", "do_not_steal_focus", False
         )
-        self._apply_focus_mode()
+        self._topmost_mode = self._get_int_setting(
+            "floating_window_management", "floating_window_topmost_mode", 1
+        )
+        self._refresh_window_flags()
 
         # 贴边隐藏功能配置
         self._init_edge_hide_settings()
@@ -455,21 +615,22 @@ class LevitationWindow(QWidget):
 
     def _apply_focus_mode(self):
         """应用无焦点模式设置"""
-        if self._do_not_steal_focus:
-            # 无焦点模式：添加 WindowDoesNotAcceptFocus 标志
-            self.setWindowFlags(self.windowFlags() | Qt.WindowDoesNotAcceptFocus)
-        else:
-            # 正常模式：移除 WindowDoesNotAcceptFocus 标志
-            self.setWindowFlags(self.windowFlags() & ~Qt.WindowDoesNotAcceptFocus)
-        # 重新显示窗口以应用新的窗口标志
-        if self.isVisible():
-            self.hide()
-            self.show()
+        self._refresh_window_flags()
 
     def showEvent(self, event):
         """重写showEvent，当浮窗显示时检测边缘"""
         super().showEvent(event)
         QTimer.singleShot(100, self._check_edge_proximity)
+        try:
+            self._uia_band_applied = False
+            self._uia_band_applied_arrow = False
+        except Exception:
+            pass
+        self._apply_topmost_runtime()
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        self._apply_topmost_runtime()
 
     def _apply_position(self):
         x = int(readme_settings_async("float_position", "x") or 100)
@@ -1526,6 +1687,7 @@ class LevitationWindow(QWidget):
 
         # 将arrow_widget赋值给storage_window，供其他地方使用
         self.storage_window = self.arrow_widget
+        self._apply_topmost_runtime()
 
     def _show_hidden_window(self, direction):
         """显示隐藏的窗口（带动画效果）"""
@@ -1629,6 +1791,11 @@ class LevitationWindow(QWidget):
             elif second == "floating_window_opacity":
                 self._opacity = float(value or 0.8)
                 self.setWindowOpacity(self._opacity)
+            elif second == "floating_window_topmost_mode":
+                mode = int(value or 0)
+                self._topmost_mode = mode
+                self._refresh_window_flags()
+                self._apply_topmost_runtime()
             elif second == "floating_window_draggable":
                 old_draggable = self._draggable
                 self._draggable = bool(value)
@@ -1676,6 +1843,7 @@ class LevitationWindow(QWidget):
             elif second == "do_not_steal_focus":
                 self._do_not_steal_focus = bool(value)
                 self._apply_focus_mode()
+                self._apply_topmost_runtime()
             # 当任何影响外观的设置改变时，重新应用主题样式
             self._apply_theme_style()
         elif first == "float_position":
@@ -1723,7 +1891,18 @@ class DraggableWidget(QWidget):
         self._long_press_timer.setSingleShot(True)
         self._long_press_timer.timeout.connect(self._on_long_press)
         self._long_press_triggered = False  # 标记是否触发长按
-        self._init_keep_top_timer()  # 初始化保持置顶定时器
+        self._keep_on_top_enabled = True
+        self._init_keep_top_timer()
+
+    def set_keep_on_top_enabled(self, enabled: bool):
+        self._keep_on_top_enabled = bool(enabled)
+        if hasattr(self, "keep_top_timer") and self.keep_top_timer:
+            if self._keep_on_top_enabled:
+                if not self.keep_top_timer.isActive():
+                    self.keep_top_timer.start(100)
+            else:
+                if self.keep_top_timer.isActive():
+                    self.keep_top_timer.stop()
 
     def is_draggable_enabled(self):
         """检查主窗口是否允许拖动"""
@@ -1749,11 +1928,14 @@ class DraggableWidget(QWidget):
         优化：减少定时器间隔并提高置顶效率"""
         self.keep_top_timer = QTimer(self)
         self.keep_top_timer.timeout.connect(self._keep_window_on_top)
-        self.keep_top_timer.start(100)
+        if self._keep_on_top_enabled:
+            self.keep_top_timer.start(100)
 
     def _keep_window_on_top(self):
         """保持窗口置顶
         优化：简化置顶逻辑，提高效率"""
+        if not self._keep_on_top_enabled:
+            return
         try:
             self.raise_()  # 将窗口提升到最前面
         except Exception as e:
