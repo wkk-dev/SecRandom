@@ -4,6 +4,7 @@ theme_management = {
         "title": {"name": "主题管理", "description": "管理软件的主题"},
         "market": {"name": "市场", "description": "浏览并下载新主题"},
         "installed": {"name": "已安装", "description": "管理已安装的主题"},
+        "background": {"name": "背景", "description": "设置窗口背景颜色或图片"},
         "refresh_market": {"name": "刷新市场", "description": "刷新主题市场列表"},
         "reload_themes": {"name": "重载主题", "description": "重新加载已安装的主题"},
         "open_folder": {
@@ -71,11 +72,64 @@ theme_management = {
             "name": "取消抽奖（HTML）",
             "description": "取消抽奖页面使用此主题（HTML）",
         },
+        "main_window_background": {
+            "name": "主窗口背景",
+            "description": "设置主窗口背景",
+        },
+        "settings_window_background": {
+            "name": "设置窗口背景",
+            "description": "设置设置窗口背景",
+        },
+        "notification_floating_window_background": {
+            "name": "内置通知浮窗背景",
+            "description": "设置通知浮窗背景",
+        },
+        "background_mode": {
+            "name": "背景类型",
+            "description": "选择背景类型",
+            "combo_items": ["默认", "纯色", "图片"],
+        },
+        "background_color": {"name": "背景颜色", "description": "设置背景颜色"},
+        "background_image": {"name": "背景图片", "description": "选择背景图片文件"},
+        "background_brightness": {
+            "name": "图片亮度",
+            "description": "调整背景图片亮度",
+        },
+        "background_blur": {
+            "name": "毛玻璃",
+            "description": "启用背景模糊效果",
+            "switchbutton_name": {"enable": "开启", "disable": "关闭"},
+        },
+        "background_blur_radius": {"name": "模糊度", "description": "调整背景模糊程度"},
+        "background_preview": {"name": "预览", "description": "当前设置的背景预览"},
+        "select_background_image": {
+            "name": "选择背景图片",
+            "description": "选择背景图片文件",
+            "pushbutton_name": "选择",
+        },
+        "clear_background_image": {
+            "name": "清除背景图片",
+            "description": "清除已选择的背景图片",
+            "pushbutton_name": "清除",
+        },
+        "select_background_image_dialog": {
+            "name": "选择背景图片",
+            "description": "选择背景图片文件",
+        },
+        "image_files": {"name": "图片文件", "description": "图片文件"},
+        "all_files": {"name": "所有文件", "description": "所有文件"},
+        "preview_default": {"name": "使用默认背景", "description": "使用默认背景"},
+        "preview_no_image": {"name": "未选择图片", "description": "未选择图片"},
+        "preview_load_failed": {"name": "图片加载失败", "description": "图片加载失败"},
     },
     "EN_US": {
         "title": {"name": "Theme Management", "description": "Manage software themes"},
         "market": {"name": "Market", "description": "Browse and download new themes"},
         "installed": {"name": "Installed", "description": "Manage installed themes"},
+        "background": {
+            "name": "Background",
+            "description": "Set background color or image",
+        },
         "refresh_market": {
             "name": "Refresh Market",
             "description": "Refresh the theme market list",
@@ -157,6 +211,80 @@ theme_management = {
         "cancel_lottery_html": {
             "name": "Cancel Lottery (HTML)",
             "description": "Cancel Lottery page (HTML)",
+        },
+        "main_window_background": {
+            "name": "Main Window Background",
+            "description": "Configure main window background",
+        },
+        "settings_window_background": {
+            "name": "Settings Window Background",
+            "description": "Configure settings window background",
+        },
+        "notification_floating_window_background": {
+            "name": "Notification Floating Window Background",
+            "description": "Configure notification floating window background",
+        },
+        "background_mode": {
+            "name": "Background Type",
+            "description": "Choose background type",
+            "combo_items": ["Default", "Color", "Image"],
+        },
+        "background_color": {
+            "name": "Background Color",
+            "description": "Set background color",
+        },
+        "background_image": {
+            "name": "Background Image",
+            "description": "Select an image file",
+        },
+        "background_brightness": {
+            "name": "Image Brightness",
+            "description": "Adjust image brightness",
+        },
+        "background_opacity": {
+            "name": "Opacity",
+            "description": "Adjust background opacity",
+        },
+        "background_blur": {
+            "name": "Blur",
+            "description": "Enable background blur effect",
+            "switchbutton_name": {"enable": "On", "disable": "Off"},
+        },
+        "background_blur_radius": {
+            "name": "Blur Radius",
+            "description": "Adjust blur intensity",
+        },
+        "background_preview": {
+            "name": "Preview",
+            "description": "Preview current background",
+        },
+        "select_background_image": {
+            "name": "Select Background Image",
+            "description": "Select an image file",
+            "pushbutton_name": "Select",
+        },
+        "clear_background_image": {
+            "name": "Clear Background Image",
+            "description": "Clear selected image",
+            "pushbutton_name": "Clear",
+        },
+        "select_background_image_dialog": {
+            "name": "Select Background Image",
+            "description": "Select an image file",
+        },
+        "image_files": {"name": "Image Files", "description": "Image files"},
+        "all_files": {"name": "All Files", "description": "All files"},
+        "preview_default": {
+            "name": "Using default background",
+            "description": "Using default background",
+        },
+        "preview_no_image": {
+            "name": "No image selected",
+            "description": "No image selected",
+        },
+        "preview_load_failed": {
+            "name": "Failed to load image",
+            "description": "Failed to load image",
         },
     },
 }

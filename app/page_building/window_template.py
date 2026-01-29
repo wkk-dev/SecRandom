@@ -1,6 +1,7 @@
 # ==================================================
 # 导入库
 # ==================================================
+import os
 from typing import Dict, Optional, Type
 
 from loguru import logger
@@ -16,6 +17,284 @@ from app.tools.settings_access import *
 from app.tools.path_utils import *
 from app.tools.personalised import *
 from app.Language.obtain_language import *
+
+
+class BackgroundLayer(QWidget):
+    def __init__(self, parent: QWidget, target: str):
+        super().__init__(parent)
+        self._target = str(target or "").strip()
+        self._mode = 0
+        self._color = QColor("#ffffff")
+        self._image_path = ""
+        self._brightness = 100
+        self._opacity = 100
+        self._blur_enable = False
+        self._blur_radius = 0
+        self._image_valid = False
+        self._movie: QMovie | None = None
+        self._movie_path = ""
+        self._pixmap_cache_key = None
+        self._pixmap_cache = QPixmap()
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        self.setStyleSheet("background: transparent;")
+
+    def updateGeometryToParent(self):
+        p = self.parentWidget()
+        if p is not None:
+            self.setGeometry(p.rect())
+
+    def applyFromSettings(self):
+        prefix = f"{self._target}_background_"
+        mode = readme_settings_async("background_management", f"{prefix}mode")
+        color = readme_settings_async("background_management", f"{prefix}color")
+        image_path = readme_settings_async("background_management", f"{prefix}image")
+        brightness = readme_settings_async(
+            "background_management", f"{prefix}brightness"
+        )
+        opacity = readme_settings_async("background_management", f"{prefix}opacity")
+        blur_enable = readme_settings_async(
+            "background_management", f"{prefix}blur_enable"
+        )
+        blur_radius = readme_settings_async(
+            "background_management", f"{prefix}blur_radius"
+        )
+
+        try:
+            self._mode = int(mode) if mode is not None else 0
+        except Exception:
+            self._mode = 0
+
+        try:
+            self._color = QColor(str(color or "#ffffff"))
+            if not self._color.isValid():
+                self._color = QColor("#ffffff")
+        except Exception:
+            self._color = QColor("#ffffff")
+
+        self._image_path = str(image_path or "")
+
+        try:
+            self._brightness = int(brightness) if brightness is not None else 100
+        except Exception:
+            self._brightness = 100
+
+        self._brightness = max(0, min(200, self._brightness))
+
+        try:
+            self._opacity = int(opacity) if opacity is not None else 100
+        except Exception:
+            self._opacity = 100
+        self._opacity = max(0, min(100, self._opacity))
+
+        self._blur_enable = bool(blur_enable)
+        try:
+            self._blur_radius = int(blur_radius) if blur_radius is not None else 0
+        except Exception:
+            self._blur_radius = 0
+        self._blur_radius = max(0, min(40, self._blur_radius))
+
+        if self._blur_enable and self._blur_radius > 0:
+            effect = self.graphicsEffect()
+            if not isinstance(effect, QGraphicsBlurEffect):
+                effect = QGraphicsBlurEffect(self)
+                self.setGraphicsEffect(effect)
+            try:
+                effect.setBlurRadius(self._blur_radius)
+            except Exception:
+                pass
+        else:
+            self.setGraphicsEffect(None)
+
+        self._image_valid = False
+        if self._mode == 2:
+            path = str(self._image_path or "")
+            if path and os.path.exists(path) and path.lower().endswith(".gif"):
+                self._ensure_movie(path)
+                self._image_valid = self._movie is not None
+            else:
+                self._stop_movie()
+                if path and os.path.exists(path):
+                    try:
+                        self._image_valid = not QPixmap(path).isNull()
+                    except Exception:
+                        self._image_valid = False
+                else:
+                    self._image_valid = False
+        else:
+            self._stop_movie()
+
+        if self._mode == 0 or (self._mode == 2 and not self._image_valid):
+            self.hide()
+        else:
+            self.show()
+        self._invalidate_pixmap_cache()
+        self.update()
+
+    def handleSettingChanged(self, group: str, key: str):
+        if group != "background_management":
+            return
+        if not str(key or "").startswith(f"{self._target}_background_"):
+            return
+        self.applyFromSettings()
+
+    def _invalidate_pixmap_cache(self):
+        cache_key = (self._image_path, self._brightness)
+        if cache_key != self._pixmap_cache_key:
+            self._pixmap_cache_key = cache_key
+            self._pixmap_cache = QPixmap()
+
+    def _stop_movie(self):
+        movie = getattr(self, "_movie", None)
+        if movie is None:
+            self._movie_path = ""
+            return
+        try:
+            movie.frameChanged.disconnect(self._on_movie_frame_changed)
+        except Exception:
+            pass
+        try:
+            movie.stop()
+        except Exception:
+            pass
+        self._movie = None
+        self._movie_path = ""
+
+    def _ensure_movie(self, path: str):
+        path = str(path or "")
+        if not path:
+            self._stop_movie()
+            return
+        if getattr(self, "_movie", None) is not None and self._movie_path == path:
+            if (
+                self._movie is not None
+                and self._movie.state() != QMovie.MovieState.Running
+            ):
+                try:
+                    self._movie.start()
+                except Exception:
+                    pass
+            return
+
+        self._stop_movie()
+        movie = QMovie(path)
+        movie.setCacheMode(QMovie.CacheMode.CacheNone)
+        movie.frameChanged.connect(self._on_movie_frame_changed)
+        self._movie = movie
+        self._movie_path = path
+        try:
+            movie.start()
+        except Exception:
+            self._stop_movie()
+            return
+
+        try:
+            if not movie.jumpToFrame(0) or movie.currentPixmap().isNull():
+                self._stop_movie()
+        except Exception:
+            self._stop_movie()
+
+    def _on_movie_frame_changed(self, _frame: int):
+        self.update()
+
+    def _get_pixmap(self) -> QPixmap:
+        if self._pixmap_cache_key != (self._image_path, self._brightness):
+            self._invalidate_pixmap_cache()
+
+        if not self._pixmap_cache.isNull():
+            return self._pixmap_cache
+
+        if not self._image_path:
+            return QPixmap()
+
+        if str(self._image_path or "").lower().endswith(".gif"):
+            return QPixmap()
+
+        try:
+            pixmap = QPixmap(self._image_path)
+        except Exception:
+            pixmap = QPixmap()
+
+        if pixmap.isNull():
+            return QPixmap()
+
+        self._pixmap_cache = pixmap
+        return pixmap
+
+    def _draw_scaled_cover(self, painter: QPainter, pixmap: QPixmap):
+        if pixmap.isNull():
+            return
+        w = self.width()
+        h = self.height()
+        if w <= 0 or h <= 0:
+            return
+        pw = pixmap.width()
+        ph = pixmap.height()
+        if pw <= 0 or ph <= 0:
+            return
+
+        ratio = max(w / pw, h / ph)
+        sw = int(pw * ratio)
+        sh = int(ph * ratio)
+        scaled = pixmap.scaled(
+            sw,
+            sh,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        cropped = scaled.copy(x, y, w, h)
+        painter.drawPixmap(0, 0, cropped)
+
+    def _apply_brightness_overlay(self, painter: QPainter, opacity: float):
+        if self._brightness == 100:
+            return
+        if self._brightness > 100:
+            alpha = int((self._brightness - 100) / 100 * 180)
+            alpha = max(0, min(180, alpha))
+            painter.fillRect(self.rect(), QColor(255, 255, 255, int(alpha * opacity)))
+        else:
+            alpha = int((100 - self._brightness) / 100 * 180)
+            alpha = max(0, min(180, alpha))
+            painter.fillRect(self.rect(), QColor(0, 0, 0, int(alpha * opacity)))
+
+    def paintEvent(self, event):
+        if self._mode == 0:
+            return
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(Qt.PenStyle.NoPen)
+        opacity = max(0.0, min(1.0, float(self._opacity) / 100))
+
+        if self._mode == 1:
+            c = QColor(self._color)
+            c.setAlpha(int(opacity * 255))
+            painter.fillRect(self.rect(), c)
+            return
+
+        if self._mode == 2:
+            if not getattr(self, "_image_valid", False):
+                return
+
+            c = QColor(self._color)
+            c.setAlpha(int(opacity * 255))
+            painter.fillRect(self.rect(), c)
+            painter.save()
+            painter.setOpacity(opacity)
+            pixmap = QPixmap()
+            movie = getattr(self, "_movie", None)
+            if movie is not None:
+                pixmap = movie.currentPixmap()
+            else:
+                pixmap = self._get_pixmap()
+            if not pixmap.isNull():
+                self._draw_scaled_cover(painter, pixmap)
+            painter.restore()
+            if not pixmap.isNull():
+                self._apply_brightness_overlay(painter, opacity)
+            return
 
 
 class SimpleWindowTemplate(FramelessWindow):
@@ -334,6 +613,7 @@ class SimpleWindowTemplate(FramelessWindow):
 
         # 确保在设置标题栏后应用当前主题和自定义字体
         self._apply_current_theme()
+        self._setup_background_layer()
 
         if self.parent_window is None:
             screen = QApplication.primaryScreen().availableGeometry()
@@ -344,11 +624,21 @@ class SimpleWindowTemplate(FramelessWindow):
         super().showEvent(event)
         QTimer.singleShot(0, self._sync_layout_margins_with_titlebar)
         QTimer.singleShot(0, self._rebuild_titlebar_title_and_icon)
+        try:
+            if getattr(self, "_background_layer", None) is not None:
+                self._background_layer.updateGeometryToParent()
+        except Exception:
+            pass
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self._sync_layout_margins_with_titlebar()
         self._position_sr_title_overlay()
+        try:
+            if getattr(self, "_background_layer", None) is not None:
+                self._background_layer.updateGeometryToParent()
+        except Exception:
+            pass
 
     def __connectSignalToSlot(self) -> None:
         """连接信号与槽"""
@@ -404,6 +694,28 @@ class SimpleWindowTemplate(FramelessWindow):
             # 设置默认的浅色背景作为备选
             self.setStyleSheet("background-color: #ffffff;")
             self.default_page.setStyleSheet("background-color: transparent;")
+
+    def _setup_background_layer(self):
+        if getattr(self, "_background_layer", None) is None:
+            self._background_layer = BackgroundLayer(
+                self, "notification_floating_window"
+            )
+            self._background_layer.updateGeometryToParent()
+            self._background_layer.lower()
+
+            try:
+                get_settings_signals().settingChanged.connect(
+                    lambda first,
+                    second,
+                    value: self._background_layer.handleSettingChanged(first, second)
+                )
+            except Exception:
+                pass
+
+        try:
+            self._background_layer.applyFromSettings()
+        except Exception:
+            pass
 
     def _set_titlebar_colors(self, is_dark: bool) -> None:
         """设置标题栏颜色"""

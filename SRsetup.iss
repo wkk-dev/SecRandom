@@ -5,7 +5,7 @@
 #define MyAppName "SecRandom"
 #define MyAppVersion "2.2.0"
 #define MyAppPublisher "SECTL"
-#define MyAppURL "https://secrandom.netlify.app/"
+#define MyAppURL "https://secrandom.sectl.top/"
 #define MyAppExeName "SecRandom.exe"
 
 [Setup]

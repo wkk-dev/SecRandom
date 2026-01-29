@@ -25,6 +25,7 @@ from app.tools.settings_access import (
     readme_settings_async,
     update_settings,
 )
+from app.page_building.window_template import BackgroundLayer
 from app.Language.obtain_language import get_content_name_async
 from app.common.IPC_URL.url_command_handler import URLCommandHandler
 
@@ -102,6 +103,42 @@ class SettingsWindow(FluentWindow):
         self.setWindowIcon(
             QIcon(str(get_data_path("assets/icon", "secrandom-icon-paper.png")))
         )
+        self._setup_background_layer()
+        self._setup_settings_listener()
+
+    def _setup_settings_listener(self):
+        try:
+            from app.tools.settings_access import get_settings_signals
+
+            get_settings_signals().settingChanged.connect(self._on_setting_changed)
+        except Exception:
+            pass
+
+    def _on_setting_changed(self, first, second, value):
+        if first == "background_management" and str(second or "").startswith(
+            "settings_window_background_"
+        ):
+            try:
+                if getattr(self, "_background_layer", None) is not None:
+                    self._background_layer.applyFromSettings()
+            except Exception:
+                pass
+
+    def _setup_background_layer(self):
+        if getattr(self, "_background_layer", None) is not None:
+            try:
+                self._background_layer.applyFromSettings()
+            except Exception:
+                pass
+            return
+
+        self._background_layer = BackgroundLayer(self, "settings_window")
+        self._background_layer.updateGeometryToParent()
+        self._background_layer.lower()
+        try:
+            self._background_layer.applyFromSettings()
+        except Exception:
+            pass
 
     def _setup_url_handler(self):
         """设置URL处理器"""
@@ -237,6 +274,11 @@ class SettingsWindow(FluentWindow):
         resize_timer = getattr(self, "resize_timer", None)
         if resize_timer is not None:
             resize_timer.start(RESIZE_TIMER_DELAY_MS)
+        try:
+            if getattr(self, "_background_layer", None) is not None:
+                self._background_layer.updateGeometryToParent()
+        except Exception:
+            pass
         super().resizeEvent(event)
 
     def changeEvent(self, event):

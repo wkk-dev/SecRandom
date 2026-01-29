@@ -196,14 +196,19 @@ UPDATE_SOURCES = [
         "priority": 0,
     },
     {
+        "name": "ghproxy.sectl",
+        "url": "https://ghproxy.sectl.top",
+        "priority": 1,
+    },
+    {
         "name": "ghfast",
         "url": "https://ghfast.top",
-        "priority": 1,
+        "priority": 2,
     },
     {
         "name": "gh-proxy",
         "url": "https://gh-proxy.com",
-        "priority": 2,
+        "priority": 3,
     },
 ]
 

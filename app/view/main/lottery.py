@@ -340,9 +340,25 @@ class Lottery(QWidget):
             "lottery_quantity_label",
         )
 
-        scroll = SmoothScrollArea()
-        scroll.setWidget(container)
+        scroll = SingleDirectionScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.setStyleSheet(
+            """
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+            QScrollArea QWidget {
+                border: none;
+                background-color: transparent;
+            }
+            """
+        )
+        QScroller.grabGesture(
+            scroll.viewport(),
+            QScroller.ScrollerGestureType.LeftMouseButtonGesture,
+        )
+        scroll.setWidget(container)
 
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)

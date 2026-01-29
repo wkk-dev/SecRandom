@@ -715,12 +715,25 @@ class basic_settings_personalised(GroupHeaderCardWidget):
             self.tr(get_content_description_async("basic_settings", "theme_color")),
         )
 
+        self.open_theme_management_button = PushButton(
+            get_content_pushbutton_name_async("basic_settings", "open_theme_management")
+        )
+        self.open_theme_management_button.clicked.connect(
+            self.__on_open_theme_management
+        )
+
         # 添加设置项到分组
         self.addGroup(
             get_theme_icon("ic_fluent_dark_theme_20_filled"),
             get_content_name_async("basic_settings", "theme"),
             get_content_description_async("basic_settings", "theme"),
             self.theme,
+        )
+        self.addGroup(
+            get_theme_icon("ic_fluent_paint_brush_20_filled"),
+            get_content_name_async("basic_settings", "open_theme_management"),
+            get_content_description_async("basic_settings", "open_theme_management"),
+            self.open_theme_management_button,
         )
         self.addGroup(
             get_theme_icon("ic_fluent_local_language_20_filled"),
@@ -748,6 +761,17 @@ class basic_settings_personalised(GroupHeaderCardWidget):
         )
         # 添加卡片到布局
         self.vBoxLayout.addWidget(self.themeColorCard)
+
+    def __on_open_theme_management(self):
+        try:
+            w = self.window()
+            if hasattr(w, "showMainPageRequested"):
+                w.showMainPageRequested.emit("settings_theme")
+                return
+            if hasattr(w, "_handle_settings_page_request"):
+                w._handle_settings_page_request("themeManagementInterface")
+        except Exception as e:
+            logger.exception(f"打开主题管理失败: {e}")
 
     def update_dpi_scale_setting(self, scale, dpi_scale_items):
         """更新DPI缩放设置"""

@@ -307,6 +307,11 @@ basic_settings = {
             "combo_items": ["浅色", "深色", "跟随系统"],
         },
         "theme_color": {"name": "主题颜色", "description": "设置软件界面主题色彩"},
+        "open_theme_management": {
+            "name": "主题管理",
+            "description": "打开主题管理与背景设置",
+            "pushbutton_name": "打开",
+        },
         "language": {
             "name": "显示语言",
             "description": "切换软件界面语言（重启软件后生效）",
@@ -672,6 +677,11 @@ basic_settings = {
         "theme_color": {
             "name": "Theme color",
             "description": "Set the software interface theme color",
+        },
+        "open_theme_management": {
+            "name": "Theme management",
+            "description": "Open theme management and background settings",
+            "pushbutton_name": "Open",
         },
         "language": {
             "name": "Display language",

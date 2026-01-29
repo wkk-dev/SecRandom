@@ -10,7 +10,7 @@ from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtNetwork import *
-from qfluentwidgets import PushButton
+from qfluentwidgets import PushButton, SingleDirectionScrollArea
 
 # ==================================================
 # 本地模块导入
@@ -233,9 +233,25 @@ class roll_call(QWidget):
         Args:
             container: 容器控件
         """
-        scroll = SmoothScrollArea()
-        scroll.setWidget(container)
+        scroll = SingleDirectionScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.setStyleSheet(
+            """
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+            QScrollArea QWidget {
+                border: none;
+                background-color: transparent;
+            }
+            """
+        )
+        QScroller.grabGesture(
+            scroll.viewport(),
+            QScroller.ScrollerGestureType.LeftMouseButtonGesture,
+        )
+        scroll.setWidget(container)
 
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)

@@ -106,7 +106,7 @@ Traditional random selection often has the problem of "repeatedly selecting cert
 
 ### 🌐 Official Download Page
 
-- 📥 **[Official Download Page](https://secrandom.netlify.app/download)** - Get the latest stable version and beta versions
+- 📥 **[Official Download Page](https://secrandom.sectl.top/download.html)** - Get the latest stable version and beta versions
 
 ## 📸 Software Screenshots
 
@@ -179,7 +179,7 @@ If you find SecRandom helpful, you're welcome to support our development work!
 
 ## 📄 Official Documentation
 
-- 📄 **[SecRandom Official Documentation](https://secrandom.netlify.app)**
+- 📄 **[SecRandom Official Documentation](https://secrandom.sectl.top)**
 - [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/SECTL/SecRandom)
 
 ## Contributing Guidelines and Actions Build Workflow

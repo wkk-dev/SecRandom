@@ -15,6 +15,7 @@ from qfluentwidgets import (
 )
 from app.view.components.center_flow_layout import CenterFlowLayout
 from app.view.settings.theme_management.theme_card import ThemeCard
+from app.view.settings.theme_management.background_page import BackgroundManagementPage
 from app.tools.personalised import get_theme_icon
 from app.Language.obtain_language import get_content_name_async
 from app.tools.path_utils import get_data_path
@@ -422,6 +423,9 @@ class ThemeManagement(QFrame):
         self.pivot.addItem(
             "installed", get_content_name_async("theme_management", "installed")
         )
+        self.pivot.addItem(
+            "background", get_content_name_async("theme_management", "background")
+        )
         self.pivot.setCurrentItem("market")
         self.pivot.currentItemChanged.connect(self._on_pivot_changed)
 
@@ -494,8 +498,11 @@ class ThemeManagement(QFrame):
         self.installedScroll.setWidget(self.installedContent)
         self.installedLayout.addWidget(self.installedScroll)
 
+        self.backgroundPage = BackgroundManagementPage(self)
+
         self.stackedWidget.addWidget(self.marketPage)
         self.stackedWidget.addWidget(self.installedPage)
+        self.stackedWidget.addWidget(self.backgroundPage)
 
         self.vBoxLayout.addWidget(self.stackedWidget)
 
@@ -517,9 +524,17 @@ class ThemeManagement(QFrame):
     def _on_pivot_changed(self, k):
         if k == "market":
             self.stackedWidget.setCurrentWidget(self.marketPage)
-        else:
+            self.refreshBtn.setVisible(True)
+            self.folderBtn.setVisible(True)
+        elif k == "installed":
             self.stackedWidget.setCurrentWidget(self.installedPage)
             self._load_installed_data()
+            self.refreshBtn.setVisible(True)
+            self.folderBtn.setVisible(True)
+        else:
+            self.stackedWidget.setCurrentWidget(self.backgroundPage)
+            self.refreshBtn.setVisible(False)
+            self.folderBtn.setVisible(False)
 
     def _refresh_market(self):
         self._load_market_data()

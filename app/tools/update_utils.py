@@ -1313,7 +1313,7 @@ class UpdateCheckThread(QThread):
                     "update", "update_notification_content"
                 ).format(version=latest_version)
                 send_system_notification(
-                    title, content, url="https://secrandom.netlify.app/download"
+                    title, content, url="https://secrandom.sectl.top/download.html"
                 )
 
                 # 如果是模式2或3，自动下载更新

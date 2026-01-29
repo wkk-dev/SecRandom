@@ -36,6 +36,7 @@ from app.page_building.main_window_page import (
 from app.view.tray.tray import Tray
 from app.view.floating_window.levitation import LevitationWindow
 from app.common.IPC_URL.url_command_handler import URLCommandHandler
+from app.page_building.window_template import BackgroundLayer
 
 
 # ==================================================
@@ -148,6 +149,7 @@ class MainWindow(FluentWindow):
         self._position_window()
         self._setup_general_settings_listener()
         self._apply_topmost_mode()
+        self._setup_background_layer()
 
     def _setup_general_settings_listener(self):
         """设置通用设置监听器"""
@@ -159,6 +161,30 @@ class MainWindow(FluentWindow):
         """处理通用设置变更"""
         if first == "basic_settings" and second == "main_window_topmost_mode":
             self._apply_topmost_mode(value)
+        if first == "background_management" and str(second or "").startswith(
+            "main_window_background_"
+        ):
+            try:
+                if getattr(self, "_background_layer", None) is not None:
+                    self._background_layer.applyFromSettings()
+            except Exception:
+                pass
+
+    def _setup_background_layer(self):
+        if getattr(self, "_background_layer", None) is not None:
+            try:
+                self._background_layer.applyFromSettings()
+            except Exception:
+                pass
+            return
+
+        self._background_layer = BackgroundLayer(self, "main_window")
+        self._background_layer.updateGeometryToParent()
+        self._background_layer.lower()
+        try:
+            self._background_layer.applyFromSettings()
+        except Exception:
+            pass
 
     def _apply_topmost_mode(self, mode=None):
         """应用主窗口置顶模式"""
@@ -391,6 +417,11 @@ class MainWindow(FluentWindow):
         resize_timer = getattr(self, "resize_timer", None)
         if resize_timer is not None:
             resize_timer.start(RESIZE_TIMER_DELAY_MS)
+        try:
+            if getattr(self, "_background_layer", None) is not None:
+                self._background_layer.updateGeometryToParent()
+        except Exception:
+            pass
         super().resizeEvent(event)
 
     def changeEvent(self, event):
