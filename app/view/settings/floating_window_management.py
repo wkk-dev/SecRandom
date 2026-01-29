@@ -112,6 +112,20 @@ class floating_window_basic_settings(GroupHeaderCardWidget):
             )
         )
 
+        self.floating_window_topmost_mode_combo_box = ComboBox()
+        self.floating_window_topmost_mode_combo_box.addItems(
+            get_content_combo_name_async(
+                "floating_window_management", "floating_window_topmost_mode"
+            )
+        )
+        topmost_mode = readme_settings_async(
+            "floating_window_management", "floating_window_topmost_mode"
+        )
+        self.floating_window_topmost_mode_combo_box.setCurrentIndex(int(topmost_mode))
+        self.floating_window_topmost_mode_combo_box.currentIndexChanged.connect(
+            self.floating_window_topmost_mode_combo_box_changed
+        )
+
         # 重置浮窗位置按钮
         self.reset_floating_window_position_button = PushButton(
             get_content_pushbutton_name_async(
@@ -215,6 +229,16 @@ class floating_window_basic_settings(GroupHeaderCardWidget):
             ),
             self.floating_window_opacity_spinbox,
         )
+        self.addGroup(
+            get_theme_icon("ic_fluent_pin_20_filled"),
+            get_content_name_async(
+                "floating_window_management", "floating_window_topmost_mode"
+            ),
+            get_content_description_async(
+                "floating_window_management", "floating_window_topmost_mode"
+            ),
+            self.floating_window_topmost_mode_combo_box,
+        )
         if is_setting_visible(
             "floating_window_management", "floating_window_draggable"
         ):
@@ -261,6 +285,52 @@ class floating_window_basic_settings(GroupHeaderCardWidget):
                 "floating_window_management", "reset_floating_window_position_button"
             ),
             self.reset_floating_window_position_button,
+        )
+
+    def floating_window_topmost_mode_combo_box_changed(self, index):
+        previous_index = int(
+            readme_settings_async(
+                "floating_window_management", "floating_window_topmost_mode"
+            )
+        )
+        if index == 2 and previous_index != 2:
+            dialog = MessageBox(
+                get_content_name_async(
+                    "floating_window_management", "uia_topmost_restart_dialog_title"
+                ),
+                get_content_name_async(
+                    "floating_window_management", "uia_topmost_restart_dialog_content"
+                ),
+                self.window(),
+            )
+            dialog.yesButton.setText(
+                get_content_name_async(
+                    "floating_window_management",
+                    "uia_topmost_restart_dialog_restart_btn",
+                )
+            )
+            dialog.cancelButton.setText(
+                get_content_name_async(
+                    "floating_window_management",
+                    "uia_topmost_restart_dialog_cancel_btn",
+                )
+            )
+
+            if dialog.exec():
+                update_settings(
+                    "floating_window_management", "floating_window_topmost_mode", index
+                )
+                QApplication.exit(EXIT_CODE_RESTART)
+            else:
+                blocker = QSignalBlocker(self.floating_window_topmost_mode_combo_box)
+                self.floating_window_topmost_mode_combo_box.setCurrentIndex(
+                    previous_index
+                )
+                del blocker
+            return
+
+        update_settings(
+            "floating_window_management", "floating_window_topmost_mode", index
         )
 
     def reset_floating_window_position_button_clicked(self):

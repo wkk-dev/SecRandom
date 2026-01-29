@@ -336,6 +336,7 @@ DEFAULT_SETTINGS = {
         "edge_settings": {"default_value": None},
         "startup_display_floating_window": {"default_value": True},
         "floating_window_opacity": {"default_value": 0.8},
+        "floating_window_topmost_mode": {"default_value": 1},
         "reset_floating_window_position_button": {"default_value": None},
         "floating_window_button_control": {"default_value": 3},
         "floating_window_placement": {"default_value": 1},

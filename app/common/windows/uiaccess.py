@@ -1,0 +1,181 @@
+import os
+import sys
+import ctypes
+from ctypes import wintypes
+from subprocess import list2cmdline
+from app.tools.path_utils import get_data_path
+
+from loguru import logger
+
+_uiaccess_dll = None
+_user32 = None
+_kernel32 = None
+
+UIACCESS_RESTART_ENV = "SECRANDOM_RESTART_UIACCESS"
+
+
+def _is_windows() -> bool:
+    return os.name == "nt"
+
+
+def _get_kernel32():
+    global _kernel32
+    if _kernel32 is not None:
+        return _kernel32
+    _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    _kernel32.ProcessIdToSessionId.argtypes = [
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+    ]
+    _kernel32.ProcessIdToSessionId.restype = wintypes.BOOL
+    return _kernel32
+
+
+def _get_user32():
+    global _user32
+    if _user32 is not None:
+        return _user32
+    _user32 = ctypes.WinDLL("user32", use_last_error=True)
+    try:
+        fn = _user32.SetWindowBand
+        fn.argtypes = [wintypes.HWND, wintypes.HWND, wintypes.DWORD]
+        fn.restype = wintypes.BOOL
+    except Exception:
+        pass
+    _user32.SetWindowPos.argtypes = [
+        wintypes.HWND,
+        wintypes.HWND,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        wintypes.UINT,
+    ]
+    _user32.SetWindowPos.restype = wintypes.BOOL
+    return _user32
+
+
+def _get_uiaccess_dll():
+    global _uiaccess_dll
+    if _uiaccess_dll is not None:
+        return _uiaccess_dll
+    dll_path = get_data_path("dlls", "uiaccess.dll")
+    _uiaccess_dll = ctypes.WinDLL(str(dll_path), use_last_error=True)
+
+    _uiaccess_dll.IsUIAccess.argtypes = []
+    _uiaccess_dll.IsUIAccess.restype = wintypes.BOOL
+
+    _uiaccess_dll.StartUIAccessProcess.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+        wintypes.DWORD,
+    ]
+    _uiaccess_dll.StartUIAccessProcess.restype = wintypes.BOOL
+
+    return _uiaccess_dll
+
+
+def is_uiaccess_process() -> bool:
+    if not _is_windows():
+        return False
+    try:
+        dll = _get_uiaccess_dll()
+        return bool(dll.IsUIAccess())
+    except Exception:
+        return False
+
+
+def start_uiaccess_process(cmd_list: list[str]) -> int:
+    if not _is_windows():
+        return 0
+    if not cmd_list:
+        return 0
+
+    try:
+        kernel32 = _get_kernel32()
+        pid = wintypes.DWORD(os.getpid())
+        session = wintypes.DWORD(0)
+        if not kernel32.ProcessIdToSessionId(pid, ctypes.byref(session)):
+            err = ctypes.get_last_error()
+            logger.debug("获取 SessionId 失败: {}", err)
+            return 0
+
+        cmd_line = list2cmdline(list(cmd_list))
+
+        dll = _get_uiaccess_dll()
+        out_pid = wintypes.DWORD(0)
+        ctypes.set_last_error(0)
+        ok = bool(
+            dll.StartUIAccessProcess(
+                None,
+                cmd_line,
+                0,
+                ctypes.byref(out_pid),
+                session.value,
+            )
+        )
+        if not ok:
+            err = ctypes.get_last_error()
+            logger.debug("启动 UIAccess 进程失败: {}", err)
+            return 0
+
+        logger.debug("已启动 UIAccess 进程: pid={}", int(out_pid.value))
+        return int(out_pid.value)
+    except Exception as e:
+        logger.debug("启动 UIAccess 进程异常: {}", e)
+        return 0
+
+
+def ensure_uiaccess_for_current_process() -> bool:
+    if not _is_windows():
+        return False
+    if is_uiaccess_process():
+        return False
+
+    try:
+        kernel32 = _get_kernel32()
+        pid = wintypes.DWORD(os.getpid())
+        session = wintypes.DWORD(0)
+        if not kernel32.ProcessIdToSessionId(pid, ctypes.byref(session)):
+            err = ctypes.get_last_error()
+            logger.debug("获取 SessionId 失败: {}", err)
+            return False
+
+        if getattr(sys, "frozen", False):
+            cmd_list = [sys.executable] + (sys.argv[1:] if sys.argv else [])
+        else:
+            argv = list(sys.argv) if sys.argv else []
+            if argv:
+                cmd_list = [sys.executable] + argv
+            else:
+                cmd_list = [sys.executable]
+
+        return bool(start_uiaccess_process(cmd_list))
+    except Exception as e:
+        logger.debug("启动 UIAccess 进程异常: {}", e)
+        return False
+
+
+def set_window_band_uiaccess(hwnd: int) -> bool:
+    if not _is_windows():
+        return False
+    if not hwnd:
+        return False
+    if not is_uiaccess_process():
+        return False
+
+    try:
+        user32 = _get_user32()
+        h = wintypes.HWND(hwnd)
+        hwnd_topmost = wintypes.HWND(-1)
+
+        SWP_NOMOVE = 0x0002
+        SWP_NOSIZE = 0x0001
+        SWP_NOACTIVATE = 0x0010
+        SWP_SHOWWINDOW = 0x0040
+        flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW
+        return bool(user32.SetWindowPos(h, hwnd_topmost, 0, 0, 0, 0, flags))
+    except Exception:
+        return False

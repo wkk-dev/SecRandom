@@ -358,12 +358,47 @@ def restart_application(program_dir):
 
         # Windows 平台使用 subprocess.Popen 启动新进程
         if platform.system() == "Windows":
+            try:
+                from app.common.windows.uiaccess import (
+                    UIACCESS_RESTART_ENV,
+                    start_uiaccess_process,
+                )
+
+                need_uiaccess = bool(os.environ.pop(UIACCESS_RESTART_ENV, "") == "1")
+            except Exception:
+                need_uiaccess = False
+                start_uiaccess_process = None
+
+            if need_uiaccess and start_uiaccess_process is not None:
+                cmd = [executable] + filtered_args
+                normalized = []
+                for arg in cmd:
+                    try:
+                        if (
+                            isinstance(arg, str)
+                            and arg
+                            and not os.path.isabs(arg)
+                            and not arg.startswith(("-", "/"))
+                            and os.path.exists(os.path.join(program_dir, arg))
+                        ):
+                            normalized.append(os.path.join(program_dir, arg))
+                        else:
+                            normalized.append(arg)
+                    except Exception:
+                        normalized.append(arg)
+
+                pid = int(start_uiaccess_process(normalized) or 0)
+                if pid > 0:
+                    logger.info("Windows 平台：UIAccess 进程已启动")
+                    os._exit(0)
+
             startup_info = subprocess.STARTUPINFO()
             startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             subprocess.Popen(
                 [executable] + filtered_args,
                 cwd=program_dir,
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+                | subprocess.DETACHED_PROCESS,
                 startupinfo=startup_info,
             )
             logger.info("Windows 平台：新进程已启动")

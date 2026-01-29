@@ -41,6 +41,7 @@ SETTINGS_VISIBILITY_CONFIG = {
         "floating_window_stick_to_edge_display_style": False,
         "floating_window_draggable": False,
         "floating_window_size": False,
+        "floating_window_topmost_mode": False,
         "do_not_steal_focus": False,
     },
 }
