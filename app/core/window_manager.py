@@ -168,7 +168,10 @@ class WindowManager:
             "floating_window_management", "startup_display_floating_window"
         )
         if startup_display_float:
-            self.show_float_window()
+            if self.float_window is None:
+                self.create_float_window()
+            if self.float_window is not None and not self.float_window.isVisible():
+                self.float_window.show()
 
     def _connect_url_handler_signals(self) -> None:
         """连接URL处理器信号"""
