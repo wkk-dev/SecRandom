@@ -74,17 +74,13 @@ if sys.platform == "linux":
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
     [],
+    exclude_binaries=True,
     name=exename,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
@@ -94,7 +90,7 @@ exe = EXE(
     icon="resources/secrandom-icon-paper.ico",
 )
 
-# 创建目录模式输出
+# 创建目录模式输出（onedir模式）
 coll = COLLECT(
     exe,
     a.binaries,
@@ -105,4 +101,3 @@ coll = COLLECT(
     upx_exclude=[],
     name="SecRandom",
 )
-#nothing
