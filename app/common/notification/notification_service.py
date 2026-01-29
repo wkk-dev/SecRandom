@@ -1143,7 +1143,7 @@ class FloatingNotificationManager:
             font_size=display_settings["font_size"],
             animation_color=display_settings["animation_color"],
             display_format=display_settings["display_format"],
-            display_style=display_settings["display_style"],
+            display_style=0,
             show_student_image=display_settings["show_student_image"],
             image_position=display_settings.get("image_position"),
             group_index=group_index,
