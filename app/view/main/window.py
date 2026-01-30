@@ -37,6 +37,7 @@ from app.view.tray.tray import Tray
 from app.view.floating_window.levitation import LevitationWindow
 from app.common.IPC_URL.url_command_handler import URLCommandHandler
 from app.page_building.window_template import BackgroundLayer
+from app.page_building.another_window import create_countdown_timer_window
 
 
 # ==================================================
@@ -247,6 +248,9 @@ class MainWindow(FluentWindow):
         self.float_window.quickDrawRequested.connect(self._handle_quick_draw)
         self.float_window.lotteryRequested.connect(
             lambda: self._show_and_switch_to(self.lottery_page)
+        )
+        self.float_window.timerRequested.connect(
+            lambda: create_countdown_timer_window()
         )
 
     # ==================================================

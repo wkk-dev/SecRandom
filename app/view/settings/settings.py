@@ -3,11 +3,15 @@
 # ==================================================
 
 from loguru import logger
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QWidget, QScroller
 from PySide6.QtGui import QIcon
-from PySide6.QtCore import QTimer, QEvent, Signal, QSize
+from PySide6.QtCore import QTimer, QEvent, Signal, QSize, Qt
 from PySide6.QtWidgets import QVBoxLayout
-from qfluentwidgets import FluentWindow, NavigationItemPosition
+from qfluentwidgets import (
+    FluentWindow,
+    NavigationItemPosition,
+    SingleDirectionScrollArea,
+)
 
 from app.tools.variable import (
     MINIMUM_WINDOW_SIZE,
@@ -105,6 +109,49 @@ class SettingsWindow(FluentWindow):
         )
         self._setup_background_layer()
         self._setup_settings_listener()
+        self._setup_sidebar_scroll()
+
+    def _setup_sidebar_scroll(self):
+        navigation = getattr(self, "navigationInterface", None)
+        if navigation is None:
+            return
+        if getattr(self, "_sidebar_scroll_area", None) is not None:
+            return
+        panel = getattr(navigation, "panel", None)
+        if panel is not None and hasattr(panel, "setMinimumExpandWidth"):
+            panel.setMinimumExpandWidth(0)
+
+        scroll_area = SingleDirectionScrollArea(self)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setStyleSheet(
+            """
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+            QScrollArea QWidget {
+                border: none;
+                background-color: transparent;
+            }
+            """
+        )
+        QScroller.grabGesture(
+            scroll_area.viewport(),
+            QScroller.ScrollerGestureType.LeftMouseButtonGesture,
+        )
+        scroll_area.setWidget(navigation)
+
+        layout = getattr(self, "hBoxLayout", None) or self.layout()
+        if layout is not None:
+            index = layout.indexOf(navigation)
+            if index < 0:
+                index = 0
+            layout.removeWidget(navigation)
+            layout.insertWidget(index, scroll_area)
+
+        self._sidebar_scroll_area = scroll_area
 
     def _setup_settings_listener(self):
         try:

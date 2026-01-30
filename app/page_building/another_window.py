@@ -1,5 +1,6 @@
 # 导入页面模板
 from PySide6.QtCore import QTimer
+from loguru import logger
 from app.page_building.page_template import PageTemplate
 from app.page_building.window_template import SimpleWindowTemplate
 from app.view.another_window.contributor import contributor_page
@@ -16,11 +17,78 @@ from app.view.another_window.remaining_list import RemainingListPage
 from app.view.another_window.current_config_viewer import CurrentConfigViewerWindow
 from app.view.another_window.log_viewer import LogViewerWindow
 from app.view.another_window.backup_manager import BackupManagerWindow
+from app.view.another_window.countdown_timer import CountdownTimerPage
 from app.Language.obtain_language import *
 from app.tools.variable import *
 
 # 全局变量，用于保持窗口引用，防止被垃圾回收
 _window_instances = {}
+
+
+def _try_activate_window(window_key: str):
+    window = _window_instances.get(window_key)
+    if window is None:
+        return None
+    try:
+        window.raise_()
+        window.activateWindow()
+        return window
+    except Exception as e:
+        logger.exception(f"激活{window_key}窗口失败: {e}")
+        _window_instances.pop(window_key, None)
+        return None
+
+
+def _create_page_loader(window, page_key: str, on_ready):
+    page_holder = {"page": None}
+
+    def setup_page():
+        page_template = window.get_page(page_key)
+        content_widget = (
+            getattr(page_template, "contentWidget", None)
+            if page_template is not None
+            else None
+        )
+        if content_widget is None:
+            QTimer.singleShot(50, setup_page)
+            return
+        page_holder["page"] = content_widget
+        on_ready(content_widget)
+
+    QTimer.singleShot(APP_INIT_DELAY, setup_page)
+
+    def get_page_callback(callback):
+        def check_page():
+            page = page_holder["page"]
+            if page is not None:
+                callback(page)
+            else:
+                QTimer.singleShot(50, check_page)
+
+        check_page()
+
+    return get_page_callback
+
+
+def _create_reusable_window(
+    window_key: str,
+    title_key: tuple,
+    template_class,
+    width: int,
+    height: int,
+    parent=None,
+):
+    window = _try_activate_window(window_key)
+    if window is not None:
+        return window, False
+    title = get_content_name_async(*title_key)
+    window = SimpleWindowTemplate(title, width=width, height=height, parent=parent)
+    window.add_page_from_template(window_key, template_class)
+    window.switch_to_page(window_key)
+    _window_instances[window_key] = window
+    window.windowClosed.connect(lambda: _window_instances.pop(window_key, None))
+    window.show()
+    return window, True
 
 
 # ==================================================
@@ -41,13 +109,14 @@ def create_set_class_name_window(parent=None):
     Returns:
         创建的窗口实例
     """
-    title = get_content_name_async("set_class_name", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600, parent=parent)
-    window.add_page_from_template("set_class_name", set_class_name_window_template)
-    window.switch_to_page("set_class_name")
-    _window_instances["set_class_name"] = window
-    window.windowClosed.connect(lambda: _window_instances.pop("set_class_name", None))
-    window.show()
+    _create_reusable_window(
+        "set_class_name",
+        ("set_class_name", "title"),
+        set_class_name_window_template,
+        800,
+        600,
+        parent=parent,
+    )
     return
 
 
@@ -76,20 +145,16 @@ def create_import_student_name_window(class_name=None, parent=None):
     Returns:
         创建的窗口实例
     """
-    title = get_content_name_async("import_student_name", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600, parent=parent)
-    window.add_page_from_template(
+    _create_reusable_window(
         "import_student_name",
-        lambda parent: import_student_name_window_template(
-            parent=parent, class_name=class_name
+        ("import_student_name", "title"),
+        lambda page_parent: import_student_name_window_template(
+            parent=page_parent, class_name=class_name
         ),
+        800,
+        600,
+        parent=parent,
     )
-    window.switch_to_page("import_student_name")
-    _window_instances["import_student_name"] = window
-    window.windowClosed.connect(
-        lambda: _window_instances.pop("import_student_name", None)
-    )
-    window.show()
     return
 
 
@@ -115,16 +180,16 @@ def create_name_setting_window(list_name=None, parent=None):
     Returns:
         创建的窗口实例
     """
-    title = get_content_name_async("name_setting", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600, parent=parent)
-    window.add_page_from_template(
+    _create_reusable_window(
         "name_setting",
-        lambda parent: name_setting_window_template(parent=parent, list_name=list_name),
+        ("name_setting", "title"),
+        lambda page_parent: name_setting_window_template(
+            parent=page_parent, list_name=list_name
+        ),
+        800,
+        600,
+        parent=parent,
     )
-    window.switch_to_page("name_setting")
-    _window_instances["name_setting"] = window
-    window.windowClosed.connect(lambda: _window_instances.pop("name_setting", None))
-    window.show()
     return
 
 
@@ -150,18 +215,16 @@ def create_gender_setting_window(list_name=None, parent=None):
     Returns:
         创建的窗口实例
     """
-    title = get_content_name_async("gender_setting", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600, parent=parent)
-    window.add_page_from_template(
+    _create_reusable_window(
         "gender_setting",
-        lambda parent: gender_setting_window_template(
-            parent=parent, list_name=list_name
+        ("gender_setting", "title"),
+        lambda page_parent: gender_setting_window_template(
+            parent=page_parent, list_name=list_name
         ),
+        800,
+        600,
+        parent=parent,
     )
-    window.switch_to_page("gender_setting")
-    _window_instances["gender_setting"] = window
-    window.windowClosed.connect(lambda: _window_instances.pop("gender_setting", None))
-    window.show()
     return
 
 
@@ -187,18 +250,16 @@ def create_group_setting_window(list_name=None, parent=None):
     Returns:
         创建的窗口实例
     """
-    title = get_content_name_async("group_setting", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600, parent=parent)
-    window.add_page_from_template(
+    _create_reusable_window(
         "group_setting",
-        lambda parent: group_setting_window_template(
-            parent=parent, list_name=list_name
+        ("group_setting", "title"),
+        lambda page_parent: group_setting_window_template(
+            parent=page_parent, list_name=list_name
         ),
+        800,
+        600,
+        parent=parent,
     )
-    window.switch_to_page("group_setting")
-    _window_instances["group_setting"] = window
-    window.windowClosed.connect(lambda: _window_instances.pop("group_setting", None))
-    window.show()
     return
 
 
@@ -220,13 +281,13 @@ def create_set_pool_name_window():
     Returns:
         创建的窗口实例
     """
-    title = get_content_name_async("set_prize_name", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600)
-    window.add_page_from_template("set_prize_name", set_pool_name_window_template)
-    window.switch_to_page("set_prize_name")
-    _window_instances["set_prize_name"] = window
-    window.windowClosed.connect(lambda: _window_instances.pop("set_prize_name", None))
-    window.show()
+    _create_reusable_window(
+        "set_prize_name",
+        ("set_prize_name", "title"),
+        set_pool_name_window_template,
+        800,
+        600,
+    )
     return
 
 
@@ -255,20 +316,15 @@ def create_import_prize_name_window(pool_name=None):
     Returns:
         创建的窗口实例
     """
-    title = get_content_name_async("import_prize_name", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600)
-    window.add_page_from_template(
+    _create_reusable_window(
         "import_prize_name",
-        lambda parent: import_prize_name_window_template(
-            parent=parent, pool_name=pool_name
+        ("import_prize_name", "title"),
+        lambda page_parent: import_prize_name_window_template(
+            parent=page_parent, pool_name=pool_name
         ),
+        800,
+        600,
     )
-    window.switch_to_page("import_prize_name")
-    _window_instances["import_prize_name"] = window
-    window.windowClosed.connect(
-        lambda: _window_instances.pop("import_prize_name", None)
-    )
-    window.show()
     return
 
 
@@ -294,20 +350,15 @@ def create_prize_setting_window(list_name=None):
     Returns:
         创建的窗口实例
     """
-    title = get_content_name_async("prize_name_setting", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600)
-    window.add_page_from_template(
+    _create_reusable_window(
         "prize_name_setting",
-        lambda parent: prize_name_setting_window_template(
-            parent=parent, list_name=list_name
+        ("prize_name_setting", "title"),
+        lambda page_parent: prize_name_setting_window_template(
+            parent=page_parent, list_name=list_name
         ),
+        800,
+        600,
     )
-    window.switch_to_page("prize_name_setting")
-    _window_instances["prize_name_setting"] = window
-    window.windowClosed.connect(
-        lambda: _window_instances.pop("prize_name_setting", None)
-    )
-    window.show()
     return
 
 
@@ -333,20 +384,15 @@ def create_prize_weight_setting_window(list_name=None):
     Returns:
         创建的窗口实例
     """
-    title = get_content_name_async("prize_weight_setting", "title")
-    window = SimpleWindowTemplate(title, width=800, height=600)
-    window.add_page_from_template(
+    _create_reusable_window(
         "prize_weight_setting",
-        lambda parent: prize_weight_setting_window_template(
-            parent=parent, list_name=list_name
+        ("prize_weight_setting", "title"),
+        lambda page_parent: prize_weight_setting_window_template(
+            parent=page_parent, list_name=list_name
         ),
+        800,
+        600,
     )
-    window.switch_to_page("prize_weight_setting")
-    _window_instances["prize_weight_setting"] = window
-    window.windowClosed.connect(
-        lambda: _window_instances.pop("prize_weight_setting", None)
-    )
-    window.show()
     return
 
 
@@ -368,13 +414,41 @@ def create_contributor_window():
     Returns:
         创建的窗口实例
     """
-    title = get_content_name_async("about", "contributor")
-    window = SimpleWindowTemplate(title, width=800, height=600)
-    window.add_page_from_template("contributor", contributor_window_template)
-    window.switch_to_page("contributor")
-    _window_instances["contributor"] = window
-    window.windowClosed.connect(lambda: _window_instances.pop("contributor", None))
-    window.show()
+    _create_reusable_window(
+        "contributor",
+        ("about", "contributor"),
+        contributor_window_template,
+        900,
+        600,
+    )
+    return
+
+
+# ==================================================
+# 计时器窗口
+# ==================================================
+class countdown_timer_window_template(PageTemplate):
+    """计时器窗口类
+    使用PageTemplate创建计时器页面"""
+
+    def __init__(self, parent=None):
+        super().__init__(content_widget_class=CountdownTimerPage, parent=parent)
+
+
+def create_countdown_timer_window():
+    """
+    创建计时器窗口
+
+    Returns:
+        创建的窗口实例
+    """
+    _create_reusable_window(
+        "countdown_timer",
+        ("countdown_timer", "title"),
+        countdown_timer_window_template,
+        980,
+        650,
+    )
     return
 
 
@@ -422,86 +496,19 @@ def create_remaining_list_window(
     Returns:
         创建的窗口实例和页面实例
     """
-    # 检查是否已存在剩余名单窗口
-    if "remaining_list" in _window_instances:
-        window = _window_instances["remaining_list"]
-        try:
-            # 激活窗口并置于前台
-            window.raise_()
-            window.activateWindow()
-
-            # 获取页面实例并更新数据
-            page = None
-
-            def setup_page():
-                nonlocal page
-                page_template = window.get_page("remaining_list")
-                content_widget = (
-                    getattr(page_template, "contentWidget", None)
-                    if page_template is not None
-                    else None
-                )
-                if content_widget is None:
-                    QTimer.singleShot(50, setup_page)
-                    return
-                page = content_widget
-                if hasattr(page, "update_remaining_list"):
-                    page.update_remaining_list(
-                        class_name,
-                        group_filter,
-                        gender_filter,
-                        half_repeat,
-                        group_index,
-                        gender_index,
-                        source=source,
-                    )
-
-            # 使用延迟调用确保内容控件已创建
-            QTimer.singleShot(APP_INIT_DELAY, setup_page)
-
-            # 创建一个回调函数，用于在页面设置完成后获取页面实例
-            def get_page_callback(callback):
-                def check_page():
-                    if page is not None:
-                        callback(page)
-                    else:
-                        QTimer.singleShot(50, check_page)
-
-                check_page()
-
-            return window, get_page_callback
-        except Exception as e:
-            # 如果窗口已损坏，从字典中移除并创建新窗口
-            logger.exception(f"激活剩余名单窗口失败: {e}")
-            _window_instances.pop("remaining_list", None)
-
-    # 创建新窗口
-    title = get_content_name_async("remaining_list", "windows_title")
-    window = SimpleWindowTemplate(title, width=800, height=600)
-    # 添加剩余名单页面
-    window.add_page_from_template("remaining_list", remaining_list_window_template)
-    # 获取页面模板并设置source
-    page_template = window.get_page("remaining_list")
-    if hasattr(page_template, "set_source"):
-        page_template.set_source(source)
-    # 切换到剩余名单页面
-    window.switch_to_page("remaining_list")
-
-    # 获取页面实例并更新数据
-    page = None
-
-    def setup_page():
-        nonlocal page
+    window, created = _create_reusable_window(
+        "remaining_list",
+        ("remaining_list", "windows_title"),
+        remaining_list_window_template,
+        900,
+        600,
+    )
+    if created:
         page_template = window.get_page("remaining_list")
-        content_widget = (
-            getattr(page_template, "contentWidget", None)
-            if page_template is not None
-            else None
-        )
-        if content_widget is None:
-            QTimer.singleShot(50, setup_page)
-            return
-        page = content_widget
+        if hasattr(page_template, "set_source"):
+            page_template.set_source(source)
+
+    def on_ready(page):
         if hasattr(page, "update_remaining_list"):
             page.update_remaining_list(
                 class_name,
@@ -512,29 +519,15 @@ def create_remaining_list_window(
                 gender_index,
                 source=source,
             )
-        try:
-            window.windowClosed.connect(
-                lambda: getattr(page, "stop_loader", lambda: None)()
-            )
-        except Exception:
-            pass
+        if created:
+            try:
+                window.windowClosed.connect(
+                    lambda: getattr(page, "stop_loader", lambda: None)()
+                )
+            except Exception:
+                pass
 
-    # 使用延迟调用确保内容控件已创建
-    QTimer.singleShot(APP_INIT_DELAY, setup_page)
-
-    _window_instances["remaining_list"] = window
-    window.windowClosed.connect(lambda: _window_instances.pop("remaining_list", None))
-    window.show()
-
-    # 创建一个回调函数，用于在页面设置完成后获取页面实例
-    def get_page_callback(callback):
-        def check_page():
-            if page is not None:
-                callback(page)
-            else:
-                QTimer.singleShot(50, check_page)
-
-        check_page()
+    get_page_callback = _create_page_loader(window, "remaining_list", on_ready)
 
     return window, get_page_callback
 
@@ -557,17 +550,13 @@ def create_current_config_viewer_window():
     Returns:
         创建的窗口实例
     """
-    title = get_content_name_async("linkage_settings", "cses_import_settings", "name")
-    window = SimpleWindowTemplate(title, width=800, height=600)
-    window.add_page_from_template(
-        "current_config_viewer", current_config_viewer_window_template
+    _create_reusable_window(
+        "current_config_viewer",
+        ("linkage_settings", "cses_import_settings", "name"),
+        current_config_viewer_window_template,
+        800,
+        600,
     )
-    window.switch_to_page("current_config_viewer")
-    _window_instances["current_config_viewer"] = window
-    window.windowClosed.connect(
-        lambda: _window_instances.pop("current_config_viewer", None)
-    )
-    window.show()
     return
 
 
@@ -589,13 +578,9 @@ def create_log_viewer_window():
     Returns:
         创建的窗口实例
     """
-    title = get_content_name_async("log_viewer", "name")
-    window = SimpleWindowTemplate(title, width=900, height=600)
-    window.add_page_from_template("log_viewer", log_viewer_window_template)
-    window.switch_to_page("log_viewer")
-    _window_instances["log_viewer"] = window
-    window.windowClosed.connect(lambda: _window_instances.pop("log_viewer", None))
-    window.show()
+    _create_reusable_window(
+        "log_viewer", ("log_viewer", "name"), log_viewer_window_template, 900, 600
+    )
     return
 
 
@@ -605,11 +590,11 @@ class backup_manager_window_template(PageTemplate):
 
 
 def create_backup_manager_window():
-    title = get_content_name_async("basic_settings", "backup_manager")
-    window = SimpleWindowTemplate(title, width=900, height=650)
-    window.add_page_from_template("backup_manager", backup_manager_window_template)
-    window.switch_to_page("backup_manager")
-    _window_instances["backup_manager"] = window
-    window.windowClosed.connect(lambda: _window_instances.pop("backup_manager", None))
-    window.show()
+    _create_reusable_window(
+        "backup_manager",
+        ("basic_settings", "backup_manager"),
+        backup_manager_window_template,
+        900,
+        650,
+    )
     return

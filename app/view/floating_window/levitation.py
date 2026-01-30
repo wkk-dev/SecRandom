@@ -20,7 +20,9 @@ from app.tools.settings_access import (
 )
 from app.tools.path_utils import *
 from app.tools.variable import EXIT_CODE_RESTART
-from app.Language.obtain_language import get_content_combo_name_async
+from app.Language.obtain_language import (
+    get_content_name_async,
+)
 from app.common.extraction.extract import _is_non_class_time
 from app.common.safety.verify_ops import require_and_run
 
@@ -35,6 +37,7 @@ class LevitationWindow(QWidget):
     rollCallRequested = Signal()
     quickDrawRequested = Signal()
     lotteryRequested = Signal()
+    timerRequested = Signal()
     visibilityChanged = Signal(bool)
     positionChanged = Signal(int, int)
 
@@ -788,33 +791,43 @@ class LevitationWindow(QWidget):
         Returns:
             按钮配置字典，包含图标、文本和信号
         """
-        text_map = get_content_combo_name_async(
-            "floating_window_management", "floating_window_button_control"
-        )
-        names = list(text_map)
-
         button_configs = {
             "roll_call": {
                 "icon": get_theme_icon("ic_fluent_people_20_filled"),
-                "text": names[0],
+                "text": get_content_name_async(
+                    "floating_window_management", "roll_call_button"
+                ),
                 "signal": self.rollCallRequested,
             },
             "quick_draw": {
                 "icon": get_theme_icon("ic_fluent_flash_20_filled"),
-                "text": names[1],
+                "text": get_content_name_async(
+                    "floating_window_management", "quick_draw_button"
+                ),
                 "signal": self.quickDrawRequested,
             },
             "lottery": {
                 "icon": get_theme_icon("ic_fluent_gift_20_filled"),
-                "text": names[2],
+                "text": get_content_name_async(
+                    "floating_window_management", "lottery_button"
+                ),
                 "signal": self.lotteryRequested,
+            },
+            "timer": {
+                "icon": get_theme_icon("ic_fluent_timer_20_filled"),
+                "text": get_content_name_async(
+                    "floating_window_management", "timer_button"
+                ),
+                "signal": self.timerRequested,
             },
         }
 
         # 默认配置（点名按钮）
         default_config = {
             "icon": get_theme_icon("ic_fluent_people_20_filled"),
-            "text": names[0],
+            "text": get_content_name_async(
+                "floating_window_management", "roll_call_button"
+            ),
             "signal": self.rollCallRequested,
         }
 
@@ -1869,6 +1882,14 @@ class LevitationWindow(QWidget):
             ["roll_call", "lottery"],
             ["quick_draw", "lottery"],
             ["roll_call", "quick_draw", "lottery"],
+            ["timer"],
+            ["roll_call", "timer"],
+            ["quick_draw", "timer"],
+            ["lottery", "timer"],
+            ["roll_call", "quick_draw", "timer"],
+            ["roll_call", "lottery", "timer"],
+            ["quick_draw", "lottery", "timer"],
+            ["roll_call", "quick_draw", "lottery", "timer"],
         ]
         if idx < 0 or idx >= len(combos):
             return combos[0]
