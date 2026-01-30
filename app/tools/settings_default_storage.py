@@ -483,6 +483,7 @@ DEFAULT_SETTINGS = {
         "verification_required": {"default_value": True},
         "instant_draw_disable": {"default_value": False},
         "data_source": {"default_value": 0},
+        "hide_floating_window_on_class_end": {"default_value": False},
         "pre_class_reset_enabled": {"default_value": False},
         "pre_class_reset_time": {"default_value": 120},
         "pre_class_enable_time": {"default_value": 0},

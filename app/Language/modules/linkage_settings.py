@@ -111,6 +111,10 @@ linkage_settings = {
                 "使用ClassIsland数据源",
             ],
         },
+        "hide_floating_window_on_class_end": {
+            "name": "下课时隐藏浮窗",
+            "description": "当检测到下课（非上课时段）时自动隐藏浮窗",
+        },
     },
     "EN_US": {
         "title": {
@@ -212,6 +216,10 @@ linkage_settings = {
             "5": "Friday",
             "6": "Saturday",
             "7": "Sunday",
+        },
+        "hide_floating_window_on_class_end": {
+            "name": "Hide floating window on class end",
+            "description": "Automatically hide floating window when class end (non-class time) is detected",
         },
         "subject_history_filter_settings": {
             "name": "Subject History Filter",

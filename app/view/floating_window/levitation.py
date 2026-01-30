@@ -493,7 +493,116 @@ class LevitationWindow(QWidget):
         self._init_edge_hide_settings()
         self._init_foreground_hide_settings()
 
+        # 联动：下课隐藏浮窗设置
+        self._init_class_linkage_settings()
+
         self._user_requested_visible = bool(self._visible_on_start)
+
+    def _init_class_linkage_settings(self):
+        """初始化联动设置：下课隐藏浮窗"""
+        try:
+            self._hide_on_class_end_enabled = bool(
+                self._get_bool_setting(
+                    "linkage_settings", "hide_floating_window_on_class_end", False
+                )
+            )
+        except Exception:
+            self._hide_on_class_end_enabled = False
+
+        # 状态跟踪
+        self._hidden_by_class_end = False
+        self._pre_class_hide_main_visible = False
+        self._pre_class_hide_storage_visible = False
+
+        # 定时检查器（默认 30 秒）
+        self._class_hide_timer = QTimer(self)
+        self._class_hide_timer.setInterval(30 * 1000)
+        self._class_hide_timer.timeout.connect(self._check_class_end_hide)
+        self._apply_class_hide_timer_state()
+
+    def _apply_class_hide_timer_state(self):
+        try:
+            if bool(getattr(self, "_hide_on_class_end_enabled", False)):
+                if not self._class_hide_timer.isActive():
+                    self._class_hide_timer.start()
+                QTimer.singleShot(0, self._check_class_end_hide)
+            else:
+                if hasattr(self, "_class_hide_timer") and self._class_hide_timer:
+                    if self._class_hide_timer.isActive():
+                        self._class_hide_timer.stop()
+                # 如果设置被关闭，确保恢复先前的可见性
+                self._apply_class_hidden(False)
+        except Exception:
+            pass
+
+    def _check_class_end_hide(self):
+        """检查是否为下课/非上课时间并应用隐藏逻辑"""
+        try:
+            if not bool(getattr(self, "_hide_on_class_end_enabled", False)):
+                return
+            is_non_class = False
+            try:
+                is_non_class = bool(_is_non_class_time())
+            except Exception:
+                is_non_class = False
+            self._apply_class_hidden(bool(is_non_class))
+        except Exception:
+            pass
+
+    def _apply_class_hidden(self, hidden: bool):
+        """根据下课检测结果隐藏或恢复浮窗（记录并恢复之前可见性）"""
+        hidden = bool(hidden)
+        if hidden == bool(getattr(self, "_hidden_by_class_end", False)):
+            return
+
+        self._hidden_by_class_end = hidden
+
+        if hidden:
+            # 记录之前可见性
+            self._pre_class_hide_main_visible = bool(self.isVisible())
+            self._pre_class_hide_storage_visible = bool(
+                hasattr(self, "arrow_widget")
+                and self.arrow_widget
+                and self.arrow_widget.isVisible()
+            )
+
+            self._suppress_visibility_tracking = True
+            try:
+                if self.isVisible():
+                    self.hide()
+                if (
+                    hasattr(self, "arrow_widget")
+                    and self.arrow_widget
+                    and self.arrow_widget.isVisible()
+                ):
+                    self.arrow_widget.hide()
+            finally:
+                self._suppress_visibility_tracking = False
+            return
+
+        # 恢复可见性：仅在用户曾经期望可见时恢复
+        should_show_main = bool(
+            getattr(self, "_user_requested_visible", False)
+            and getattr(self, "_pre_class_hide_main_visible", False)
+        )
+        should_show_storage = bool(
+            getattr(self, "_user_requested_visible", False)
+            and getattr(self, "_pre_class_hide_storage_visible", False)
+        )
+
+        self._suppress_visibility_tracking = True
+        try:
+            if should_show_main and not self.isVisible():
+                self.show()
+            if (
+                should_show_storage
+                and hasattr(self, "arrow_widget")
+                and self.arrow_widget
+                and not self.arrow_widget.isVisible()
+            ):
+                self.arrow_widget.show()
+        finally:
+            self._suppress_visibility_tracking = False
 
     def _get_bool_setting(self, section: str, key: str, default: bool = False) -> bool:
         """获取布尔类型设置"""
@@ -2169,6 +2278,16 @@ class LevitationWindow(QWidget):
                 QTimer.singleShot(0, self._check_foreground_hide)
             # 当任何影响外观的设置改变时，重新应用主题样式
             self._apply_theme_style()
+        elif first == "linkage_settings":
+            # 处理联动设置变化（比如下课隐藏浮窗）
+            if second == "hide_floating_window_on_class_end":
+                try:
+                    self._hide_on_class_end_enabled = bool(value)
+                except Exception:
+                    self._hide_on_class_end_enabled = False
+                self._apply_class_hide_timer_state()
+            # 其他 linkage 设置目前不在此处处理
+            return
         elif first == "float_position":
             if second == "x":
                 x = int(value or 0)

@@ -371,6 +371,26 @@ class class_break_settings(GroupHeaderCardWidget):
             )
         )
 
+        # 下课隐藏浮窗开关
+        self.hide_floating_on_class_end_switch = SwitchButton()
+        self.hide_floating_on_class_end_switch.setOffText(
+            get_content_name_async("linkage_settings", "disable")
+        )
+        self.hide_floating_on_class_end_switch.setOnText(
+            get_content_name_async("linkage_settings", "enable")
+        )
+        hide_on_class_end = readme_settings_async(
+            "linkage_settings", "hide_floating_window_on_class_end"
+        )
+        self.hide_floating_on_class_end_switch.setChecked(bool(hide_on_class_end))
+        self.hide_floating_on_class_end_switch.checkedChanged.connect(
+            lambda: update_settings(
+                "linkage_settings",
+                "hide_floating_window_on_class_end",
+                self.hide_floating_on_class_end_switch.isChecked(),
+            )
+        )
+
         # 添加设置项到分组
         self.addGroup(
             get_theme_icon("ic_fluent_clock_lock_20_filled"),
@@ -397,6 +417,16 @@ class class_break_settings(GroupHeaderCardWidget):
                 "linkage_settings", "post_class_disable_delay"
             ),
             self.post_class_disable_delay_spinbox,
+        )
+        self.addGroup(
+            get_theme_icon("ic_fluent_window_shield_20_filled"),
+            get_content_name_async(
+                "linkage_settings", "hide_floating_window_on_class_end"
+            ),
+            get_content_description_async(
+                "linkage_settings", "hide_floating_window_on_class_end"
+            ),
+            self.hide_floating_on_class_end_switch,
         )
 
 
