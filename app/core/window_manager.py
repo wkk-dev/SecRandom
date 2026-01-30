@@ -3,7 +3,7 @@ from typing import Optional, Callable, TYPE_CHECKING
 from loguru import logger
 from PySide6.QtCore import QTimer
 from app.tools.settings_access import readme_settings_async
-from app.core.utils import safe_execute, safe_close_window
+from app.core.utils import safe_execute, safe_close_window, activate_window
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
@@ -603,8 +603,7 @@ class WindowManager:
                 if action == "show":
                     if not win.isVisible():
                         win.show()
-                    win.raise_()
-                    win.activateWindow()
+                    activate_window(win)
                     return
 
         safe_execute(impl, error_message="执行窗口控制失败")

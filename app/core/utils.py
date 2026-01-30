@@ -2,6 +2,7 @@ from typing import Tuple
 from typing import Optional, Callable, TypeVar, Any
 from functools import wraps
 from loguru import logger
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 
 
@@ -46,7 +47,8 @@ def activate_window(window: QWidget) -> bool:
     try:
         window.show()
         window.raise_()
-        window.activateWindow()
+        if not (window.windowFlags() & Qt.WindowDoesNotAcceptFocus):
+            window.activateWindow()
         return True
     except Exception as e:
         logger.exception(f"激活窗口失败: {e}", exc_info=True)

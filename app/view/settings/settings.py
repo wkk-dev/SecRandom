@@ -117,9 +117,6 @@ class SettingsWindow(FluentWindow):
             return
         if getattr(self, "_sidebar_scroll_area", None) is not None:
             return
-        panel = getattr(navigation, "panel", None)
-        if panel is not None and hasattr(panel, "setMinimumExpandWidth"):
-            panel.setMinimumExpandWidth(0)
 
         scroll_area = SingleDirectionScrollArea(self)
         scroll_area.setWidgetResizable(True)
