@@ -420,7 +420,7 @@ def _send_linux_notification(
             )
             logger.debug(f"已发送Linux通知(不包含URL): {title}")
         return True
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         try:
             from plyer import notification
 

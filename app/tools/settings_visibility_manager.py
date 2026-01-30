@@ -16,6 +16,5 @@ def is_setting_visible(category: str, setting_name: str) -> bool:
     """
     simplified_mode = readme_settings_async("basic_settings", "simplified_mode")
     if simplified_mode:
-        return SETTINGS_VISIBILITY_CONFIG[category][setting_name]
-    else:
-        return True
+        return SETTINGS_VISIBILITY_CONFIG.get(category, {}).get(setting_name, True)
+    return True

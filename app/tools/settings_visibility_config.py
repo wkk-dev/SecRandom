@@ -6,6 +6,7 @@ SETTINGS_VISIBILITY_CONFIG = {
         "background_resident": False,
         "auto_save_window_size": False,
         "url_protocol": False,
+        "main_window_topmost_mode": False,
     },
     "roll_call_settings": {
         "use_global_font": False,
