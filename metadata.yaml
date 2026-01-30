@@ -1,7 +1,7 @@
 latest:
-  release: v2.2.7
-  beta: v2.2.7
-  alpha: v2.2.7
+  release: v2.2.8
+  beta: v2.2.8
+  alpha: v2.2.8
 
 latest_no:
   release: 2
