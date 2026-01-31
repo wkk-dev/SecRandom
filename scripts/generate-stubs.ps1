@@ -3,6 +3,7 @@ $SearchPath = "./data/dlls"
 $DestPath = "./typings"
 
 $dlls = Get-ChildItem -Path $SearchPath -Filter "*.dll" -Recurse |
+        Where-Object { $_.FullName -notlike "*uiaccess.dll" }
         ForEach-Object { $_.FullName }
 
 Write-Host "Found $($dlls.Count) DLL files" -ForegroundColor Green

@@ -23,15 +23,16 @@ if sys.platform == "win32":
         clr.AddReference("ClassIsland.Shared.IPC")
         clr.AddReference("SecRandom4Ci.Interface")
 
-        from System import Action, DateTime
+        from System import Action, DateTime, Version
         from ClassIsland.Shared.Enums import TimeState
         from ClassIsland.Shared.IPC import IpcClient, IpcRoutedNotifyIds
         from ClassIsland.Shared.IPC.Abstractions.Services import IPublicLessonsService
         from dotnetCampus.Ipc.CompilerServices.GeneratedProxies import (
             GeneratedIpcFactory,
         )
+        from SecRandom4Ci.Interface.Enums import ResultType
+        from SecRandom4Ci.Interface.Models import CallResult, NotificationData, Student
         from SecRandom4Ci.Interface.Services import ISecRandomService
-        from SecRandom4Ci.Interface.Models import CallResult, Student
 
         CSHARP_AVAILABLE = True
     except Exception as e:
@@ -68,7 +69,7 @@ if CSHARP_AVAILABLE:
             self.loop: Optional[asyncio.AbstractEventLoop] = None
             self.is_running = False
             self.is_connected = False
-            self._disconnect_logged = False  # 跟踪是否已记录断连日志
+            self._no_plugin_logged = False
             self._last_on_class_left_log_time = 0  # 上次记录距离上课时间的时间
             self._last_known_subject_name: Optional[str] = None
 
@@ -120,6 +121,7 @@ if CSHARP_AVAILABLE:
             draw_count=1,
             settings=None,
             settings_group=None,
+            is_animating=False,
         ) -> bool:
             """发送提醒"""
             if not self.is_running:
@@ -134,17 +136,71 @@ if CSHARP_AVAILABLE:
                 display_duration = 5
 
             logger.debug(
-                f"发送通知到 ClassIsland: 班级={class_name}, 选中学生={selected_students}, 抽取数量={draw_count}, 显示时长={display_duration}"
+                f"发送通知到 ClassIsland: 班级={class_name}, 选中学生={selected_students}, 抽取数量={draw_count}, 显示时长={display_duration}, 设置组={settings_group}, 是否动画={is_animating}"
             )
 
             randomService = GeneratedIpcFactory.CreateIpcProxy[ISecRandomService](
                 self.ipc_client.Provider, self.ipc_client.PeerProxy
             )
-            result = self.convert_to_call_result(
-                class_name, selected_students, draw_count, display_duration
-            )
-            randomService.NotifyResult(result)
 
+            try:
+                plugin_version = randomService.GetPluginVersion()
+            except Exception as e:
+                plugin_version = Version.Parse("0.0.0.1")
+
+            logger.debug(f"插件版本为 {plugin_version}")
+            if plugin_version < Version.Parse("1.2.0.0"):
+                logger.warning("检测到旧版插件 (小于 1.2.0.0)，请尽快升级！")
+
+                result = CallResult()
+                result.ClassName = class_name
+                result.DrawCount = draw_count
+                result.DisplayDuration = display_duration
+                for student in selected_students:
+                    cs_student = Student()
+                    cs_student.StudentId = student[0]
+                    cs_student.StudentName = student[1]
+                    cs_student.Exists = student[2]
+                    result.SelectedStudents.Add(cs_student)
+                randomService.NotifyResult(result)
+
+                return True
+
+            if settings_group is None:
+                notification_type = ResultType.Unknown
+            elif "roll_call" in settings_group:
+                notification_type = [
+                    ResultType.PartialRollCall,
+                    ResultType.FinishedRollCall,
+                ][not is_animating]
+            elif "quick_draw" in settings_group:
+                notification_type = [
+                    ResultType.PartialQuickDraw,
+                    ResultType.FinishedQuickDraw,
+                ][not is_animating]
+            elif "lottery" in settings_group:
+                notification_type = [
+                    ResultType.PartialLottery,
+                    ResultType.FinishedLottery,
+                ][not is_animating]
+            else:
+                notification_type = ResultType.Unknown
+
+            logger.debug(f"通知类型: {notification_type}")
+
+            data = NotificationData()
+            data.ResultType = notification_type
+            data.ClassName = class_name
+            data.DrawCount = draw_count
+            data.DisplayDuration = display_duration
+            for student in selected_students:
+                cs_student = Student()
+                cs_student.StudentId = student[0]
+                cs_student.StudentName = student[1]
+                cs_student.Exists = student[2]
+                data.Items.Add(cs_student)
+
+            randomService.ShowNotification(data)
             return True
 
         def is_breaking(self) -> bool:
@@ -307,22 +363,6 @@ if CSHARP_AVAILABLE:
             except Exception:
                 return 0
 
-        @staticmethod
-        def convert_to_call_result(
-            class_name: str, selected_students, draw_count: int, display_duration=5.0
-        ) -> CallResult:
-            result = CallResult()
-            result.ClassName = class_name
-            result.DrawCount = draw_count
-            result.DisplayDuration = display_duration
-            for student in selected_students:
-                cs_student = Student()
-                cs_student.StudentId = student[0]
-                cs_student.StudentName = student[1]
-                cs_student.Exists = student[2]
-                result.SelectedStudents.Add(cs_student)
-            return result
-
         def _on_class_test(self):
             lessonSc = GeneratedIpcFactory.CreateIpcProxy[IPublicLessonsService](
                 self.ipc_client.Provider, self.ipc_client.PeerProxy
@@ -353,22 +393,28 @@ if CSHARP_AVAILABLE:
                 task = self.ipc_client.Connect()
                 await self.loop.run_in_executor(None, lambda: task.Wait())
                 self.is_connected = True
+                logger.debug("C# IPC 连接成功！")
 
                 while self.is_running:
                     await asyncio.sleep(1)
 
-                    if not self._check_alive():
-                        if not self._disconnect_logged:
+                    # logger.debug(f"stat: plugin({self._check_plugin_alive()}) ci({self._check_ci_alive()})")
+                    if not self.check_plugin_alive():
+                        if not self.check_ci_alive():
                             logger.debug("C# IPC 断连！重连...")
-                            self._disconnect_logged = True
-                        self.is_connected = False
+                            self.is_connected = False
 
-                        task = self.ipc_client.Connect()
-                        await self.loop.run_in_executor(
-                            None, lambda task=task: task.Wait()
-                        )
-                        self.is_connected = True
-                        self._disconnect_logged = False
+                            task = self.ipc_client.Connect()
+                            await self.loop.run_in_executor(
+                                None, lambda task=task: task.Wait()
+                            )
+                            self.is_connected = True
+                            logger.debug("C# IPC 连接成功！")
+                        elif not self._no_plugin_logged:
+                            logger.debug("未安装 SecRandom-Ci 插件。")
+                            self._no_plugin_logged = True
+                    else:
+                        self._no_plugin_logged = False
 
                 self.ipc_client = None
                 self.is_connected = False
@@ -386,8 +432,19 @@ if CSHARP_AVAILABLE:
                 self.loop.close()
                 self.loop = None
 
-        def _check_alive(self) -> bool:
-            """客户端是否正常连接"""
+        def check_ci_alive(self) -> bool:
+            """ClassIsland 是否正常连接"""
+            try:
+                lessonsService = GeneratedIpcFactory.CreateIpcProxy[
+                    IPublicLessonsService
+                ](self.ipc_client.Provider, self.ipc_client.PeerProxy)
+                return lessonsService.IsTimerRunning
+            except Exception as e:
+                logger.debug(e)
+                return False
+
+        def check_plugin_alive(self) -> bool:
+            """SecRandom-Ci 插件是否正常连接"""
             try:
                 randomService = GeneratedIpcFactory.CreateIpcProxy[ISecRandomService](
                     self.ipc_client.Provider, self.ipc_client.PeerProxy
@@ -444,6 +501,7 @@ else:
             draw_count=1,
             settings=None,
             settings_group=None,
+            is_animating=False,
         ) -> bool:
             """发送提醒"""
             return False
@@ -484,15 +542,17 @@ else:
         def get_elapsed_since_previous_time_point_end_seconds(self) -> int:
             return 0
 
-        @staticmethod
-        def convert_to_call_result(
-            class_name: str, selected_students, draw_count: int, display_duration=5.0
-        ) -> object:
-            return object
-
         def _on_class_test(self):
             pass
 
         def _run_client(self):
             """运行 C# IPC 客户端"""
             pass
+
+        def check_ci_alive(self) -> bool:
+            """ClassIsland 是否正常连接"""
+            return False
+
+        def check_plugin_alive(self) -> bool:
+            """SecRandom-Ci 插件是否正常连接"""
+            return False

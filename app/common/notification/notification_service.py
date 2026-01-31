@@ -1031,6 +1031,7 @@ class FloatingNotificationManager:
                 draw_count,
                 settings,
                 settings_group,
+                is_animating
             )
             if status:
                 logger.info("成功发送通知到ClassIsland，结果未知")

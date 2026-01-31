@@ -8,6 +8,7 @@ from PySide6.QtCore import *
 from PySide6.QtNetwork import *
 from qfluentwidgets import *
 
+from app.common.IPC_URL.csharp_ipc_handler import CSharpIPCHandler
 from app.tools.variable import *
 from app.tools.path_utils import *
 from app.tools.personalised import *
@@ -213,25 +214,67 @@ class basic_settings(GroupHeaderCardWidget):
             index,
         )
         if index == 1 or index == 2:
-            hint_title = get_any_position_value_async(
-                "lottery_notification_settings",
-                "classisland_notification_hint",
-                "title",
-            )
-            hint_content = get_any_position_value_async(
-                "lottery_notification_settings",
-                "classisland_notification_hint",
-                "content",
-            )
-            InfoBar.success(
-                title=hint_title,
-                content=hint_content,
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=5000,
-                parent=self,
-            )
+            service = CSharpIPCHandler.instance()
+            if not service.check_ci_alive():
+                hint_title = get_any_position_value_async(
+                    "lottery_notification_settings",
+                    "classisland_notification_hint",
+                    "title",
+                )
+                hint_content = get_any_position_value_async(
+                    "lottery_notification_settings",
+                    "classisland_notification_hint",
+                    "content",
+                )
+                InfoBar.success(
+                    title=hint_title,
+                    content=hint_content,
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=5000,
+                    parent=self,
+                )
+            elif not service.check_plugin_alive():
+                hint_title = get_any_position_value_async(
+                    "lottery_notification_settings",
+                    "classisland_plugin_notification_hint",
+                    "title",
+                )
+                hint_content = get_any_position_value_async(
+                    "lottery_notification_settings",
+                    "classisland_plugin_notification_hint",
+                    "content",
+                )
+                InfoBar.warning(
+                    title=hint_title,
+                    content=hint_content,
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=5000,
+                    parent=self,
+                )
+            else:
+                hint_title = get_any_position_value_async(
+                    "lottery_notification_settings",
+                    "classisland_configured_successfully",
+                    "title",
+                )
+                hint_content = get_any_position_value_async(
+                    "lottery_notification_settings",
+                    "classisland_configured_successfully",
+                    "content",
+                )
+                InfoBar.success(
+                    title=hint_title,
+                    content=hint_content,
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=5000,
+                    parent=self,
+                )
 
 
 class floating_window_settings(GroupHeaderCardWidget):

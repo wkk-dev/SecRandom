@@ -129,6 +129,14 @@ roll_call_notification_settings = {
             "title": "ClassIsland通知服务",
             "content": "请确保已安装.NET 8运行时，并在ClassIsland中安装SecRandom-Ci插件",
         },
+        "classisland_plugin_notification_hint": {
+            "title": "ClassIsland通知服务",
+            "content": "检测到未安装插件，请在ClassIsland中安装SecRandom-Ci插件",
+        },
+        "classisland_configured_successfully": {
+            "title": "ClassIsland通知服务",
+            "content": "检测到ClassIsland和SecRandom-Ci插件正常运行，欢迎使用",
+        },
     },
     "EN_US": {
         "title": {
@@ -218,6 +226,14 @@ roll_call_notification_settings = {
         "classisland_notification_hint": {
             "title": "ClassIsland Notification Service",
             "content": "Please ensure .NET 8 runtime is installed and SecRandom-Ci plugin is installed in ClassIsland",
+        },
+        "classisland_plugin_notification_hint": {
+            "title": "ClassIsland Notification Service",
+            "content": "Plugin not detected, please install SecRandom-Ci plugin in ClassIsland",
+        },
+        "classisland_configured_successfully": {
+            "title": "ClassIsland Notification Service",
+            "content": "Detected ClassIsland and SecRandom-Ci plugin running properly, welcome to use",
         },
     },
     "JA_JP": {
@@ -313,6 +329,14 @@ roll_call_notification_settings = {
             "title": "ClassIsland通知サービス",
             "content": ".NET 8ランタイムがインストールされ、ClassIslandにSecRandom-Ciプラグインがインストールされていることを確認してください",
         },
+        "classisland_plugin_notification_hint": {
+            "title": "ClassIsland通知サービス",
+            "content": "プラグインがインストールされていないことを検出しました、ClassIslandにSecRandom-Ciプラグインをインストールしてください",
+        },
+        "classisland_configured_successfully": {
+            "title": "ClassIsland通知サービス",
+            "content": "ClassIslandとSecRandom-Ciプラグインが正常に動作していることを検出しました、ご利用いただきありがとうございます",
+        },
     },
 }
 
@@ -388,6 +412,14 @@ quick_draw_notification_settings = {
             "title": "ClassIsland通知服务",
             "content": "请确保已安装.NET 8运行时，并在ClassIsland中安装SecRandom-Ci插件",
         },
+        "classisland_plugin_notification_hint": {
+            "title": "ClassIsland通知服务",
+            "content": "检测到未安装插件，请在ClassIsland中安装SecRandom-Ci插件",
+        },
+        "classisland_configured_successfully": {
+            "title": "ClassIsland通知服务",
+            "content": "检测到ClassIsland和SecRandom-Ci插件正常运行，欢迎使用",
+        },
     },
     "EN_US": {
         "title": {
@@ -461,6 +493,14 @@ quick_draw_notification_settings = {
         "classisland_notification_hint": {
             "title": "ClassIsland Notification Service",
             "content": "Please ensure .NET 8 runtime is installed and SecRandom-Ci plugin is installed in ClassIsland",
+        },
+        "classisland_plugin_notification_hint": {
+            "title": "ClassIsland Notification Service",
+            "content": "Plugin not detected, please install SecRandom-Ci plugin in ClassIsland",
+        },
+        "classisland_configured_successfully": {
+            "title": "ClassIsland Notification Service",
+            "content": "Detected ClassIsland and SecRandom-Ci plugin running properly, welcome to use",
         },
     },
     "JA_JP": {
@@ -536,6 +576,14 @@ quick_draw_notification_settings = {
         "classisland_notification_hint": {
             "title": "ClassIsland通知サービス",
             "content": ".NET 8ランタイムがインストールされ、ClassIslandにSecRandom-Ciプラグインがインストールされていることを確認してください",
+        },
+        "classisland_plugin_notification_hint": {
+            "title": "ClassIsland通知サービス",
+            "content": "プラグインがインストールされていないことを検出しました、ClassIslandにSecRandom-Ciプラグインをインストールしてください",
+        },
+        "classisland_configured_successfully": {
+            "title": "ClassIsland通知サービス",
+            "content": "ClassIslandとSecRandom-Ciプラグインが正常に動作していることを検出しました、ご利用いただきありがとうございます",
         },
     },
 }
@@ -630,6 +678,14 @@ lottery_notification_settings = {
             "title": "ClassIsland通知服务",
             "content": "请确保已安装.NET 8运行时，并在ClassIsland中安装SecRandom-Ci插件",
         },
+        "classisland_plugin_notification_hint": {
+            "title": "ClassIsland通知服务",
+            "content": "检测到未安装插件，请在ClassIsland中安装SecRandom-Ci插件",
+        },
+        "classisland_configured_successfully": {
+            "title": "ClassIsland通知服务",
+            "content": "检测到ClassIsland和SecRandom-Ci插件正常运行，欢迎使用",
+        },
     },
     "EN_US": {
         "title": {
@@ -715,6 +771,14 @@ lottery_notification_settings = {
         "classisland_notification_hint": {
             "title": "ClassIsland Notification Service",
             "content": "Please ensure .NET 8 runtime is installed and SecRandom-Ci plugin is installed in ClassIsland",
+        },
+        "classisland_plugin_notification_hint": {
+            "title": "ClassIsland Notification Service",
+            "content": "Plugin not detected, please install SecRandom-Ci plugin in ClassIsland",
+        },
+        "classisland_configured_successfully": {
+            "title": "ClassIsland Notification Service",
+            "content": "Detected ClassIsland and SecRandom-Ci plugin running properly, welcome to use",
         },
     },
     "JA_JP": {
@@ -804,6 +868,14 @@ lottery_notification_settings = {
         "classisland_notification_hint": {
             "title": "ClassIsland通知サービス",
             "content": ".NET 8ランタイムがインストールされ、ClassIslandにSecRandom-Ciプラグインがインストールされていることを確認してください",
+        },
+        "classisland_plugin_notification_hint": {
+            "title": "ClassIsland通知サービス",
+            "content": "プラグインがインストールされていないことを検出しました、ClassIslandにSecRandom-Ciプラグインをインストールしてください",
+        },
+        "classisland_configured_successfully": {
+            "title": "ClassIsland通知サービス",
+            "content": "ClassIslandとSecRandom-Ciプラグインが正常に動作していることを検出しました、ご利用いただきありがとうございます",
         },
     },
 }
