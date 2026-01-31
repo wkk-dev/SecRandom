@@ -1,6 +1,5 @@
 # 导入页面模板
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QFrame
 from loguru import logger
 from app.page_building.page_template import PageTemplate
 from app.page_building.window_template import SimpleWindowTemplate
@@ -428,22 +427,12 @@ def create_contributor_window():
 # ==================================================
 # 计时器窗口
 # ==================================================
-class countdown_timer_window_template(QFrame):
+class countdown_timer_window_template(PageTemplate):
     """计时器窗口类
-    不使用 ScrollArea，直接嵌入 CountdownTimerPage，避免布局冲突"""
+    使用PageTemplate创建计时器页面"""
 
     def __init__(self, parent=None):
-        super().__init__(parent=parent)
-        from PySide6.QtWidgets import QVBoxLayout
-        
-        # 直接创建布局，不使用 ScrollArea
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        
-        # 直接创建并添加 CountdownTimerPage
-        self.contentWidget = CountdownTimerPage(self)
-        layout.addWidget(self.contentWidget)
+        super().__init__(content_widget_class=CountdownTimerPage, parent=parent)
 
 
 def create_countdown_timer_window():
