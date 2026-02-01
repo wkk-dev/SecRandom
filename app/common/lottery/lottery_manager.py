@@ -937,30 +937,13 @@ def stop_animation(widget):
 
         settings = widget.manager.get_notification_settings(refresh=True)
         if settings is not None:
-            use_main_window_when_exceed_threshold = readme_settings_async(
-                "lottery_notification_settings", "use_main_window_when_exceed_threshold"
+            ResultDisplayUtils.show_notification_if_enabled(
+                widget.final_pool_name,
+                widget.final_selected_students,
+                actual_draw_count,
+                settings,
+                settings_group="lottery_notification_settings",
             )
-            max_notify_count = readme_settings_async(
-                "lottery_notification_settings", "main_window_display_threshold"
-            )
-
-            if use_main_window_when_exceed_threshold:
-                if actual_draw_count <= max_notify_count:
-                    ResultDisplayUtils.show_notification_if_enabled(
-                        widget.final_pool_name,
-                        widget.final_selected_students,
-                        actual_draw_count,
-                        settings,
-                        settings_group="lottery_notification_settings",
-                    )
-            else:
-                ResultDisplayUtils.show_notification_if_enabled(
-                    widget.final_pool_name,
-                    widget.final_selected_students,
-                    actual_draw_count,
-                    settings,
-                    settings_group="lottery_notification_settings",
-                )
 
         play_voice_result(widget)
 

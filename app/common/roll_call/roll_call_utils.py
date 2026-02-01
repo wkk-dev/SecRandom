@@ -759,30 +759,11 @@ class RollCallUtils:
         settings = RollCallUtils.prepare_notification_settings_by_group(
             settings_group, display_settings
         )
-
-        use_main_window_when_exceed_threshold = readme_settings_async(
-            settings_group, "use_main_window_when_exceed_threshold"
+        ResultDisplayUtils.show_notification_if_enabled(
+            class_name,
+            selected_students,
+            draw_count,
+            settings,
+            settings_group=settings_group,
+            is_animating=is_animating,
         )
-        max_notify_count = readme_settings_async(
-            settings_group, "main_window_display_threshold"
-        )
-
-        if use_main_window_when_exceed_threshold:
-            if draw_count <= max_notify_count:
-                ResultDisplayUtils.show_notification_if_enabled(
-                    class_name,
-                    selected_students,
-                    draw_count,
-                    settings,
-                    settings_group=settings_group,
-                    is_animating=is_animating,
-                )
-        else:
-            ResultDisplayUtils.show_notification_if_enabled(
-                class_name,
-                selected_students,
-                draw_count,
-                settings,
-                settings_group=settings_group,
-                is_animating=is_animating,
-            )
