@@ -89,8 +89,6 @@ class LevitationWindow(QWidget):
         # ==================== 构建UI ====================
         self._build_ui()
         self._apply_position()
-        self._apply_window()
-        self._install_drag_filters()
 
         # ==================== 信号连接 ====================
         self._connect_signals()
@@ -98,9 +96,13 @@ class LevitationWindow(QWidget):
         # ==================== 主题应用 ====================
         self._apply_theme_style()
 
+        self._apply_window()
+        self._install_drag_filters()
+
         # ==================== 启动周期性置顶 ====================
         self._start_periodic_topmost()
-        self._startup_initial_show = False
+        if not bool(getattr(self, "_visible_on_start", False)):
+            QTimer.singleShot(0, lambda: self._check_edge_proximity(immediate=True))
 
     # ==================== 初始化方法 ====================
 
@@ -1010,9 +1012,20 @@ class LevitationWindow(QWidget):
 
     def set_user_requested_visible(self, visible: bool) -> None:
         self._user_requested_visible = bool(visible)
+        storage = getattr(self, "storage_window", None)
         if self._user_requested_visible:
             super().show()
+            if bool(getattr(self, "_retracted", False)) and storage is not None:
+                try:
+                    storage.show()
+                except Exception:
+                    pass
         else:
+            if storage is not None and bool(storage.isVisible()):
+                try:
+                    storage.hide()
+                except Exception:
+                    pass
             super().hide()
 
     def _apply_size_setting(self, size_idx: int):
@@ -1129,7 +1142,17 @@ class LevitationWindow(QWidget):
         super().showEvent(event)
         if not bool(getattr(self, "_suppress_visibility_tracking", False)):
             self._user_requested_visible = True
-        QTimer.singleShot(100, self._check_edge_proximity)
+            if bool(getattr(self, "_retracted", False)):
+                storage = getattr(self, "storage_window", None)
+                if storage is not None and not bool(storage.isVisible()):
+                    try:
+                        storage.show()
+                    except Exception:
+                        pass
+        if bool(getattr(self, "_startup_initial_show", False)):
+            self._check_edge_proximity(immediate=True)
+        else:
+            QTimer.singleShot(100, self._check_edge_proximity)
         if bool(getattr(self, "_startup_initial_show", False)):
             self._startup_initial_show = False
             self._schedule_auto_hide(force=False)
@@ -1144,6 +1167,12 @@ class LevitationWindow(QWidget):
         super().hideEvent(event)
         if not bool(getattr(self, "_suppress_visibility_tracking", False)):
             self._user_requested_visible = False
+            storage = getattr(self, "storage_window", None)
+            if storage is not None and bool(storage.isVisible()):
+                try:
+                    storage.hide()
+                except Exception:
+                    pass
         self._apply_topmost_runtime()
 
     def closeEvent(self, event):
@@ -2093,7 +2122,7 @@ class LevitationWindow(QWidget):
         self._retracted = False
         # logger.debug(f"_expand_from_edge: 窗口位置已展开到 ({self.x()}, {self.y()})")
 
-    def _check_edge_proximity(self):
+    def _check_edge_proximity(self, immediate: bool = False):
         """检测窗口是否靠近屏幕边缘，并实现贴边隐藏功能（带动画效果）"""
         # logger.debug("开始检查边缘贴边隐藏功能")
 
@@ -2128,6 +2157,27 @@ class LevitationWindow(QWidget):
             # 保存主浮窗的原始位置（但不更新实际坐标）
             if not hasattr(self, "_original_position"):
                 self._original_position = window_pos
+
+            if bool(immediate):
+                end_rect = QRect(
+                    screen.left() - window_width + 1,
+                    window_pos.y(),
+                    window_width,
+                    window_height,
+                )
+                try:
+                    self.setGeometry(end_rect)
+                except Exception:
+                    pass
+                self._create_arrow_button(
+                    "right",
+                    0,
+                    window_pos.y()
+                    + window_height // 2
+                    - self._storage_btn_size.height() // 2,
+                )
+                self._retracted = True
+                return
 
             # 创建平滑动画效果
             self.animation = QPropertyAnimation(self, b"geometry")
@@ -2174,6 +2224,27 @@ class LevitationWindow(QWidget):
             # 保存主浮窗的原始位置（但不更新实际坐标）
             if not hasattr(self, "_original_position"):
                 self._original_position = window_pos
+
+            if bool(immediate):
+                end_rect = QRect(
+                    screen.right() - 1,
+                    window_pos.y(),
+                    window_width,
+                    window_height,
+                )
+                try:
+                    self.setGeometry(end_rect)
+                except Exception:
+                    pass
+                self._create_arrow_button(
+                    "left",
+                    screen.width() - self._storage_btn_size.width(),
+                    window_pos.y()
+                    + window_height // 2
+                    - self._storage_btn_size.height() // 2,
+                )
+                self._retracted = True
+                return
 
             # 创建平滑动画效果
             self.animation = QPropertyAnimation(self, b"geometry")

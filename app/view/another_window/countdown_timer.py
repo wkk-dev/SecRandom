@@ -576,9 +576,11 @@ class CountdownTimerPage(QWidget):
         outer_layout = QVBoxLayout(self.left_container)
         outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.setSpacing(0)
+        self._left_outer_layout = outer_layout
 
         center_widget = QWidget(self.left_container)
         center_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self._left_center_widget = center_widget
         ring_layer = QGridLayout(center_widget)
         ring_layer.setContentsMargins(0, 0, 0, 0)
         ring_layer.setSpacing(0)
@@ -590,7 +592,8 @@ class CountdownTimerPage(QWidget):
         ring_layer.addWidget(self.digit_panel, 0, 0, 1, 1)
 
         outer_layout.addStretch(1)
-        outer_layout.addWidget(center_widget, 0, Qt.AlignCenter)
+        outer_layout.addWidget(center_widget, 0)
+        outer_layout.setAlignment(center_widget, Qt.AlignHCenter | Qt.AlignVCenter)
         outer_layout.addStretch(1)
 
     def _build_digit_panel(self, parent_widget=None):
@@ -634,7 +637,7 @@ class CountdownTimerPage(QWidget):
 
         digits_row = QHBoxLayout()
         digits_row.setContentsMargins(0, 0, 0, 0)
-        digits_row.setSpacing(4)
+        digits_row.setSpacing(0)
         digits_row.setAlignment(Qt.AlignCenter)
 
         minus_row = QHBoxLayout()
@@ -678,6 +681,13 @@ class CountdownTimerPage(QWidget):
         self._ms_minus_placeholder.setFixedWidth(self._ms_label.width())
         self._ms_minus_placeholder.setVisible(False)
         minus_row.addWidget(self._ms_minus_placeholder)
+
+        for row in (plus_row, digits_row, minus_row):
+            row.insertStretch(0, 1)
+            row.addStretch(1)
+        self._digit_plus_row_layout = plus_row
+        self._digit_digits_row_layout = digits_row
+        self._digit_minus_row_layout = minus_row
 
         digit_v.addLayout(plus_row)
         digit_v.addLayout(digits_row)
@@ -757,7 +767,7 @@ class CountdownTimerPage(QWidget):
             onClick=lambda: self._set_preset_category("recent"),
         )
         self.preset_segment.setCurrentItem("common")
-        preset_panel_layout.addWidget(self.preset_segment, 0, Qt.AlignCenter)
+        preset_panel_layout.addWidget(self.preset_segment, 0, Qt.AlignLeft)
 
         self._common_presets = [
             _Preset("05:00", 5 * 60),
@@ -785,7 +795,7 @@ class CountdownTimerPage(QWidget):
         preset_panel_layout.addLayout(self.preset_grid)
         self._sync_preset_buttons()
 
-        controls_layout.addWidget(self.preset_panel, 0, Qt.AlignTop)
+        controls_layout.addWidget(self.preset_panel, 0, Qt.AlignTop | Qt.AlignLeft)
         self._build_stopwatch_panel(controls_layout)
         controls_layout.addStretch(1)
 
@@ -1209,25 +1219,42 @@ class CountdownTimerPage(QWidget):
                     int(digit_metrics.horizontalAdvance("0")),
                     int(digit_metrics.horizontalAdvance("8")),
                 )
-                + 8
+                + 4
             )
 
             sample_colon_font = QFont(self._font_family, int(colon_size))
             sample_colon_font.setBold(True)
             colon_metrics = QFontMetrics(sample_colon_font)
-            colon_width = int(colon_metrics.horizontalAdvance(":")) + 6
+            colon_width = int(colon_metrics.horizontalAdvance(":")) + 2
 
             sample_ms_font = QFont(self._font_family, int(ms_size))
             sample_ms_font.setBold(True)
             ms_metrics = QFontMetrics(sample_ms_font)
-            ms_width = int(ms_metrics.horizontalAdvance(".000")) + 10
+            ms_width = int(ms_metrics.horizontalAdvance(".000")) + 2
         else:
             digit_size = 50
-            digit_width = 42
             colon_size = 42
             ms_size = 32
-            ms_width = 84
-            colon_width = 14
+            sample_digit_font = QFont(self._font_family, int(digit_size))
+            sample_digit_font.setBold(True)
+            digit_metrics = QFontMetrics(sample_digit_font)
+            digit_width = (
+                max(
+                    int(digit_metrics.horizontalAdvance("0")),
+                    int(digit_metrics.horizontalAdvance("8")),
+                )
+                + 4
+            )
+
+            sample_colon_font = QFont(self._font_family, int(colon_size))
+            sample_colon_font.setBold(True)
+            colon_metrics = QFontMetrics(sample_colon_font)
+            colon_width = int(colon_metrics.horizontalAdvance(":")) + 2
+
+            sample_ms_font = QFont(self._font_family, int(ms_size))
+            sample_ms_font.setBold(True)
+            ms_metrics = QFontMetrics(sample_ms_font)
+            ms_width = int(ms_metrics.horizontalAdvance(".000")) + 2
         date_size = 18 if mode == "clock" else 16
 
         for lab in self._digit_labels:
@@ -1381,6 +1408,7 @@ class CountdownTimerPage(QWidget):
             or force_compact_by_width
         )
         self._set_compact_view(desired_compact)
+
         if not is_mini:
             self.left_container.setSizePolicy(
                 QSizePolicy.Minimum, QSizePolicy.Expanding
@@ -1482,20 +1510,67 @@ class CountdownTimerPage(QWidget):
             and self._center_between_spacer is not None
             and self._center_right_spacer is not None
         ):
+            digit_rows = [
+                getattr(self, "_digit_plus_row_layout", None),
+                getattr(self, "_digit_digits_row_layout", None),
+                getattr(self, "_digit_minus_row_layout", None),
+            ]
+            for row in digit_rows:
+                if row is not None and row.count() >= 2:
+                    row.setStretch(0, 1)
+                    row.setStretch(row.count() - 1, 1)
+
+            base_margin = 20 if w and (w.isFullScreen() or w.isMaximized()) else 0
+            between_w = 0
+            if not is_mini and not desired_compact:
+                if mode == "clock":
+                    between_w = 0
+                elif window_width > 550:
+                    between_w = 20
+                else:
+                    between_w = 0
+
+            extra_left = 0
+            if not is_mini:
+                if (
+                    mode == "countdown"
+                    and getattr(self, "preset_panel", None) is not None
+                    and self.preset_panel.isVisible()
+                    and getattr(self, "right_container", None) is not None
+                    and self.right_container.isVisible()
+                ):
+                    extra_left = between_w + max(
+                        0, int(self.right_container.sizeHint().width())
+                    )
+                elif (
+                    mode == "stopwatch"
+                    and getattr(self, "right_container", None) is not None
+                    and self.right_container.isVisible()
+                ):
+                    extra_left = between_w + max(
+                        0, int(self.right_container.sizeHint().width())
+                    )
+
+            try:
+                cap = max(
+                    0,
+                    int(window_width)
+                    - max(0, int(self.left_container.sizeHint().width()))
+                    - 10,
+                )
+                extra_left = min(int(extra_left), int(cap))
+            except Exception:
+                extra_left = int(extra_left)
+
             self._center_left_spacer.changeSize(
-                0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum
+                int(base_margin) + int(extra_left),
+                0,
+                QSizePolicy.Expanding,
+                QSizePolicy.Minimum,
             )
             self._center_right_spacer.changeSize(
-                0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum
+                int(base_margin), 0, QSizePolicy.Expanding, QSizePolicy.Minimum
             )
-
-            if w and (w.isFullScreen() or w.isMaximized()):
-                self._center_left_spacer.changeSize(
-                    20, 0, QSizePolicy.Expanding, QSizePolicy.Minimum
-                )
-                self._center_right_spacer.changeSize(
-                    20, 0, QSizePolicy.Expanding, QSizePolicy.Minimum
-                )
 
             if not is_mini and not desired_compact:
                 # For clock mode the right panel is hidden; keep the center
@@ -1506,7 +1581,7 @@ class CountdownTimerPage(QWidget):
                     )
                 elif window_width > 550:
                     self._center_between_spacer.changeSize(
-                        20, 0, QSizePolicy.MinimumExpanding, QSizePolicy.Minimum
+                        20, 0, QSizePolicy.Fixed, QSizePolicy.Minimum
                     )
                 else:
                     self._center_between_spacer.changeSize(
