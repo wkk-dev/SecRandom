@@ -1213,7 +1213,7 @@ class FloatingNotificationManager:
             is_animating: 是否在动画过程中，如果是则不启动自动关闭定时器
         """
         notification_service_type = 0
-        suppress_secrandom_notification = False
+        exceed_threshold = False
         if settings_group:
             try:
                 notification_service_type = readme_settings_async(
@@ -1230,12 +1230,14 @@ class FloatingNotificationManager:
                 max_notify_count = readme_settings_async(
                     settings_group, "main_window_display_threshold"
                 )
-                if use_main_window_when_exceed_threshold and int(draw_count or 0) > int(
-                    max_notify_count or 0
-                ):
-                    suppress_secrandom_notification = True
+                exceed_threshold = use_main_window_when_exceed_threshold and int(
+                    draw_count or 0
+                ) > int(max_notify_count or 0)
             except Exception:
-                suppress_secrandom_notification = False
+                exceed_threshold = False
+
+        if exceed_threshold:
+            return
 
         # 如果选择了ClassIsland通知服务，则发送到ClassIsland
         if notification_service_type == 1:  # 1 表示 ClassIsland 通知服务
@@ -1245,7 +1247,6 @@ class FloatingNotificationManager:
                 draw_count,
                 settings,
                 settings_group,
-                fallback_on_error=not suppress_secrandom_notification,
                 is_animating=is_animating,
             )
             return
@@ -1262,19 +1263,16 @@ class FloatingNotificationManager:
                 fallback_on_error=False,
                 is_animating=is_animating,
             )
-            if suppress_secrandom_notification:
-                return
 
         # 否则使用SecRandom浮窗通知
-        if not suppress_secrandom_notification:
-            self._show_secrandom_notification(
-                class_name,
-                selected_students,
-                draw_count,
-                settings,
-                settings_group,
-                is_animating,
-            )
+        self._show_secrandom_notification(
+            class_name,
+            selected_students,
+            draw_count,
+            settings,
+            settings_group,
+            is_animating,
+        )
 
     def close_all_notifications(self):
         """关闭所有浮动通知窗口"""
