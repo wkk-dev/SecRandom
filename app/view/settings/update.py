@@ -16,6 +16,9 @@ from app.tools.update_utils import *
 from app.Language.obtain_language import *
 from loguru import logger
 
+import os
+import ctypes
+
 
 # ==================================================
 # 辅助类
@@ -725,23 +728,9 @@ class update(QWidget):
                 get_content_name_async("update", "installing_update")
             )
 
-            # 安装更新
             try:
-                success = install_update(file_path)
-                if success:
-                    # 安装成功
-                    self.status_label.setText(
-                        get_content_name_async(
-                            "update", "update_installed_successfully"
-                        )
-                    )
-                else:
-                    # 安装失败
-                    self.status_label.setText(
-                        get_content_name_async("update", "install_failed")
-                    )
+                self._run_installer_as_admin_silent_and_exit(file_path)
             except Exception as e:
-                # 安装过程中发生错误
                 error_text = (
                     f"{get_content_name_async('update', 'install_failed')}: {str(e)}"
                 )
@@ -754,6 +743,28 @@ class update(QWidget):
             # 恢复按钮状态
             self.download_install_button.setEnabled(True)
             self.check_update_button.setEnabled(True)
+
+    def _run_installer_as_admin_silent_and_exit(self, file_path: str) -> None:
+        if not get_path(file_path).exists():
+            raise FileNotFoundError(file_path)
+
+        if not check_update_file_integrity(file_path):
+            raise RuntimeError("installer integrity check failed")
+
+        if os.name != "nt":
+            raise RuntimeError("unsupported platform")
+
+        exe_path = str(get_path(file_path).resolve())
+        params = "/silent"
+
+        rc = ctypes.windll.shell32.ShellExecuteW(
+            None, "runas", exe_path, params, None, 1
+        )
+
+        if rc <= 32:
+            raise RuntimeError(f"ShellExecuteW failed: {rc}")
+
+        QTimer.singleShot(150, lambda: QApplication.instance().quit())
 
     def cancel_update(self):
         """取消更新"""
