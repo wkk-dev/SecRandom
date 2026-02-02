@@ -1084,16 +1084,6 @@ class FloatingNotificationManager:
                     normalized_name = _normalize_text(item[1])
                     exist = bool(item[2])
 
-                    try:
-                        sid = int(student_id or 0)
-                    except Exception:
-                        sid = 0
-                    group_name = student_group_by_id.get(sid, "") or ""
-                    if not group_name and normalized_name:
-                        group_name = (
-                            student_group_by_name.get(normalized_name, "") or ""
-                        )
-
                     selected_students_for_ipc.append(
                         {
                             "student_id": int(student_id or 0),

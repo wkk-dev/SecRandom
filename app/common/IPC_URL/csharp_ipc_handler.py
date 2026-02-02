@@ -145,65 +145,9 @@ if CSHARP_AVAILABLE:
             if not self.is_connected:
                 return False
 
-            def _safe_int(value: Any) -> int:
-                try:
-                    if value is None:
-                        return 0
-                    return int(value)
-                except Exception:
-                    return 0
-
-            def _coerce_student(value: Any) -> SelectedStudentNotificationInfo | None:
-                if isinstance(value, dict):
-                    student_id = _safe_int(value.get("student_id", value.get("id", 0)))
-                    student_name = str(
-                        value.get("student_name", value.get("name", "")) or ""
-                    )
-                    display_text = str(
-                        value.get(
-                            "display_text", value.get("display", value.get("text", ""))
-                        )
-                        or student_name
-                    )
-                    exists = bool(value.get("exists", value.get("exist", True)))
-                    group_name = str(
-                        value.get("group_name", value.get("group", "")) or ""
-                    )
-                    lottery_name = str(
-                        value.get(
-                            "lottery_name",
-                            value.get(
-                                "lottery",
-                                value.get("prize_name", value.get("prize", "")),
-                            ),
-                        )
-                        or ""
-                    )
-                    return {
-                        "student_id": student_id,
-                        "student_name": student_name,
-                        "display_text": display_text,
-                        "exists": exists,
-                        "group_name": group_name,
-                        "lottery_name": lottery_name,
-                    }
-
-                if isinstance(value, (list, tuple)) and len(value) >= 3:
-                    student_name = str(value[1] or "")
-                    return {
-                        "student_id": _safe_int(value[0]),
-                        "student_name": student_name,
-                        "display_text": student_name,
-                        "exists": bool(value[2]),
-                        "group_name": "",
-                        "lottery_name": "",
-                    }
-
-                return None
-
             coerced_students: list[SelectedStudentNotificationInfo] = []
             for student in selected_students or []:
-                item = _coerce_student(student)
+                item = self._coerce_student(student)
                 if item is None:
                     continue
                 coerced_students.append(item)
@@ -534,6 +478,61 @@ if CSHARP_AVAILABLE:
                 return randomService.IsAlive() == "Yes"
             except Exception:
                 return False
+
+        @staticmethod
+        def _safe_int(value: Any) -> int:
+            try:
+                if value is None:
+                    return 0
+                return int(value)
+            except Exception:
+                return 0
+
+        def _coerce_student(self, value: Any) -> SelectedStudentNotificationInfo | None:
+            if isinstance(value, dict):
+                student_id = self._safe_int(value.get("student_id", value.get("id", 0)))
+                student_name = str(
+                    value.get("student_name", value.get("name", "")) or ""
+                )
+                display_text = str(
+                    value.get(
+                        "display_text", value.get("display", value.get("text", ""))
+                    )
+                    or student_name
+                )
+                exists = bool(value.get("exists", value.get("exist", True)))
+                group_name = str(value.get("group_name", value.get("group", "")) or "")
+                lottery_name = str(
+                    value.get(
+                        "lottery_name",
+                        value.get(
+                            "lottery",
+                            value.get("prize_name", value.get("prize", "")),
+                        ),
+                    )
+                    or ""
+                )
+                return {
+                    "student_id": student_id,
+                    "student_name": student_name,
+                    "display_text": display_text,
+                    "exists": exists,
+                    "group_name": group_name,
+                    "lottery_name": lottery_name,
+                }
+
+            if isinstance(value, (list, tuple)) and len(value) >= 3:
+                student_name = str(value[1] or "")
+                return {
+                    "student_id": self._safe_int(value[0]),
+                    "student_name": student_name,
+                    "display_text": student_name,
+                    "exists": bool(value[2]),
+                    "group_name": "",
+                    "lottery_name": "",
+                }
+
+            return None
 else:
 
     class CSharpIPCHandler:
