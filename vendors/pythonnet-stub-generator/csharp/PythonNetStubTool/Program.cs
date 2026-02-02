@@ -34,7 +34,7 @@ namespace PythonNetStubTool
                 infos.Add(assemblyPath);
 
             }
-            
+
             Console.WriteLine($"building stubs...");
 
             try
