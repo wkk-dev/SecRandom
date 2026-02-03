@@ -254,25 +254,53 @@ def detect_faces_yunet(
     frame_bgr,
     *,
     detector,
+    input_size: Optional[Tuple[int, int]] = None,
     score_threshold: float = 0.85,
 ) -> list[Rect]:
     """使用 YuNet 检测人脸并返回矩形列表。"""
+    import cv2
+
     h, w = frame_bgr.shape[:2]
     if h <= 0 or w <= 0:
         return []
 
+    in_w = 0
+    in_h = 0
     try:
-        detector.setInputSize((w, h))
+        if input_size is not None:
+            in_w = int(input_size[0])
+            in_h = int(input_size[1])
+    except Exception:
+        in_w = 0
+        in_h = 0
+    if in_w <= 0 or in_h <= 0:
+        in_w = int(w)
+        in_h = int(h)
+
+    try:
+        detector.setInputSize((in_w, in_h))
     except Exception:
         pass
 
+    frame_in = frame_bgr
+    if int(in_w) != int(w) or int(in_h) != int(h):
+        try:
+            frame_in = cv2.resize(
+                frame_bgr, (int(in_w), int(in_h)), interpolation=cv2.INTER_LINEAR
+            )
+        except Exception:
+            frame_in = frame_bgr
+
     try:
-        ok, faces = detector.detect(frame_bgr)
+        ok, faces = detector.detect(frame_in)
     except Exception as exc:
         raise RuntimeError(f"YuNet detect failed: {exc}") from exc
 
     if faces is None:
         return []
+
+    scale_x = float(w) / float(in_w) if in_w > 0 else 1.0
+    scale_y = float(h) / float(in_h) if in_h > 0 else 1.0
 
     rects: list[Rect] = []
     try:
@@ -280,7 +308,14 @@ def detect_faces_yunet(
             x, y, bw, bh, score = row[:5]
             if float(score) < float(score_threshold):
                 continue
-            rects.append((int(x), int(y), int(bw), int(bh)))
+            rects.append(
+                (
+                    int(round(float(x) * scale_x)),
+                    int(round(float(y) * scale_y)),
+                    int(round(float(bw) * scale_x)),
+                    int(round(float(bh) * scale_y)),
+                )
+            )
     except Exception as exc:
         logger.exception("解析 YuNet 检测结果失败: {}", exc)
         return []
@@ -470,24 +505,47 @@ def detect_faces_ultralight(
     return rects
 
 
-def create_onnx_face_detector(*, model_path: Path):
+def create_onnx_face_detector(
+    *, model_path: Path, input_size: Optional[Tuple[int, int]] = None
+):
     name = model_path.name.lower()
+
+    override_w = 0
+    override_h = 0
+    try:
+        if input_size is not None:
+            override_w = int(input_size[0])
+            override_h = int(input_size[1])
+    except Exception:
+        override_w = 0
+        override_h = 0
+    override_size = (
+        (override_w, override_h) if override_w > 0 and override_h > 0 else None
+    )
+
     if "yunet" in name:
-        detector = create_yunet_face_detector(model_path=model_path)
+        detector = create_yunet_face_detector(
+            model_path=model_path,
+            input_size=override_size if override_size is not None else (320, 320),
+        )
         return {
             "kind": "yunet",
             "model_path": Path(model_path),
             "detector": detector,
+            "input_size": override_size,
         }
 
-    input_size = _ultralight_input_size_from_name(model_path.name)
+    default_input_size = _ultralight_input_size_from_name(model_path.name)
+    resolved_input_size = (
+        override_size if override_size is not None else default_input_size
+    )
     net = create_ultralight_net(model_path=model_path)
-    priors = _generate_ultralight_priors(input_size)
+    priors = _generate_ultralight_priors(resolved_input_size)
     return {
         "kind": "ultralight",
         "model_path": Path(model_path),
         "net": net,
-        "input_size": input_size,
+        "input_size": resolved_input_size,
         "priors": priors,
     }
 
@@ -501,7 +559,11 @@ def detect_faces_onnx(frame_bgr, *, detector_state) -> list[Rect]:
 
     frame_size = frame_bgr.shape[:2]
     if kind == "yunet":
-        rects = detect_faces_yunet(frame_bgr, detector=detector_state["detector"])
+        rects = detect_faces_yunet(
+            frame_bgr,
+            detector=detector_state["detector"],
+            input_size=detector_state.get("input_size"),
+        )
         return merge_face_rects(frame_size, rects)
     if kind == "ultralight":
         rects = detect_faces_ultralight(

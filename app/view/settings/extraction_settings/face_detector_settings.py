@@ -1,10 +1,11 @@
 import os
 
 from loguru import logger
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QWidget, QVBoxLayout
+from PySide6.QtWidgets import QHBoxLayout, QWidget, QVBoxLayout
 from qfluentwidgets import (
+    BodyLabel,
     ComboBox,
     ColorConfigItem,
     ColorSettingCard,
@@ -15,9 +16,15 @@ from qfluentwidgets import (
 )
 
 from app.Language.obtain_language import (
+    get_content_combo_name_async,
     get_content_description_async,
     get_content_name_async,
+    get_content_pushbutton_name_async,
     get_content_switchbutton_name_async,
+)
+from app.common.camera_preview_backend import (
+    get_cached_camera_devices,
+    warmup_camera_devices_async,
 )
 from app.tools.path_utils import get_data_path
 from app.tools.personalised import get_theme_icon
@@ -35,8 +42,8 @@ class face_detector_settings(QWidget):
         self.basic_settings_widget = face_detector_basic_settings(self)
         self.vBoxLayout.addWidget(self.basic_settings_widget)
 
-        self.animation_settings_widget = face_detector_animation_settings(self)
-        self.vBoxLayout.addWidget(self.animation_settings_widget)
+        self.advanced_settings_widget = face_detector_advanced_settings(self)
+        self.vBoxLayout.addWidget(self.advanced_settings_widget)
 
 
 class _ModelComboBox(ComboBox):
@@ -60,113 +67,13 @@ class face_detector_basic_settings(GroupHeaderCardWidget):
             get_content_name_async("face_detector_settings", "basic_settings")
         )
         self.setBorderRadius(8)
+        self._media_devices = None
+        self._camera_devices = []
+        self._camera_poll_left = 0
 
-        self.detector_type_combo = _ModelComboBox(self._refresh_model_list)
-        self._refresh_model_list()
-        self._apply_saved_selection()
-
-        self.detector_type_combo.currentTextChanged.connect(
-            lambda: update_settings(
-                "face_detector_settings",
-                "detector_type",
-                self.detector_type_combo.currentText().strip(),
-            )
-        )
-
-        self.open_model_folder_button = PushButton(
-            get_content_name_async("face_detector_settings", "open_model_folder")
-        )
-        self.open_model_folder_button.clicked.connect(self.open_model_folder)
-
-        self.addGroup(
-            get_theme_icon("ic_fluent_scan_object_20_filled"),
-            get_content_name_async("face_detector_settings", "detector_type"),
-            get_content_description_async("face_detector_settings", "detector_type"),
-            self.detector_type_combo,
-        )
-
-        self.addGroup(
-            get_theme_icon("ic_fluent_folder_open_20_filled"),
-            get_content_name_async("face_detector_settings", "open_model_folder"),
-            get_content_description_async(
-                "face_detector_settings", "open_model_folder"
-            ),
-            self.open_model_folder_button,
-        )
-
-    def _model_dir(self):
-        return get_data_path("cv_models")
-
-    def _list_model_names(self) -> list[str]:
-        model_dir = self._model_dir()
-        try:
-            if not model_dir.exists():
-                os.makedirs(model_dir, exist_ok=True)
-        except Exception:
-            pass
-
-        try:
-            items = []
-            for p in sorted(model_dir.glob("*.onnx")):
-                if p.is_file():
-                    items.append(p.name)
-            return items
-        except Exception:
-            return []
-
-    def _refresh_model_list(self) -> None:
-        current = (self.detector_type_combo.currentText() or "").strip()
-        items = self._list_model_names()
-        self.detector_type_combo.blockSignals(True)
-        self.detector_type_combo.clear()
-        self.detector_type_combo.addItems(items)
-        if current:
-            idx = self.detector_type_combo.findText(current)
-            if idx >= 0:
-                self.detector_type_combo.setCurrentIndex(idx)
-        self.detector_type_combo.blockSignals(False)
-
-    def _apply_saved_selection(self) -> None:
-        saved = readme_settings_async("face_detector_settings", "detector_type")
-        saved_text = ""
-        try:
-            if isinstance(saved, int):
-                idx = int(saved)
-                if 0 <= idx < self.detector_type_combo.count():
-                    saved_text = self.detector_type_combo.itemText(idx)
-            else:
-                saved_text = str(saved).strip() if saved is not None else ""
-        except Exception:
-            saved_text = ""
-
-        if saved_text:
-            idx = self.detector_type_combo.findText(saved_text)
-            if idx >= 0:
-                self.detector_type_combo.setCurrentIndex(idx)
-                return
-
-        if self.detector_type_combo.count() > 0:
-            self.detector_type_combo.setCurrentIndex(0)
-
-    def open_model_folder(self) -> None:
-        folder_path = self._model_dir()
-        try:
-            if not folder_path.exists():
-                os.makedirs(folder_path, exist_ok=True)
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder_path)))
-        except Exception:
-            logger.exception("无法打开模型文件夹: {}", folder_path)
-
-
-class face_detector_animation_settings(GroupHeaderCardWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setTitle(
-            get_content_name_async(
-                "face_detector_settings", "picker_animation_settings"
-            )
-        )
-        self.setBorderRadius(8)
+        self.camera_combo = _ModelComboBox(self._refresh_camera_list)
+        self.camera_combo.currentIndexChanged.connect(self._on_camera_changed)
+        QTimer.singleShot(0, self._init_camera_combo)
 
         self.picking_duration_spin = SpinBox()
         self.picking_duration_spin.setFixedWidth(WIDTH_SPINBOX)
@@ -187,6 +94,29 @@ class face_detector_animation_settings(GroupHeaderCardWidget):
                 "face_detector_settings",
                 "picking_duration_seconds",
                 int(self.picking_duration_spin.value()),
+            )
+        )
+
+        self.preview_mode_combo = ComboBox()
+        self.preview_mode_combo.addItems(
+            get_content_combo_name_async(
+                "face_detector_settings", "camera_preview_mode"
+            )
+        )
+        try:
+            current = readme_settings_async(
+                "face_detector_settings", "camera_preview_mode"
+            )
+            current_idx = int(current) if current is not None else 0
+        except Exception:
+            current_idx = 0
+        current_idx = 0 if current_idx not in (0, 1) else current_idx
+        self.preview_mode_combo.setCurrentIndex(current_idx)
+        self.preview_mode_combo.currentIndexChanged.connect(
+            lambda: update_settings(
+                "face_detector_settings",
+                "camera_preview_mode",
+                self.preview_mode_combo.currentIndex(),
             )
         )
 
@@ -234,6 +164,22 @@ class face_detector_animation_settings(GroupHeaderCardWidget):
             lambda state: update_settings(
                 "face_detector_settings", "play_result_audio", bool(state)
             )
+        )
+
+        self.addGroup(
+            get_theme_icon("ic_fluent_camera_20_filled"),
+            get_content_name_async("face_detector_settings", "camera_source"),
+            get_content_description_async("face_detector_settings", "camera_source"),
+            self.camera_combo,
+        )
+
+        self.addGroup(
+            get_theme_icon("ic_fluent_reading_mode_mobile_20_filled"),
+            get_content_name_async("face_detector_settings", "camera_preview_mode"),
+            get_content_description_async(
+                "face_detector_settings", "camera_preview_mode"
+            ),
+            self.preview_mode_combo,
         )
 
         self.addGroup(
@@ -290,3 +236,330 @@ class face_detector_animation_settings(GroupHeaderCardWidget):
             self,
         )
         self.vBoxLayout.addWidget(self.frame_color_card)
+
+    def _init_camera_combo(self) -> None:
+        self._camera_poll_left = 30
+        self._refresh_camera_list()
+        self._apply_saved_camera_selection()
+        if self.camera_combo.count() <= 0:
+            try:
+                warmup_camera_devices_async(force_refresh=False)
+            except Exception:
+                pass
+            self._schedule_camera_poll()
+
+    def _list_cameras(self, force_refresh: bool = False):
+        try:
+            devices = get_cached_camera_devices()
+            if force_refresh or not devices:
+                warmup_camera_devices_async(force_refresh=force_refresh)
+            return devices
+        except Exception:
+            return []
+
+    def _schedule_camera_poll(self) -> None:
+        if self._camera_poll_left <= 0:
+            return
+        self._camera_poll_left -= 1
+        QTimer.singleShot(200, self._poll_camera_devices)
+
+    def _poll_camera_devices(self) -> None:
+        if self.camera_combo.count() > 0:
+            return
+        devices = self._list_cameras(force_refresh=False)
+        if devices:
+            self._refresh_camera_list()
+            self._apply_saved_camera_selection()
+            return
+        self._schedule_camera_poll()
+
+    def _on_video_inputs_changed(self) -> None:
+        self._refresh_camera_list(force_refresh=True)
+        self._apply_saved_camera_selection()
+        self._schedule_camera_poll()
+
+    def _refresh_camera_list(self, force_refresh: bool = False) -> None:
+        current = None
+        try:
+            current = self.camera_combo.currentData()
+        except Exception:
+            current = None
+
+        devices = self._list_cameras(force_refresh=force_refresh)
+        self._camera_devices = list(devices)
+
+        self.camera_combo.blockSignals(True)
+        try:
+            self.camera_combo.clear()
+            for idx, device in enumerate(devices):
+                self.camera_combo.addItem(device.name)
+                try:
+                    value = (
+                        device.qt_id if getattr(device, "qt_id", "") else device.source
+                    )
+                    self.camera_combo.setItemData(idx, value)
+                except Exception:
+                    pass
+
+            if current is not None and self.camera_combo.count() > 0:
+                for idx in range(self.camera_combo.count()):
+                    try:
+                        if self.camera_combo.itemData(idx) == current:
+                            self.camera_combo.setCurrentIndex(idx)
+                            break
+                    except Exception:
+                        continue
+
+            if self.camera_combo.count() > 0 and self.camera_combo.currentIndex() < 0:
+                self.camera_combo.setCurrentIndex(0)
+        finally:
+            self.camera_combo.blockSignals(False)
+
+    def _on_camera_changed(self, _index: int) -> None:
+        value = None
+        try:
+            value = self.camera_combo.currentData()
+        except Exception:
+            value = None
+        if value is None:
+            return
+        update_settings("face_detector_settings", "camera_source", value)
+
+    def _apply_saved_camera_selection(self) -> None:
+        saved = readme_settings_async("face_detector_settings", "camera_source")
+        if saved is None:
+            if self.camera_combo.count() > 0:
+                self.camera_combo.blockSignals(True)
+                try:
+                    self.camera_combo.setCurrentIndex(0)
+                finally:
+                    self.camera_combo.blockSignals(False)
+            return
+
+        target_index = -1
+        for idx in range(self.camera_combo.count()):
+            try:
+                data = self.camera_combo.itemData(idx)
+            except Exception:
+                data = None
+
+            if data == saved or str(data) == str(saved):
+                target_index = idx
+                break
+
+        if target_index < 0:
+            for idx, device in enumerate(self._camera_devices):
+                try:
+                    if (
+                        device.source == saved
+                        or str(device.source) == str(saved)
+                        or device.qt_id == saved
+                        or str(device.qt_id) == str(saved)
+                    ):
+                        target_index = idx
+                        break
+                except Exception:
+                    continue
+
+        if target_index >= 0:
+            self.camera_combo.blockSignals(True)
+            try:
+                self.camera_combo.setCurrentIndex(target_index)
+            finally:
+                self.camera_combo.blockSignals(False)
+            return
+
+
+class face_detector_advanced_settings(GroupHeaderCardWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setTitle(
+            get_content_name_async("face_detector_settings", "advanced_settings")
+        )
+        self.setBorderRadius(8)
+
+        self.detector_type_combo = _ModelComboBox(self._refresh_model_list)
+        self._refresh_model_list()
+        self._apply_saved_selection()
+
+        self.detector_type_combo.currentTextChanged.connect(
+            self._on_detector_type_changed
+        )
+
+        self.open_model_folder_button = PushButton(
+            get_content_pushbutton_name_async(
+                "face_detector_settings", "open_model_folder"
+            )
+        )
+        self.open_model_folder_button.clicked.connect(self.open_model_folder)
+
+        self.model_input_width_spin = SpinBox()
+        self.model_input_width_spin.setFixedWidth(160)
+        self.model_input_width_spin.setRange(0, 4096)
+        self.model_input_width_spin.setSingleStep(16)
+        self.model_input_width_spin.setSuffix("px")
+        try:
+            current = readme_settings_async(
+                "face_detector_settings", "model_input_width"
+            )
+            self.model_input_width_spin.setValue(
+                int(current) if current is not None else 0
+            )
+        except Exception:
+            self.model_input_width_spin.setValue(0)
+        self.model_input_width_spin.valueChanged.connect(
+            lambda: update_settings(
+                "face_detector_settings",
+                "model_input_width",
+                int(self.model_input_width_spin.value()),
+            )
+        )
+
+        self.model_input_height_spin = SpinBox()
+        self.model_input_height_spin.setFixedWidth(160)
+        self.model_input_height_spin.setRange(0, 4096)
+        self.model_input_height_spin.setSingleStep(16)
+        self.model_input_height_spin.setSuffix("px")
+        try:
+            current = readme_settings_async(
+                "face_detector_settings", "model_input_height"
+            )
+            self.model_input_height_spin.setValue(
+                int(current) if current is not None else 0
+            )
+        except Exception:
+            self.model_input_height_spin.setValue(0)
+        self.model_input_height_spin.valueChanged.connect(
+            lambda: update_settings(
+                "face_detector_settings",
+                "model_input_height",
+                int(self.model_input_height_spin.value()),
+            )
+        )
+
+        self.model_input_size_widget = QWidget(self)
+        model_size_layout = QHBoxLayout(self.model_input_size_widget)
+        model_size_layout.setContentsMargins(0, 0, 0, 0)
+        model_size_layout.setSpacing(8)
+        model_size_layout.addWidget(self.model_input_width_spin)
+        model_size_layout.addWidget(BodyLabel("×"))
+        model_size_layout.addWidget(self.model_input_height_spin)
+        model_size_layout.addStretch(1)
+
+        self.addGroup(
+            get_theme_icon("ic_fluent_scan_object_20_filled"),
+            get_content_name_async("face_detector_settings", "detector_type"),
+            get_content_description_async("face_detector_settings", "detector_type"),
+            self.detector_type_combo,
+        )
+
+        self.addGroup(
+            get_theme_icon("ic_fluent_folder_open_20_filled"),
+            get_content_name_async("face_detector_settings", "open_model_folder"),
+            get_content_description_async(
+                "face_detector_settings", "open_model_folder"
+            ),
+            self.open_model_folder_button,
+        )
+
+        self.addGroup(
+            get_theme_icon("ic_fluent_resize_20_filled"),
+            get_content_name_async("face_detector_settings", "model_input_size"),
+            get_content_description_async("face_detector_settings", "model_input_size"),
+            self.model_input_size_widget,
+        )
+
+    def _model_dir(self):
+        return get_data_path("cv_models")
+
+    def _list_model_names(self) -> list[str]:
+        model_dir = self._model_dir()
+        try:
+            if not model_dir.exists():
+                os.makedirs(model_dir, exist_ok=True)
+        except Exception:
+            pass
+
+        try:
+            items = []
+            for p in sorted(model_dir.glob("*.onnx")):
+                if p.is_file():
+                    items.append(p.name)
+            return items
+        except Exception:
+            return []
+
+    def _refresh_model_list(self) -> None:
+        current = (self.detector_type_combo.currentText() or "").strip()
+        saved_text = ""
+        try:
+            saved = readme_settings_async("face_detector_settings", "detector_type")
+            saved_text = str(saved).strip() if saved is not None else ""
+        except Exception:
+            saved_text = ""
+        preferred = current or saved_text
+        items = self._list_model_names()
+        self.detector_type_combo.blockSignals(True)
+        try:
+            self.detector_type_combo.clear()
+            self.detector_type_combo.addItems(items)
+            if preferred:
+                idx = self.detector_type_combo.findText(preferred)
+                if idx >= 0:
+                    self.detector_type_combo.setCurrentIndex(idx)
+            if (
+                self.detector_type_combo.count() > 0
+                and self.detector_type_combo.currentIndex() < 0
+            ):
+                self.detector_type_combo.setCurrentIndex(0)
+        finally:
+            self.detector_type_combo.blockSignals(False)
+
+    def _apply_saved_selection(self) -> None:
+        saved = readme_settings_async("face_detector_settings", "detector_type")
+        saved_text = ""
+        try:
+            if isinstance(saved, int):
+                idx = int(saved)
+                if 0 <= idx < self.detector_type_combo.count():
+                    saved_text = self.detector_type_combo.itemText(idx)
+            else:
+                saved_text = str(saved).strip() if saved is not None else ""
+        except Exception:
+            saved_text = ""
+
+        if saved_text:
+            idx = self.detector_type_combo.findText(saved_text)
+            if idx >= 0:
+                self.detector_type_combo.blockSignals(True)
+                try:
+                    self.detector_type_combo.setCurrentIndex(idx)
+                finally:
+                    self.detector_type_combo.blockSignals(False)
+                return
+
+        if self.detector_type_combo.count() > 0:
+            self.detector_type_combo.blockSignals(True)
+            try:
+                self.detector_type_combo.setCurrentIndex(0)
+            finally:
+                self.detector_type_combo.blockSignals(False)
+
+    def _on_detector_type_changed(self, text: object) -> None:
+        value = ""
+        try:
+            value = str(text).strip() if text is not None else ""
+        except Exception:
+            value = ""
+        if not value or value.isdigit():
+            return
+        update_settings("face_detector_settings", "detector_type", value)
+
+    def open_model_folder(self) -> None:
+        folder_path = self._model_dir()
+        try:
+            if not folder_path.exists():
+                os.makedirs(folder_path, exist_ok=True)
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder_path)))
+        except Exception:
+            logger.exception("无法打开模型文件夹: {}", folder_path)

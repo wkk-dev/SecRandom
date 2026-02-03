@@ -1,6 +1,6 @@
 camera_preview = {
     "ZH_CN": {
-        "title": {"name": "摄像头", "description": "摄像头预览"},
+        "title": {"name": "人脸抽取", "description": "从摄像头抽取人脸"},
         "no_camera": {"name": "未检测到摄像头", "description": "未检测到摄像头设备"},
         "no_face_detected": {
             "name": "未识别到人脸",
@@ -12,8 +12,12 @@ camera_preview = {
         },
         "start_button": {
             "name": "开始",
-            "description": "开始随机框选人脸（2 秒）",
+            "description": "开始随机框选人脸",
             "pushbutton_name": "开始",
+        },
+        "recognized_count": {
+            "name": "识别到 {count} 人",
+            "description": "识别模式下显示已识别人数",
         },
         "opencv_missing": {
             "name": "OpenCV 未安装",
@@ -64,8 +68,12 @@ camera_preview = {
         },
         "start_button": {
             "name": "Start",
-            "description": "Randomly highlight a face (2s)",
+            "description": "Randomly highlight a face",
             "pushbutton_name": "Start",
+        },
+        "recognized_count": {
+            "name": "{count} face(s) detected",
+            "description": "Detected face count shown in recognition mode",
         },
         "opencv_missing": {
             "name": "OpenCV not installed",
@@ -116,8 +124,12 @@ camera_preview = {
         },
         "start_button": {
             "name": "開始",
-            "description": "顔をランダムに強調表示（2 秒）",
+            "description": "顔をランダムに強調表示",
             "pushbutton_name": "開始",
+        },
+        "recognized_count": {
+            "name": "{count} 人を検出",
+            "description": "認識モードで検出人数を表示",
         },
         "opencv_missing": {
             "name": "OpenCV が未インストール",

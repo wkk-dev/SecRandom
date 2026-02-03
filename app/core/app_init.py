@@ -42,6 +42,7 @@ class AppInitializer:
         self._load_theme_color()
         self._clear_restart_record()
         self._check_updates()
+        self._warmup_face_detector_devices()
         self._create_main_window()
 
     def _load_theme(self) -> None:
@@ -116,3 +117,19 @@ class AppInitializer:
             init_delay,
             lambda: safe_execute(apply_font_settings, error_message="应用字体设置失败"),
         )
+
+    def _warmup_face_detector_devices(self) -> None:
+        guide_completed = readme_settings_async("basic_settings", "guide_completed")
+        init_delay = 1500 if not guide_completed else APP_INIT_DELAY + 1500
+        QTimer.singleShot(
+            init_delay,
+            lambda: safe_execute(
+                self._do_warmup_face_detector_devices,
+                error_message="预热摄像头设备失败",
+            ),
+        )
+
+    def _do_warmup_face_detector_devices(self) -> None:
+        from app.common.camera_preview_backend import warmup_camera_devices_async
+
+        warmup_camera_devices_async(force_refresh=True)

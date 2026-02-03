@@ -1193,15 +1193,28 @@ lottery_settings = {
         },
     },
 }
-
-# 人脸识别设置（人脸抽取）
+# 人脸检测设置（人脸抽取）
 face_detector_settings = {
     "ZH_CN": {
-        "title": {"name": "人脸抽取", "description": "相机预览人脸识别模型选择"},
-        "basic_settings": {"name": "基础设置", "description": "人脸识别基础设置"},
+        "title": {"name": "人脸抽取", "description": "相机预览人脸检测模型选择"},
+        "basic_settings": {"name": "基础设置", "description": "人脸检测基础设置"},
+        "advanced_settings": {"name": "高级设置", "description": "人脸检测高级设置"},
+        "camera_source": {
+            "name": "摄像头",
+            "description": "选择人脸抽取使用的摄像头设备",
+        },
         "detector_type": {
-            "name": "识别模型",
-            "description": "选择相机预览的人脸识别模型文件（ONNX）",
+            "name": "检测模型",
+            "description": "选择相机预览的人脸检测模型文件（ONNX）",
+        },
+        "camera_preview_mode": {
+            "name": "模式",
+            "description": "选择摄像头预览工作模式",
+            "combo_items": ["抽取模式", "识别模式"],
+        },
+        "model_input_size": {
+            "name": "模型输入尺寸",
+            "description": "设置输入到人脸检测模型的画面宽高（0 表示使用原始帧）",
         },
         "open_model_folder": {
             "name": "模型文件夹",
@@ -1231,15 +1244,32 @@ face_detector_settings = {
     "EN_US": {
         "title": {
             "name": "Face picking",
-            "description": "Face recognition model for camera preview",
+            "description": "Face detection model for camera preview",
         },
         "basic_settings": {
             "name": "Basic settings",
-            "description": "Face recognition basic settings",
+            "description": "Face detection basic settings",
+        },
+        "advanced_settings": {
+            "name": "Advanced settings",
+            "description": "Advanced face picking settings",
+        },
+        "camera_source": {
+            "name": "Camera",
+            "description": "Select the camera device for face picking",
         },
         "detector_type": {
-            "name": "Recognition model",
+            "name": "Detection model",
             "description": "Select ONNX model file for camera preview",
+        },
+        "camera_preview_mode": {
+            "name": "Mode",
+            "description": "Select camera preview mode",
+            "combo_items": ["Picking mode", "Recognition mode"],
+        },
+        "model_input_size": {
+            "name": "Model input size",
+            "description": "Set input frame width/height for the detector (0 = original frame)",
         },
         "open_model_folder": {
             "name": "Model folder",
@@ -1272,12 +1302,26 @@ face_detector_settings = {
     "JA_JP": {
         "title": {
             "name": "顔抽選",
-            "description": "カメラプレビューの顔認識モデルを選択",
+            "description": "カメラプレビューの顔検出モデルを選択",
         },
-        "basic_settings": {"name": "基本設定", "description": "顔認識の基本設定"},
+        "basic_settings": {"name": "基本設定", "description": "顔検出の基本設定"},
+        "advanced_settings": {"name": "詳細設定", "description": "顔検出の詳細設定"},
+        "camera_source": {
+            "name": "カメラ",
+            "description": "顔抽選に使用するカメラデバイスを選択",
+        },
         "detector_type": {
-            "name": "認識モデル",
+            "name": "検出モデル",
             "description": "カメラプレビューで使用する ONNX モデルファイルを選択",
+        },
+        "camera_preview_mode": {
+            "name": "モード",
+            "description": "カメラプレビューの動作モードを選択",
+            "combo_items": ["抽選モード", "認識モード"],
+        },
+        "model_input_size": {
+            "name": "モデル入力サイズ",
+            "description": "顔検出モデルへ入力するフレームサイズ（0 は元のサイズ）",
         },
         "open_model_folder": {
             "name": "モデルフォルダ",

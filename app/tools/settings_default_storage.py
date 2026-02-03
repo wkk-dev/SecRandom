@@ -155,11 +155,15 @@ DEFAULT_SETTINGS = {
         "result_music_fade_out": {"default_value": 300},
     },
     "face_detector_settings": {
-        "detector_type": {"default_value": ""},
+        "detector_type": {"default_value": None},
+        "camera_source": {"default_value": None},
         "picker_frame_color": {"default_value": DEFAULT_THEME_COLOR},
         "play_process_audio": {"default_value": True},
         "play_result_audio": {"default_value": True},
-        "picking_duration_seconds": {"default_value": 2},
+        "picking_duration_seconds": {"default_value": 3},
+        "camera_preview_mode": {"default_value": 0},
+        "model_input_width": {"default_value": 640},
+        "model_input_height": {"default_value": 480},
     },
     "roll_call_notification_settings": {
         "call_notification_service": {"default_value": False},

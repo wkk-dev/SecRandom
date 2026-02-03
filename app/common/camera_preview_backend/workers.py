@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import os
 import time
 from typing import Optional, Union
 
@@ -16,6 +17,43 @@ from app.common.camera_preview_backend.detection import (
 
 
 CameraSource = Union[int, str]
+
+
+def _silence_opencv_logs(cv2: object) -> None:
+    try:
+        os.environ.setdefault("OPENCV_LOG_LEVEL", "SILENT")
+    except Exception:
+        pass
+
+    try:
+        utils = getattr(cv2, "utils", None)
+        logging_mod = getattr(utils, "logging", None) if utils is not None else None
+        setter = getattr(logging_mod, "setLogLevel", None)
+        if callable(setter):
+            level = getattr(logging_mod, "LOG_LEVEL_SILENT", None)
+            if level is None:
+                level = getattr(logging_mod, "LOG_LEVEL_ERROR", None)
+            if level is not None:
+                setter(level)
+    except Exception:
+        pass
+
+    try:
+        setter = getattr(cv2, "setLogLevel", None)
+        if callable(setter):
+            level = getattr(cv2, "LOG_LEVEL_SILENT", None)
+            if level is None:
+                level = getattr(cv2, "LOG_LEVEL_ERROR", None)
+            setter(0 if level is None else level)
+    except Exception:
+        pass
+
+    try:
+        redirect = getattr(cv2, "redirectError", None)
+        if callable(redirect):
+            redirect(lambda *args: 0)
+    except Exception:
+        pass
 
 
 class OpenCVCaptureWorker(QObject):
@@ -41,23 +79,23 @@ class OpenCVCaptureWorker(QObject):
         self._consecutive_failures = 0
         self._last_emit = 0.0
         self._emit_interval_s = 1.0 / 20.0
-
-        try:
-            import cv2  # type: ignore
-
-            self._cv2 = cv2
-        except Exception as exc:
-            self._cv2 = None
-            logger.exception("OpenCV 导入失败: {}", exc)
+        self._cv2 = None
 
     @Slot()
     def start(self) -> None:
         """在此线程的事件循环中开始捕获帧。"""
         if self._cv2 is None:
-            self.error_occurred.emit(
-                "opencv_missing", "OpenCV missing", "cv2 import failed"
-            )
-            return
+            try:
+                import cv2  # type: ignore
+
+                _silence_opencv_logs(cv2)
+                self._cv2 = cv2
+            except Exception:
+                self._cv2 = None
+                self.error_occurred.emit(
+                    "opencv_missing", "OpenCV missing", "cv2 import failed"
+                )
+                return
 
         if self._running:
             return
@@ -142,7 +180,27 @@ class OpenCVCaptureWorker(QObject):
                 self.stop()
             return
 
-        ok, frame = cap.read()
+        ok = False
+        frame = None
+        try:
+            ok, frame = cap.read()
+        except Exception as exc:
+            try:
+                self._consecutive_failures += 1
+                if self._consecutive_failures in (1, 5, 10, 20):
+                    logger.warning("读取摄像头帧失败: {}", exc)
+                if self._consecutive_failures >= 5:
+                    try:
+                        self._release()
+                    except Exception:
+                        pass
+                    try:
+                        self._cap = self._open_capture(self._source)
+                        cap = self._cap
+                    except Exception:
+                        cap = None
+            except Exception:
+                pass
         if not ok or frame is None:
             self._consecutive_failures += 1
             if (
@@ -156,13 +214,6 @@ class OpenCVCaptureWorker(QObject):
                 )
                 self.stop()
             return
-
-        try:
-            h, w = frame.shape[:2]
-            if int(w) != 640 or int(h) != 480:
-                frame = self._cv2.resize(frame, (640, 480))  # type: ignore[union-attr]
-        except Exception:
-            pass
 
         self._consecutive_failures = 0
         self._last_ok = time.monotonic()
@@ -193,25 +244,22 @@ class OpenCVCaptureWorker(QObject):
             return None
 
         backend_candidates: list[int] = []
-        if isinstance(source, int):
-            if sys.platform.startswith("win"):
-                backend_candidates = [
-                    getattr(cv2, "CAP_DSHOW", cv2.CAP_ANY),
-                    getattr(cv2, "CAP_MSMF", cv2.CAP_ANY),
-                    cv2.CAP_ANY,
-                ]
-            elif sys.platform.startswith("linux"):
-                backend_candidates = [
-                    getattr(cv2, "CAP_V4L2", cv2.CAP_ANY),
-                    cv2.CAP_ANY,
-                ]
-            elif sys.platform == "darwin":
-                backend_candidates = [
-                    getattr(cv2, "CAP_AVFOUNDATION", cv2.CAP_ANY),
-                    cv2.CAP_ANY,
-                ]
-            else:
-                backend_candidates = [cv2.CAP_ANY]
+        if sys.platform.startswith("win"):
+            backend_candidates = [
+                getattr(cv2, "CAP_DSHOW", cv2.CAP_ANY),
+                getattr(cv2, "CAP_MSMF", cv2.CAP_ANY),
+                cv2.CAP_ANY,
+            ]
+        elif sys.platform.startswith("linux"):
+            backend_candidates = [
+                getattr(cv2, "CAP_V4L2", cv2.CAP_ANY),
+                cv2.CAP_ANY,
+            ]
+        elif sys.platform == "darwin":
+            backend_candidates = [
+                getattr(cv2, "CAP_AVFOUNDATION", cv2.CAP_ANY),
+                cv2.CAP_ANY,
+            ]
         else:
             backend_candidates = [cv2.CAP_ANY]
 
@@ -266,18 +314,12 @@ class FaceDetectorWorker(QObject):
         super().__init__(parent)
         self._enabled = False
         self._model_filename = ""
+        self._input_size = None
         self._last_detect = 0.0
         self._last_load_attempt = 0.0
 
         self._detector_state = None
-
-        try:
-            import cv2  # type: ignore
-
-            self._cv2 = cv2
-        except Exception as exc:
-            self._cv2 = None
-            logger.exception("OpenCV 导入失败: {}", exc)
+        self._cv2 = None
 
     @Slot(bool)
     def set_enabled(self, enabled: bool) -> None:
@@ -298,13 +340,36 @@ class FaceDetectorWorker(QObject):
         self._detector_state = None
         self._last_load_attempt = 0.0
 
+    @Slot(object)
+    def set_input_size(self, input_size: object) -> None:
+        size = None
+        try:
+            if isinstance(input_size, (list, tuple)) and len(input_size) >= 2:
+                w = int(input_size[0])
+                h = int(input_size[1])
+                if w > 0 and h > 0:
+                    size = (w, h)
+        except Exception:
+            size = None
+        if size == self._input_size:
+            return
+        self._input_size = size
+        self._detector_state = None
+        self._last_load_attempt = 0.0
+
     @Slot()
     def ensure_loaded(self) -> None:
         if self._cv2 is None:
-            self.error_occurred.emit(
-                "opencv_missing", "OpenCV missing", "cv2 import failed"
-            )
-            return
+            try:
+                import cv2  # type: ignore
+
+                self._cv2 = cv2
+            except Exception:
+                self._cv2 = None
+                self.error_occurred.emit(
+                    "opencv_missing", "OpenCV missing", "cv2 import failed"
+                )
+                return
         now = time.monotonic()
         if now - self._last_load_attempt < 2.0:
             return
@@ -333,7 +398,9 @@ class FaceDetectorWorker(QObject):
             return
 
         try:
-            self._detector_state = create_onnx_face_detector(model_path=model_path)
+            self._detector_state = create_onnx_face_detector(
+                model_path=model_path, input_size=self._input_size
+            )
         except Exception as exc:
             logger.exception("模型不兼容: {}", exc)
             self._detector_state = None

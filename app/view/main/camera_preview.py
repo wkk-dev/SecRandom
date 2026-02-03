@@ -17,13 +17,15 @@ from app.Language.obtain_language import (
 )
 
 from app.common.camera_preview_backend import (
-    list_camera_devices,
+    get_cached_camera_devices,
     OpenCVCaptureWorker,
     FaceDetectorWorker,
     bgr_frame_to_qimage,
+    warmup_camera_devices_async,
 )
 from app.common.camera_preview_backend.audio_player import camera_preview_audio_player
 from app.tools.settings_access import get_settings_signals, readme_settings_async
+from app.common.roll_call import roll_call_manager
 
 
 class CameraPreview(QWidget):
@@ -33,10 +35,13 @@ class CameraPreview(QWidget):
     capture_stop_requested = Signal()
     detector_enabled_changed = Signal(bool)
     detector_type_changed = Signal(object)
+    detector_input_size_changed = Signal(object)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._devices = []
+        self._workers_ready: bool = False
+        self._preview_mode: int = 0
         self._detection_active = False
         self._has_face_once = False
         self._overlay_rects: list[tuple[int, int, int, int]] = []
@@ -63,6 +68,8 @@ class CameraPreview(QWidget):
         self._pick_minus_button: Optional[QPushButton] = None
         self._pick_plus_button: Optional[QPushButton] = None
         self._pick_count_label: Optional[QLabel] = None
+        self._pick_count_widget: Optional[QWidget] = None
+        self._recognized_count_label: Optional[QLabel] = None
         self._target_pick_count: int = 1
         self._picked_faces: list[tuple[int, int, int, int]] = []
         self._picked_face_pixmaps: list[QPixmap] = []
@@ -74,6 +81,10 @@ class CameraPreview(QWidget):
         self._capture_worker: Optional[OpenCVCaptureWorker] = None
         self._detector_thread: Optional[QThread] = None
         self._detector_worker: Optional[FaceDetectorWorker] = None
+        self._init_poll_left: int = 0
+        self._init_poll_timer = QTimer(self)
+        self._init_poll_timer.setSingleShot(True)
+        self._init_poll_timer.timeout.connect(self._try_init_workers_nonblocking)
 
         self._clear_timer = QTimer(self)
         self._clear_timer.setSingleShot(True)
@@ -92,7 +103,247 @@ class CameraPreview(QWidget):
         self._final_view_timer.timeout.connect(self._stop_detection_and_reset)
 
         self._init_ui()
-        self._init_workers()
+
+    def showEvent(self, event: QShowEvent) -> None:
+        super().showEvent(event)
+        self._ensure_workers_nonblocking()
+        self._start_preview_capture()
+        self._apply_preview_mode()
+
+    def hideEvent(self, event: QHideEvent) -> None:
+        self._stop_preview_capture()
+        super().hideEvent(event)
+
+    def _ensure_workers_nonblocking(self) -> None:
+        if self._workers_ready:
+            return
+        devices = get_cached_camera_devices()
+        if devices:
+            self._init_workers(devices=devices)
+            return
+
+        try:
+            warmup_camera_devices_async(force_refresh=False)
+        except Exception:
+            pass
+
+        if self._init_poll_left <= 0:
+            self._init_poll_left = 40
+        if not self._init_poll_timer.isActive():
+            self._init_poll_timer.start(200)
+
+    def _try_init_workers_nonblocking(self) -> None:
+        if self._workers_ready:
+            return
+        devices = get_cached_camera_devices()
+        if devices:
+            self._init_workers(devices=devices)
+            try:
+                if self.isVisible():
+                    self._start_preview_capture()
+                    self._apply_preview_mode()
+            except Exception:
+                pass
+            return
+
+        self._init_poll_left = int(self._init_poll_left) - 1
+        if self._init_poll_left > 0:
+            self._init_poll_timer.start(200)
+            return
+        try:
+            self.start_button.setEnabled(False)
+        except Exception:
+            pass
+        try:
+            self.preview_label.setText(
+                get_content_description_async("camera_preview", "no_camera")
+            )
+        except Exception:
+            pass
+        self._show_message("no_camera")
+
+    def _read_preview_mode(self) -> int:
+        try:
+            v = readme_settings_async("face_detector_settings", "camera_preview_mode")
+            idx = int(v) if v is not None else 0
+        except Exception:
+            idx = 0
+        return 0 if idx not in (0, 1) else idx
+
+    def _apply_preview_mode(self, mode_index: Optional[int] = None) -> None:
+        mode = self._read_preview_mode() if mode_index is None else int(mode_index)
+        mode = 0 if mode not in (0, 1) else mode
+        self._preview_mode = mode
+
+        pick_widget = self._pick_count_widget
+        count_label = self._recognized_count_label
+
+        if mode == 1:
+            try:
+                self.start_button.setVisible(False)
+            except Exception:
+                pass
+            if pick_widget is not None:
+                try:
+                    pick_widget.setVisible(False)
+                except Exception:
+                    pass
+            if count_label is not None:
+                try:
+                    count_label.setVisible(True)
+                except Exception:
+                    pass
+
+            self._clear_timer.stop()
+            self._no_face_timer.stop()
+            self._picking_timer.stop()
+            self._final_view_timer.stop()
+
+            self._detection_active = True
+            self._picking_active = False
+            self._picking_started = False
+            self._commit_pending = False
+            self._final_view_active = False
+            self._final_selected_rect = None
+            self._final_face_pixmap = None
+            self._overlay_circles = []
+            self._overlay_colors = []
+
+            try:
+                self._camera_opacity_effect.setOpacity(1.0)
+            except Exception:
+                pass
+            try:
+                self.preview_stack.setCurrentWidget(self.preview_label)
+            except Exception:
+                pass
+
+            try:
+                if self._audio_loop_started:
+                    camera_preview_audio_player.stop(wait=False)
+            except Exception:
+                pass
+            self._audio_loop_started = False
+
+            self.detector_enabled_changed.emit(True)
+            self._load_recognition_frame_color()
+            self._update_recognition_status()
+            return
+
+        if count_label is not None:
+            try:
+                count_label.setVisible(False)
+            except Exception:
+                pass
+        if pick_widget is not None:
+            try:
+                pick_widget.setVisible(True)
+            except Exception:
+                pass
+        try:
+            self.start_button.setVisible(True)
+        except Exception:
+            pass
+
+        if self._detection_active:
+            self._stop_detection_and_reset()
+
+    def _update_recognition_status(self) -> None:
+        if self._preview_mode != 1:
+            return
+        rects = list(self._latest_faces or [])
+        self._overlay_circles = [self._compute_circle_from_rect(r) for r in rects]
+        base_color = (
+            self._picker_color
+            if self._picker_color is not None and self._picker_color.isValid()
+            else QColor(255, 255, 255)
+        )
+        self._overlay_colors = [base_color for _ in self._overlay_circles]
+
+        label = self._recognized_count_label
+        if label is not None:
+            try:
+                label.setText(
+                    get_content_name_async("camera_preview", "recognized_count").format(
+                        count=len(rects)
+                    )
+                )
+            except Exception:
+                try:
+                    label.setText(str(len(rects)))
+                except Exception:
+                    pass
+
+    def _start_preview_capture(self) -> None:
+        if not self._workers_ready:
+            return
+
+        detector_thread = self._detector_thread
+        if detector_thread is not None and not detector_thread.isRunning():
+            try:
+                detector_thread.start()
+            except Exception:
+                pass
+
+        capture_thread = self._capture_thread
+        if capture_thread is not None and not capture_thread.isRunning():
+            try:
+                capture_thread.start()
+            except Exception:
+                pass
+
+        self._connect_frame_pipeline()
+
+        capture_worker = self._capture_worker
+        if capture_worker is None:
+            return
+        if capture_thread is not None and capture_thread.isRunning():
+            QMetaObject.invokeMethod(
+                capture_worker,
+                "start",
+                Qt.ConnectionType.QueuedConnection,
+            )
+        else:
+            try:
+                capture_worker.start()
+            except Exception:
+                pass
+
+    def _stop_preview_capture(self) -> None:
+        self._clear_timer.stop()
+        self._no_face_timer.stop()
+        self._picking_timer.stop()
+        self._final_view_timer.stop()
+
+        try:
+            self._stop_detection_and_reset()
+        except Exception:
+            pass
+
+        self._disconnect_frame_pipeline()
+
+        try:
+            camera_preview_audio_player.stop(wait=False)
+        except Exception:
+            pass
+        self._audio_loop_started = False
+
+        capture_worker = self._capture_worker
+        if capture_worker is None:
+            return
+
+        capture_thread = self._capture_thread
+        if capture_thread is not None and capture_thread.isRunning():
+            QMetaObject.invokeMethod(
+                capture_worker,
+                "stop",
+                Qt.ConnectionType.BlockingQueuedConnection,
+            )
+        else:
+            try:
+                capture_worker.stop()
+            except Exception:
+                pass
 
     def _disconnect_frame_pipeline(self) -> None:
         if self._capture_worker is None:
@@ -175,27 +426,41 @@ class CameraPreview(QWidget):
             get_content_pushbutton_name_async("camera_preview", "start_button"),
             self,
         )
-        self.start_button.setFixedWidth(180)
+        roll_call_manager.set_widget_font(self.start_button, 15)
+        self.start_button.setFixedSize(180, 45)
         self.start_button.clicked.connect(self._on_start_clicked)
 
-        self._pick_minus_button = QPushButton("-")
-        self._pick_plus_button = QPushButton("+")
-        self._pick_count_label = QLabel("1")
+        self._pick_minus_button = PushButton("-")
+        self._pick_plus_button = PushButton("+")
+        self._pick_count_label = BodyLabel("1")
         self._pick_count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self._pick_minus_button.setFixedHeight(38)
-        self._pick_plus_button.setFixedHeight(38)
-        self._pick_count_label.setFixedHeight(38)
-        self._pick_count_label.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        roll_call_manager.set_widget_font(self._pick_minus_button, 20)
+        roll_call_manager.set_widget_font(self._pick_plus_button, 20)
+        roll_call_manager.set_widget_font(self._pick_count_label, 20)
+
+        self._pick_minus_button.setFixedSize(45, 45)
+        self._pick_plus_button.setFixedSize(45, 45)
+        self._pick_count_label.setFixedSize(65, 45)
+
+        self._pick_minus_button.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+        self._pick_plus_button.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
 
         self._pick_minus_button.clicked.connect(lambda: self._change_pick_count(-1))
         self._pick_plus_button.clicked.connect(lambda: self._change_pick_count(1))
 
-        pick_count_widget = QWidget(self)
-        pick_count_widget.setFixedWidth(180)
-        pick_layout = QHBoxLayout(pick_count_widget)
+        self._recognized_count_label = BodyLabel("")
+        try:
+            self._recognized_count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        except Exception:
+            pass
+        roll_call_manager.set_widget_font(self._recognized_count_label, 16)
+        self._recognized_count_label.setFixedSize(180, 45)
+        self._recognized_count_label.setVisible(False)
+
+        self._pick_count_widget = QWidget(self)
+        self._pick_count_widget.setFixedWidth(180)
+        pick_layout = QHBoxLayout(self._pick_count_widget)
         pick_layout.setContentsMargins(0, 0, 0, 0)
         pick_layout.setSpacing(0)
         pick_layout.addWidget(self._pick_minus_button)
@@ -205,13 +470,13 @@ class CameraPreview(QWidget):
         pick_layout.addWidget(self._pick_plus_button)
         self._apply_pick_count_limits()
 
-        self.camera_combo = ComboBox(self)
-        self.camera_combo.setFixedWidth(180)
-        self.camera_combo.currentIndexChanged.connect(self._on_camera_changed)
-
+        controls_layout.addWidget(
+            self._recognized_count_label, 0, Qt.AlignmentFlag.AlignRight
+        )
+        controls_layout.addWidget(
+            self._pick_count_widget, 0, Qt.AlignmentFlag.AlignRight
+        )
         controls_layout.addWidget(self.start_button, 0, Qt.AlignmentFlag.AlignRight)
-        controls_layout.addWidget(pick_count_widget, 0, Qt.AlignmentFlag.AlignRight)
-        controls_layout.addWidget(self.camera_combo, 0, Qt.AlignmentFlag.AlignRight)
 
         bottom = QWidget(self)
         bottom_layout = QHBoxLayout(bottom)
@@ -222,70 +487,40 @@ class CameraPreview(QWidget):
         main_layout.addWidget(self.preview_container, 1)
         main_layout.addWidget(bottom, 0)
 
-    def _init_workers(self) -> None:
+    def _init_workers(self, devices: Optional[list] = None) -> None:
         """初始化摄像头捕获和检测工作线程。"""
-        try:
-            import cv2
-
-            _ = cv2.__version__
-        except Exception as exc:
-            logger.exception("OpenCV 导入失败: {}", exc)
-            self._show_message("opencv_missing", details=str(exc))
-            self.start_button.setEnabled(False)
-            self.camera_combo.setEnabled(False)
-            self.preview_label.setText(
-                get_content_description_async("camera_preview", "unavailable")
-            )
+        if self._workers_ready:
             return
 
+        os.environ.setdefault("OPENCV_VIDEOIO_PRIORITY_MSMF", "1")
+
+        if devices is None:
+            devices = get_cached_camera_devices()
         try:
-            import numpy
-
-            _ = numpy.__version__
-        except Exception as exc:
-            logger.exception("NumPy 导入失败: {}", exc)
-            self._show_message("numpy_missing", details=str(exc))
-            self.start_button.setEnabled(False)
-            self.camera_combo.setEnabled(False)
-            self.preview_label.setText(
-                get_content_description_async("camera_preview", "unavailable")
-            )
-            return
-
-        os.environ.setdefault("OPENCV_VIDEOIO_PRIORITY_MSMF", "0")
-
-        self._devices = list_camera_devices()
+            self._devices = list(devices or [])
+        except Exception:
+            self._devices = []
         if not self._devices:
             self.start_button.setEnabled(False)
-            self.camera_combo.setEnabled(False)
             self.preview_label.setText(
                 get_content_description_async("camera_preview", "no_camera")
             )
             self._show_message("no_camera")
             return
 
-        self.camera_combo.blockSignals(True)
-        self.camera_combo.clear()
-        for index, device in enumerate(self._devices):
-            self.camera_combo.addItem(device.name)
-            try:
-                self.camera_combo.setItemData(index, device.source)
-            except Exception:
-                pass
-        self.camera_combo.setCurrentIndex(0)
-        self.camera_combo.blockSignals(False)
-
+        saved_source = readme_settings_async("face_detector_settings", "camera_source")
         default_source = None
-        try:
-            default_source = self.camera_combo.currentData()
-        except Exception:
-            default_source = None
+        if saved_source is not None:
+            for device in self._devices:
+                if (
+                    device.qt_id == saved_source
+                    or str(device.qt_id) == str(saved_source)
+                    or device.source == saved_source
+                    or str(device.source) == str(saved_source)
+                ):
+                    default_source = device.source
+                    break
         if default_source is None:
-            try:
-                default_source = self.camera_combo.itemData(0)
-            except Exception:
-                default_source = None
-        if default_source is None and self._devices:
             default_source = self._devices[0].source
 
         self._capture_thread = QThread(self)
@@ -302,10 +537,21 @@ class CameraPreview(QWidget):
         detector_type = readme_settings_async("face_detector_settings", "detector_type")
         self._detector_worker = FaceDetectorWorker()
         self._detector_worker.set_model_filename(detector_type)
+        try:
+            w = int(
+                readme_settings_async("face_detector_settings", "model_input_width")
+            )
+            h = int(
+                readme_settings_async("face_detector_settings", "model_input_height")
+            )
+            self._detector_worker.set_input_size((w, h) if w > 0 and h > 0 else None)
+        except Exception:
+            self._detector_worker.set_input_size(None)
         self._detector_worker.moveToThread(self._detector_thread)
         self._detector_thread.started.connect(self._detector_worker.ensure_loaded)
         self.detector_enabled_changed.connect(self._detector_worker.set_enabled)
         self.detector_type_changed.connect(self._detector_worker.set_model_filename)
+        self.detector_input_size_changed.connect(self._detector_worker.set_input_size)
         self._detector_worker.faces_ready.connect(self._on_faces_detected)
         self._detector_worker.error_occurred.connect(self._on_worker_error)
 
@@ -321,13 +567,15 @@ class CameraPreview(QWidget):
             logger.exception("启动摄像头线程失败: {}", exc)
             self._show_message("unavailable", details=str(exc))
             self.start_button.setEnabled(False)
-            self.camera_combo.setEnabled(False)
             return
 
         self._connect_frame_pipeline()
+        self._workers_ready = True
 
     def _on_start_clicked(self) -> None:
         """启动人脸检测流程。"""
+        if self._preview_mode == 1:
+            return
         if self._detector_worker is None or self._capture_worker is None:
             self._show_message("unavailable")
             return
@@ -399,9 +647,81 @@ class CameraPreview(QWidget):
     ) -> None:
         if first_level_key != "face_detector_settings":
             return
-        if second_level_key != "detector_type":
+        if second_level_key in ("model_input_width", "model_input_height"):
+            try:
+                w = int(
+                    readme_settings_async("face_detector_settings", "model_input_width")
+                )
+                h = int(
+                    readme_settings_async(
+                        "face_detector_settings", "model_input_height"
+                    )
+                )
+                self.detector_input_size_changed.emit(
+                    (w, h) if w > 0 and h > 0 else None
+                )
+            except Exception:
+                self.detector_input_size_changed.emit(None)
             return
-        self.detector_type_changed.emit(value)
+        if second_level_key == "picker_frame_color":
+            try:
+                text = str(value).strip() if value is not None else ""
+                c = QColor(text) if text else QColor()
+                if self._preview_mode == 1:
+                    self._picker_color = c if c.isValid() else QColor(255, 255, 255)
+                    self._update_recognition_status()
+                    try:
+                        if self._latest_frame is not None:
+                            self._on_frame_received(self._latest_frame)
+                    except Exception:
+                        pass
+                elif c.isValid():
+                    self._picker_color = c
+            except Exception:
+                if self._preview_mode == 1:
+                    self._picker_color = QColor(255, 255, 255)
+            return
+        if second_level_key == "detector_type":
+            self.detector_type_changed.emit(value)
+            return
+        if second_level_key == "camera_preview_mode":
+            try:
+                self._apply_preview_mode(int(value) if value is not None else 0)
+            except Exception:
+                self._apply_preview_mode()
+            return
+        if second_level_key != "camera_source":
+            return
+
+        if self._capture_worker is None:
+            return
+
+        source = None
+        if value is not None:
+            for device in self._devices:
+                if (
+                    device.qt_id == value
+                    or str(device.qt_id) == str(value)
+                    or device.source == value
+                    or str(device.source) == str(value)
+                ):
+                    source = device.source
+                    break
+            if source is None:
+                source = value
+
+        if source is None and self._devices:
+            source = self._devices[0].source
+
+        if source is None:
+            self._show_message("camera_open_failed")
+            return
+
+        self._stop_detection_and_reset()
+        self._no_face_timer.stop()
+        self._clear_timer.stop()
+        self.camera_source_change_requested.emit(source)
+        self._apply_preview_mode()
 
     def _stop_detection_and_reset(self) -> None:
         """停止检测，清除覆盖层，并恢复 UI 状态。"""
@@ -451,32 +771,6 @@ class CameraPreview(QWidget):
         self._stop_detection_and_reset()
         self._show_message("no_face_detected")
 
-    def _on_camera_changed(self, _index: int) -> None:
-        """切换当前摄像头设备。"""
-        if self._capture_worker is None:
-            return
-
-        self._stop_detection_and_reset()
-        self._no_face_timer.stop()
-        self._clear_timer.stop()
-
-        source = None
-        try:
-            source = self.camera_combo.currentData()
-        except Exception:
-            source = None
-        if source is None:
-            try:
-                source = self.camera_combo.itemData(self.camera_combo.currentIndex())
-            except Exception:
-                source = None
-        if source is None and self._devices:
-            source = self._devices[0].source
-        if source is None:
-            self._show_message("camera_open_failed")
-            return
-        self.camera_source_change_requested.emit(source)
-
     def _on_frame_received(self, frame_bgr) -> None:
         """在 UI 中渲染新帧。"""
         self._latest_frame = frame_bgr
@@ -496,10 +790,6 @@ class CameraPreview(QWidget):
         if self._detection_active and self._overlay_circles:
             painter = QPainter(pixmap)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-            painter.fillRect(
-                QRect(0, 0, pixmap.width(), pixmap.height()),
-                QColor(0, 0, 0, 110),
-            )
             for circle, color in zip(
                 self._overlay_circles, self._overlay_colors, strict=True
             ):
@@ -542,11 +832,15 @@ class CameraPreview(QWidget):
 
     def _on_faces_detected(self, rects: list[tuple[int, int, int, int]]) -> None:
         """从检测线程接收人脸矩形。"""
+        if self._preview_mode == 1:
+            self._latest_faces = rects or []
+            self._detection_active = True
+            self._update_recognition_status()
+            return
         if not self._detection_active:
             return
 
         self._latest_faces = rects or []
-        self._pick_max_count = max(1, len(self._latest_faces))
         self._apply_pick_count_limits()
 
         if (
@@ -589,19 +883,18 @@ class CameraPreview(QWidget):
         self._apply_pick_count_limits()
 
     def _apply_pick_count_limits(self) -> None:
-        max_count = int(self._pick_max_count) if int(self._pick_max_count) > 0 else 1
         try:
             self._pick_count = int(self._pick_count)
         except Exception:
             self._pick_count = 1
-        self._pick_count = max(1, min(self._pick_count, max_count))
+        self._pick_count = max(1, min(self._pick_count, 100))
 
         if self._pick_count_label is not None:
             self._pick_count_label.setText(str(self._pick_count))
         if self._pick_minus_button is not None:
             self._pick_minus_button.setEnabled(self._pick_count > 1)
         if self._pick_plus_button is not None:
-            self._pick_plus_button.setEnabled(self._pick_count < max_count)
+            self._pick_plus_button.setEnabled(self._pick_count < 100)
 
     def _rect_iou(
         self, a: tuple[int, int, int, int], b: tuple[int, int, int, int]
@@ -665,6 +958,17 @@ class CameraPreview(QWidget):
                 random.randint(20, 235),
             )
 
+    def _load_recognition_frame_color(self) -> None:
+        try:
+            value = readme_settings_async(
+                "face_detector_settings", "picker_frame_color"
+            )
+            text = str(value).strip() if value is not None else ""
+            c = QColor(text) if text else QColor()
+            self._picker_color = c if c.isValid() else QColor(255, 255, 255)
+        except Exception:
+            self._picker_color = QColor(255, 255, 255)
+
     def _compute_circle_from_rect(
         self, rect: tuple[int, int, int, int]
     ) -> tuple[int, int, int]:
@@ -693,13 +997,13 @@ class CameraPreview(QWidget):
             or not self._picking_started
         ):
             return
+        if self._commit_pending:
+            self._commit_locked_face()
+            return
+
         candidates = self._latest_faces or []
         if not candidates:
             self._schedule_next_pick_tick()
-            return
-
-        if self._commit_pending:
-            self._commit_locked_face()
             return
 
         if self._picking_step >= self._picking_total_steps - 1:
@@ -723,11 +1027,21 @@ class CameraPreview(QWidget):
     def _begin_commit_sequence(
         self, candidates: list[tuple[int, int, int, int]]
     ) -> None:
-        target = int(self._target_pick_count) if int(self._target_pick_count) > 0 else 1
-        target = max(1, min(target, len(candidates) if candidates else 1))
+        if not candidates:
+            self._stop_detection_and_reset()
+            self._show_message("no_face_detected")
+            return
 
         try:
-            selected = random.sample(list(candidates), k=target)
+            target = int(self._target_pick_count)
+        except Exception:
+            target = 1
+        target = max(1, min(target, 100))
+
+        try:
+            pool = list(candidates)
+            target = min(target, len(pool))
+            selected = random.sample(pool, k=target)
         except Exception:
             selected = [random.choice(candidates)]
 
