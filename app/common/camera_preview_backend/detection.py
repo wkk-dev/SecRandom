@@ -239,15 +239,30 @@ def create_yunet_face_detector(
     if not hasattr(cv2, "FaceDetectorYN"):
         raise RuntimeError("OpenCV FaceDetectorYN is not available in this build")
 
-    detector = cv2.FaceDetectorYN.create(
-        str(model_path),
-        "",
-        input_size,
-        score_threshold,
-        nms_threshold,
-        top_k,
-    )
-    return detector
+    def _create(path: Path):
+        return cv2.FaceDetectorYN.create(
+            str(path),
+            "",
+            input_size,
+            score_threshold,
+            nms_threshold,
+            top_k,
+        )
+
+    try:
+        return _create(model_path)
+    except Exception:
+        import shutil
+        import tempfile
+
+        temp_dir = Path(tempfile.gettempdir()) / "SecRandom" / "cv_models"
+        try:
+            temp_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            temp_dir = Path(tempfile.gettempdir())
+        temp_path = temp_dir / model_path.name
+        shutil.copy2(model_path, temp_path)
+        return _create(temp_path)
 
 
 def detect_faces_yunet(
@@ -337,7 +352,13 @@ def create_ultralight_net(*, model_path: Path):
 
     if not hasattr(cv2, "dnn"):
         raise RuntimeError("OpenCV dnn is not available in this build")
-    return cv2.dnn.readNetFromONNX(str(model_path))
+    try:
+        blob = model_path.read_bytes()
+        if not blob:
+            raise RuntimeError("ONNX file is empty")
+        return cv2.dnn.readNetFromONNX(blob)
+    except Exception:
+        return cv2.dnn.readNetFromONNX(str(model_path))
 
 
 def _generate_ultralight_priors(input_size: Tuple[int, int]):
@@ -614,8 +635,13 @@ def create_scrfd_net(*, model_path: Path):
 
     if not hasattr(cv2, "dnn"):
         raise RuntimeError("OpenCV dnn is not available in this build")
-    net = cv2.dnn.readNetFromONNX(str(model_path))
-    return net
+    try:
+        blob = model_path.read_bytes()
+        if not blob:
+            raise RuntimeError("ONNX file is empty")
+        return cv2.dnn.readNetFromONNX(blob)
+    except Exception:
+        return cv2.dnn.readNetFromONNX(str(model_path))
 
 
 def detect_faces_scrfd(
