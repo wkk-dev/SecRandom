@@ -1193,3 +1193,118 @@ lottery_settings = {
         },
     },
 }
+
+# 人脸识别设置（人脸抽取）
+face_detector_settings = {
+    "ZH_CN": {
+        "title": {"name": "人脸抽取", "description": "相机预览人脸识别模型选择"},
+        "basic_settings": {"name": "基础设置", "description": "人脸识别基础设置"},
+        "detector_type": {
+            "name": "识别模型",
+            "description": "选择相机预览的人脸识别模型文件（ONNX）",
+        },
+        "open_model_folder": {
+            "name": "模型文件夹",
+            "description": "打开 data/cv_models，用于添加 ONNX 模型文件",
+            "pushbutton_name": "打开",
+        },
+        "picker_animation_settings": {
+            "name": "抽取动画",
+            "description": "开始抽取后的框选动画设置",
+        },
+        "picker_frame_color": {"name": "框颜色", "description": "抽取动画圆形框颜色"},
+        "picking_duration_seconds": {
+            "name": "抽取时长",
+            "description": "抽取动画持续时间（秒）",
+        },
+        "play_process_audio": {
+            "name": "过程音效",
+            "description": "抽取过程中是否播放音效",
+            "switchbutton_name": {"enable": "", "disable": ""},
+        },
+        "play_result_audio": {
+            "name": "结果音效",
+            "description": "抽取结果展示时是否播放音效",
+            "switchbutton_name": {"enable": "", "disable": ""},
+        },
+    },
+    "EN_US": {
+        "title": {
+            "name": "Face picking",
+            "description": "Face recognition model for camera preview",
+        },
+        "basic_settings": {
+            "name": "Basic settings",
+            "description": "Face recognition basic settings",
+        },
+        "detector_type": {
+            "name": "Recognition model",
+            "description": "Select ONNX model file for camera preview",
+        },
+        "open_model_folder": {
+            "name": "Model folder",
+            "description": "Open data/cv_models to add ONNX model files",
+            "pushbutton_name": "Open",
+        },
+        "picker_animation_settings": {
+            "name": "Picking animation",
+            "description": "Circle frame animation after tapping Start",
+        },
+        "picker_frame_color": {
+            "name": "Frame color",
+            "description": "Color of circle frames during picking",
+        },
+        "picking_duration_seconds": {
+            "name": "Picking duration",
+            "description": "Picking animation duration (seconds)",
+        },
+        "play_process_audio": {
+            "name": "Process audio",
+            "description": "Play audio during picking",
+            "switchbutton_name": {"enable": "On", "disable": "Off"},
+        },
+        "play_result_audio": {
+            "name": "Result audio",
+            "description": "Play audio when showing result",
+            "switchbutton_name": {"enable": "On", "disable": "Off"},
+        },
+    },
+    "JA_JP": {
+        "title": {
+            "name": "顔抽選",
+            "description": "カメラプレビューの顔認識モデルを選択",
+        },
+        "basic_settings": {"name": "基本設定", "description": "顔認識の基本設定"},
+        "detector_type": {
+            "name": "認識モデル",
+            "description": "カメラプレビューで使用する ONNX モデルファイルを選択",
+        },
+        "open_model_folder": {
+            "name": "モデルフォルダ",
+            "description": "data/cv_models を開いて ONNX モデルを追加",
+            "pushbutton_name": "開く",
+        },
+        "picker_animation_settings": {
+            "name": "抽選アニメーション",
+            "description": "開始後の枠アニメーション設定",
+        },
+        "picker_frame_color": {
+            "name": "枠色",
+            "description": "抽選アニメーションの円枠色",
+        },
+        "picking_duration_seconds": {
+            "name": "抽選時間",
+            "description": "抽選アニメーションの時間（秒）",
+        },
+        "play_process_audio": {
+            "name": "過程音声",
+            "description": "抽選中に音声を再生するか",
+            "switchbutton_name": {"enable": "オン", "disable": "オフ"},
+        },
+        "play_result_audio": {
+            "name": "結果音声",
+            "description": "結果表示時に音声を再生するか",
+            "switchbutton_name": {"enable": "オン", "disable": "オフ"},
+        },
+    },
+}

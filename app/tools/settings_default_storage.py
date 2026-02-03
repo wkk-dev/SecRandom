@@ -154,6 +154,13 @@ DEFAULT_SETTINGS = {
         "animation_music_fade_out": {"default_value": 300},
         "result_music_fade_out": {"default_value": 300},
     },
+    "face_detector_settings": {
+        "detector_type": {"default_value": ""},
+        "picker_frame_color": {"default_value": DEFAULT_THEME_COLOR},
+        "play_process_audio": {"default_value": True},
+        "play_result_audio": {"default_value": True},
+        "picking_duration_seconds": {"default_value": 2},
+    },
     "roll_call_notification_settings": {
         "call_notification_service": {"default_value": False},
         "animation": {"default_value": True},
@@ -267,6 +274,7 @@ DEFAULT_SETTINGS = {
     "sidebar_management_window": {
         "roll_call_sidebar_position": {"default_value": 1},
         "lottery_sidebar_position": {"default_value": 1},
+        "camera_preview_sidebar_position": {"default_value": 1},
         "main_window_history": {"default_value": 1},
         "settings_icon": {"default_value": 1},
     },

@@ -2,6 +2,8 @@
 # 导入库
 # ==================================================
 import os
+import ctypes
+from ctypes import wintypes
 from typing import Dict, Optional, Type
 
 from loguru import logger
@@ -447,6 +449,11 @@ class SimpleWindowTemplate(FramelessWindow):
         """
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        self._sr_close_guard_enabled = False
+        self._sr_allow_close_once = False
+        self._sr_close_guard_last_log_ms = 0
+        self._sr_close_buttons = []
+        self._sr_close_guard_hooks_installed = False
 
         # 保存父窗口引用
         self.parent_window = parent
@@ -684,6 +691,7 @@ class SimpleWindowTemplate(FramelessWindow):
         except Exception:
             self.titleBar.setFixedHeight(self._DEFAULT_TITLEBAR_HEIGHT)
 
+        self._install_sr_close_guard_hooks()
         self._sync_layout_margins_with_titlebar()
         self.setMinimumSize(MINIMUM_WINDOW_SIZE[0], MINIMUM_WINDOW_SIZE[1])
         self.resize(width, height)
@@ -706,10 +714,136 @@ class SimpleWindowTemplate(FramelessWindow):
             w, h = screen.width(), screen.height()
             self.move(w // 2 - self.width() // 2, h // 2 - self.height() // 2)
 
+    def enable_close_guard(self, enabled: bool = True) -> None:
+        self._sr_close_guard_enabled = bool(enabled)
+        if self._sr_close_guard_enabled:
+            self._install_sr_close_guard_hooks()
+
+    def _is_sr_close_button(self, btn: QAbstractButton) -> bool:
+        try:
+            name = str(btn.objectName() or "")
+        except Exception:
+            name = ""
+        try:
+            tooltip = str(btn.toolTip() or "")
+        except Exception:
+            tooltip = ""
+
+        n = name.lower()
+        t = tooltip.lower()
+
+        if n in {"closebutton", "closebtn"}:
+            return True
+        if "close" in n and "disclose" not in n:
+            return True
+        if "close" in t or "关闭" in tooltip or "退出" in tooltip:
+            return True
+        return False
+
+    def _sr_mark_allow_close_once(self) -> None:
+        self._sr_allow_close_once = True
+
+    def _find_sr_close_button_by_layout(self) -> QAbstractButton | None:
+        if not self.titleBar:
+            return None
+        try:
+            candidates = [
+                b
+                for b in self.titleBar.findChildren(QAbstractButton)
+                if b is not None and b.isVisible() and b.width() > 0 and b.height() > 0
+            ]
+        except Exception:
+            candidates = []
+        if not candidates:
+            return None
+        try:
+            candidates.sort(
+                key=lambda b: b.mapToGlobal(QPoint(b.width(), int(b.height() / 2))).x()
+            )
+        except Exception:
+            return None
+        return candidates[-1] if candidates else None
+
+    def _install_sr_titlebar_press_guard(self) -> None:
+        try:
+            if not self.titleBar:
+                return
+            if bool(getattr(self, "_sr_titlebar_press_guard_installed", False)):
+                return
+            self.titleBar.installEventFilter(self)
+            self._sr_titlebar_press_guard_installed = True
+        except Exception:
+            pass
+
+    def _install_sr_close_guard_hooks(self) -> None:
+        try:
+            if not self.titleBar:
+                return
+            existing = set(getattr(self, "_sr_close_buttons", []))
+            found = 0
+            buttons = list(self.titleBar.findChildren(QAbstractButton))
+            layout_close = self._find_sr_close_button_by_layout()
+            if layout_close is not None:
+                buttons.append(layout_close)
+            for btn in buttons:
+                if btn is None:
+                    continue
+                if btn is not layout_close and not self._is_sr_close_button(btn):
+                    continue
+                if btn in existing:
+                    continue
+                try:
+                    btn.clicked.connect(self._sr_mark_allow_close_once)
+                except Exception:
+                    pass
+                try:
+                    btn.installEventFilter(self)
+                except Exception:
+                    pass
+                self._sr_close_buttons.append(btn)
+                found += 1
+            if found > 0:
+                self._sr_close_guard_hooks_installed = True
+                self._install_sr_titlebar_press_guard()
+        except Exception:
+            pass
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        try:
+            if (
+                self._sr_close_guard_enabled
+                and watched is not None
+                and self.titleBar is not None
+                and watched is self.titleBar
+                and event.type() == QEvent.Type.MouseButtonPress
+            ):
+                try:
+                    pos = event.position().toPoint()
+                except Exception:
+                    pos = None
+                if pos is not None:
+                    w = int(self.titleBar.width() or 0)
+                    h = int(self.titleBar.height() or 0)
+                    if w > 0 and h > 0 and pos.x() >= w - 120 and 0 <= pos.y() <= h:
+                        self._sr_allow_close_once = True
+
+            if (
+                self._sr_close_guard_enabled
+                and watched is not None
+                and watched in getattr(self, "_sr_close_buttons", [])
+            ):
+                if event.type() == QEvent.Type.MouseButtonPress:
+                    self._sr_allow_close_once = True
+        except Exception:
+            pass
+        return super().eventFilter(watched, event)
+
     def showEvent(self, event) -> None:
         super().showEvent(event)
         QTimer.singleShot(0, self._sync_layout_margins_with_titlebar)
         QTimer.singleShot(0, self._rebuild_titlebar_title_and_icon)
+        if bool(getattr(self, "_sr_close_guard_enabled", False)):
+            QTimer.singleShot(0, self._install_sr_close_guard_hooks)
         try:
             if getattr(self, "_background_layer", None) is not None:
                 self._background_layer.updateGeometryToParent()
@@ -725,6 +859,81 @@ class SimpleWindowTemplate(FramelessWindow):
                 self._background_layer.updateGeometryToParent()
         except Exception:
             pass
+
+    def keyPressEvent(self, event) -> None:
+        try:
+            if self._sr_close_guard_enabled:
+                key = event.key()
+                modifiers = event.modifiers()
+                if key == Qt.Key_F4 and (modifiers & Qt.AltModifier):
+                    try:
+                        event.accept()
+                    except Exception:
+                        pass
+                    return
+        except Exception:
+            pass
+        return super().keyPressEvent(event)
+
+    def _sr_is_recent_user_input(self, max_age_ms: int) -> bool:
+        try:
+            if os.name != "nt":
+                return True
+            max_age_ms = int(max_age_ms or 0)
+            if max_age_ms <= 0:
+                return False
+
+            class _LASTINPUTINFO(ctypes.Structure):
+                _fields_ = [
+                    ("cbSize", wintypes.UINT),
+                    ("dwTime", wintypes.DWORD),
+                ]
+
+            lii = _LASTINPUTINFO()
+            lii.cbSize = ctypes.sizeof(_LASTINPUTINFO)
+            if not bool(ctypes.windll.user32.GetLastInputInfo(ctypes.byref(lii))):
+                return False
+            tick = int(ctypes.windll.kernel32.GetTickCount() or 0)
+            last = int(lii.dwTime or 0)
+            age = (tick - last) & 0xFFFFFFFF
+            return int(age) <= max_age_ms
+        except Exception:
+            return False
+
+    def _sr_is_foreground_window(self) -> bool:
+        try:
+            if os.name != "nt":
+                return True
+            hwnd = int(self.winId() or 0)
+            if not hwnd:
+                return False
+            fg = int(ctypes.windll.user32.GetForegroundWindow() or 0)
+            return fg == hwnd
+        except Exception:
+            return False
+
+    def nativeEvent(self, eventType, message):
+        try:
+            if os.name == "nt" and bool(
+                getattr(self, "_sr_close_guard_enabled", False)
+            ):
+                msg = ctypes.cast(int(message), ctypes.POINTER(wintypes.MSG)).contents
+                if int(msg.message) == 0x0112 and (int(msg.wParam) & 0xFFF0) == 0xF060:
+                    lparam = int(msg.lParam) if msg.lParam is not None else 0
+                    is_keyboard_close = lparam == 0
+                    if (
+                        not is_keyboard_close
+                        and self._sr_is_foreground_window()
+                        and self._sr_is_recent_user_input(1500)
+                    ):
+                        self._sr_allow_close_once = True
+        except Exception:
+            pass
+
+        try:
+            return super().nativeEvent(eventType, message)
+        except Exception:
+            return False, 0
 
     def __connectSignalToSlot(self) -> None:
         """连接信号与槽"""
@@ -1073,6 +1282,31 @@ class SimpleWindowTemplate(FramelessWindow):
 
     def closeEvent(self, event) -> None:
         """窗口关闭事件处理"""
+        try:
+            if (
+                self._sr_close_guard_enabled
+                and not getattr(self, "_sr_allow_close_once", False)
+                and not QApplication.instance().closingDown()
+            ):
+                try:
+                    event.ignore()
+                except Exception:
+                    pass
+                now_ms = int(QDateTime.currentMSecsSinceEpoch() or 0)
+                if now_ms - int(self._sr_close_guard_last_log_ms or 0) >= 5000:
+                    self._sr_close_guard_last_log_ms = now_ms
+                    logger.warning("检测到外部关闭请求，已阻止关闭窗口")
+                try:
+                    if self.isMinimized():
+                        self.showNormal()
+                    self.show()
+                    self.raise_()
+                    self.activateWindow()
+                except Exception:
+                    pass
+                return
+        finally:
+            self._sr_allow_close_once = False
         try:
             qconfig.themeChanged.disconnect(self._on_theme_changed)
         except Exception:

@@ -193,7 +193,8 @@ cython_debug/
 /scripts/*.json
 /data/history
 /data/list
-/data/audio
+/data/audio/music
+/data/audio/voices
 /data/TEMP
 /data/CSES
 /typings

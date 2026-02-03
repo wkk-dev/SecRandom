@@ -176,6 +176,25 @@ class sidebar_management_window(GroupHeaderCardWidget):
             )
         )
 
+        self.camera_preview_sidebar_position_comboBox = ComboBox(self)
+        self.camera_preview_sidebar_position_comboBox.addItems(
+            get_content_combo_name_async(
+                "sidebar_management_window", "camera_preview_sidebar_position"
+            )
+        )
+        self.camera_preview_sidebar_position_comboBox.setCurrentIndex(
+            readme_settings_async(
+                "sidebar_management_window", "camera_preview_sidebar_position"
+            )
+        )
+        self.camera_preview_sidebar_position_comboBox.currentIndexChanged.connect(
+            lambda: update_settings(
+                "sidebar_management_window",
+                "camera_preview_sidebar_position",
+                self.camera_preview_sidebar_position_comboBox.currentIndex(),
+            )
+        )
+
         # 主窗口历史记录下拉框
         self.main_window_history_comboBox = ComboBox(self)
         self.main_window_history_comboBox.addItems(
@@ -230,6 +249,16 @@ class sidebar_management_window(GroupHeaderCardWidget):
                 "sidebar_management_window", "lottery_sidebar_position"
             ),
             self.lottery_sidebar_position_comboBox,
+        )
+        self.addGroup(
+            get_theme_icon("ic_fluent_video_person_sparkle_20_filled"),
+            get_content_name_async(
+                "sidebar_management_window", "camera_preview_sidebar_position"
+            ),
+            get_content_description_async(
+                "sidebar_management_window", "camera_preview_sidebar_position"
+            ),
+            self.camera_preview_sidebar_position_comboBox,
         )
         self.addGroup(
             get_theme_icon("ic_fluent_chat_history_20_filled"),

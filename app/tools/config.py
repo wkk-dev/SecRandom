@@ -964,9 +964,12 @@ def _export_diagnostic_files(file_path: str, app_dir: Path) -> int:
                 for file_path_obj in folder_path.rglob("*"):
                     if file_path_obj.is_file():
                         try:
-                            arc_path = str(
-                                file_path_obj.relative_to(folder_path.parent)
-                            )
+                            try:
+                                arc_path = str(file_path_obj.relative_to(app_dir))
+                            except Exception:
+                                arc_path = str(
+                                    file_path_obj.relative_to(folder_path.parent)
+                                )
                             zipf.write(str(file_path_obj), arc_path)
                             exported_count += 1
                         except Exception as e:

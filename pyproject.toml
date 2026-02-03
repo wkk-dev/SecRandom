@@ -25,6 +25,7 @@ dependencies = [
     "pillow>=10.4.0",
     "openpyxl==3.1.5",
     "imageio>=2.37.2",
+    "opencv-python>=4.13.0.90",
     "qrcode>=7.4.2",
     "pyqrcode~=1.2.1",
     "pypng~=0.20220715.0",

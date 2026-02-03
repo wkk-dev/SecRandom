@@ -37,6 +37,11 @@ sidebar_management_window = {
             "description": "配置抽奖功能在侧边栏位置 (重启生效)",
             "combo_items": ["顶部", "底部", "不显示"],
         },
+        "camera_preview_sidebar_position": {
+            "name": "摄像头侧边栏位置",
+            "description": "配置摄像头功能在侧边栏位置 (重启生效)",
+            "combo_items": ["顶部", "底部", "不显示"],
+        },
         "main_window_history": {
             "name": "主窗口历史记录位置",
             "description": "配置历史记录功能在侧边栏位置 (重启生效)",
@@ -63,6 +68,11 @@ sidebar_management_window = {
             "description": "Set the position of Lottery in sidebar (Restart to take effect)",
             "combo_items": {"0": "Top", "1": "Bottom", "2": "Hide"},
         },
+        "camera_preview_sidebar_position": {
+            "name": "Position of Camera",
+            "description": "Set the position of Camera in sidebar (Restart to take effect)",
+            "combo_items": {"0": "Top", "1": "Bottom", "2": "Hide"},
+        },
         "main_window_history": {
             "name": "Main window history position",
             "description": "Set history position in sidebar (Restart to take effect)",
@@ -87,6 +97,11 @@ sidebar_management_window = {
         "lottery_sidebar_position": {
             "name": "抽選サイドバー位置",
             "description": "抽選機能のサイドバー位置を設定（再起動で有効）",
+            "combo_items": ["上部", "下部", "非表示"],
+        },
+        "camera_preview_sidebar_position": {
+            "name": "カメラサイドバー位置",
+            "description": "カメラ機能のサイドバー位置を設定（再起動で有効）",
             "combo_items": ["上部", "下部", "非表示"],
         },
         "main_window_history": {

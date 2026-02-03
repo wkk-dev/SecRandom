@@ -28,6 +28,7 @@ from app.Language.obtain_language import (
 )
 from app.common.safety.verify_ops import require_and_run
 from app.view.main.quick_draw_animation import QuickDrawAnimation
+from app.view.main.camera_preview import CameraPreview
 from app.page_building.main_window_page import (
     roll_call_page,
     lottery_page,
@@ -75,6 +76,9 @@ class MainWindow(FluentWindow):
     def _initialize_variables(self):
         """初始化实例变量"""
         self.roll_call_page = None
+        self.lottery_page = None
+        self.camera_preview_page = None
+        self.history_page = None
         self.settingsInterface = None
         self._has_been_shown = False
         self.pre_class_reset_performed = False
@@ -477,13 +481,21 @@ class MainWindow(FluentWindow):
         self.lottery_page = lottery_page(self)
         self.lottery_page.setObjectName("lottery_page")
 
+        self.camera_preview_page = CameraPreview(self)
+        self.camera_preview_page.setObjectName("camera_preview_page")
+
         self.history_page = history_page(self)
         self.history_page.setObjectName("history_page")
 
         self.settingsInterface = QWidget(self)
         self.settingsInterface.setObjectName("settingsInterface")
 
-        for page in [self.roll_call_page, self.lottery_page, self.history_page]:
+        for page in [
+            self.roll_call_page,
+            self.lottery_page,
+            self.camera_preview_page,
+            self.history_page,
+        ]:
             page.installEventFilter(self)
 
         self.initNavigation()
@@ -493,6 +505,7 @@ class MainWindow(FluentWindow):
         根据用户设置构建个性化菜单导航"""
         self._add_roll_call_navigation()
         self._add_lottery_navigation()
+        self._add_camera_preview_navigation()
         self._add_history_navigation()
         self._add_settings_navigation()
 
@@ -532,6 +545,23 @@ class MainWindow(FluentWindow):
                 get_theme_icon("ic_fluent_gift_20_filled"),
                 get_content_name_async("lottery", "title"),
                 position=lottery_position,
+            )
+
+    def _add_camera_preview_navigation(self):
+        camera_sidebar_pos = readme_settings_async(
+            "sidebar_management_window", "camera_preview_sidebar_position"
+        )
+        if camera_sidebar_pos is None or camera_sidebar_pos != 2:
+            camera_position = (
+                NavigationItemPosition.TOP
+                if (camera_sidebar_pos is None or camera_sidebar_pos != 1)
+                else NavigationItemPosition.BOTTOM
+            )
+            self.addSubInterface(
+                self.camera_preview_page,
+                get_theme_icon("ic_fluent_video_person_sparkle_20_filled"),
+                get_content_name_async("camera_preview", "title"),
+                position=camera_position,
             )
 
     def _add_history_navigation(self):

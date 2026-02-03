@@ -58,6 +58,9 @@ class extraction_settings_page(PivotPageTemplate):
                 "quick_draw_settings", "title"
             ),
             "lottery_settings": get_content_name_async("lottery_settings", "title"),
+            "face_detector_settings": get_content_name_async(
+                "face_detector_settings", "title"
+            ),
         }
         super().__init__(page_config, parent, is_preview_mode=is_preview)
         self.set_base_path("app.view.settings.extraction_settings")

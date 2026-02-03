@@ -577,6 +577,7 @@ def stop_animation(widget):
         result.get("class_name") or widget.manager.current_class_name
     )
     widget.final_selected_students_dict = result.get("selected_students_dict") or []
+    widget.final_ipc_selected_students = result.get("ipc_selected_students") or []
     widget.final_group_filter = (
         result.get("group_filter") or widget.range_combobox.currentText()
     )
@@ -616,6 +617,9 @@ def stop_animation(widget):
                 selected_students=widget.final_selected_students,
                 draw_count=actual_draw_count,
                 settings_group="roll_call_notification_settings",
+                ipc_selected_students=getattr(
+                    widget, "final_ipc_selected_students", None
+                ),
             )
 
         play_voice_result(widget)
@@ -716,6 +720,11 @@ def display_result_animated(widget, selected_students, class_name, draw_count=No
     display_dict = RollCallUtils.create_display_settings("roll_call_settings")
     if draw_count is None:
         draw_count = widget.current_count
+
+    if group_index == 1:
+        selected_students = RollCallUtils.render_group_display_students(
+            class_name, selected_students, display_dict.get("show_random", 0)
+        )
 
     student_labels = ResultDisplayUtils.create_student_label(
         class_name=class_name,

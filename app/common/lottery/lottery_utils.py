@@ -162,11 +162,32 @@ class LotteryUtils:
                 }
                 students_dict_list.append(student_dict)
 
-            # 处理小组模式下的特殊逻辑
+            draw_count = int(current_count or 0)
+            if draw_count <= 0:
+                return {
+                    "selected_students": [],
+                    "class_name": class_name,
+                    "selected_students_dict": [],
+                    "group_filter": group_filter,
+                    "gender_filter": gender_filter,
+                }
+
+            if not students_dict_list:
+                return {"reset_required": True}
+
             draw_type = readme_settings_async("roll_call_settings", "draw_type")
+            unique_draw = min(draw_count, len(students_dict_list))
             selected_groups = RollCallUtils.draw_random_groups(
-                students_dict_list, current_count, draw_type
+                students_dict_list, unique_draw, draw_type
             )
+
+            if len(selected_groups) < draw_count:
+                all_groups = [
+                    (g.get("id", ""), g.get("name", ""), g.get("exist", True))
+                    for g in students_dict_list
+                ]
+                while len(selected_groups) < draw_count and all_groups:
+                    selected_groups.append(system_random.choice(all_groups))
 
             return {
                 "selected_students": selected_groups,

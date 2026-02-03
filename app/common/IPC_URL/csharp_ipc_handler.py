@@ -1,12 +1,22 @@
 import sys
 import asyncio
 import threading
-from typing import Optional
+from typing import Optional, Any, TypedDict
 from loguru import logger
 
 from app.tools.path_utils import get_data_path
 
 CSHARP_AVAILABLE = False
+
+
+class SelectedStudentNotificationInfo(TypedDict):
+    student_id: int
+    student_name: str
+    display_text: str
+    exists: bool
+    group_name: str
+    lottery_name: str
+
 
 if sys.platform == "win32":
     try:
@@ -31,7 +41,12 @@ if sys.platform == "win32":
             GeneratedIpcFactory,
         )
         from SecRandom4Ci.Interface.Enums import ResultType
-        from SecRandom4Ci.Interface.Models import CallResult, NotificationData, Student
+        from SecRandom4Ci.Interface.Models import (
+            CallResult,
+            Student,
+            NotificationData,
+            NotificationItem,
+        )
         from SecRandom4Ci.Interface.Services import ISecRandomService
 
         CSHARP_AVAILABLE = True
@@ -117,7 +132,7 @@ if CSHARP_AVAILABLE:
         def send_notification(
             self,
             class_name,
-            selected_students,
+            selected_students: list[SelectedStudentNotificationInfo],
             draw_count=1,
             settings=None,
             settings_group=None,
@@ -129,6 +144,13 @@ if CSHARP_AVAILABLE:
 
             if not self.is_connected:
                 return False
+
+            coerced_students: list[SelectedStudentNotificationInfo] = []
+            for student in selected_students or []:
+                item = self._coerce_student(student)
+                if item is None:
+                    continue
+                coerced_students.append(item)
 
             if settings:
                 display_duration = settings.get("notification_display_duration", 5)
@@ -156,11 +178,11 @@ if CSHARP_AVAILABLE:
                 result.ClassName = class_name
                 result.DrawCount = draw_count
                 result.DisplayDuration = display_duration
-                for student in selected_students:
+                for student in coerced_students:
                     cs_student = Student()
-                    cs_student.StudentId = student[0]
-                    cs_student.StudentName = student[1]
-                    cs_student.Exists = student[2]
+                    cs_student.StudentId = student["student_id"]
+                    cs_student.StudentName = student["display_text"]
+                    cs_student.Exists = student["exists"]
                     result.SelectedStudents.Add(cs_student)
                 randomService.NotifyResult(result)
 
@@ -193,12 +215,16 @@ if CSHARP_AVAILABLE:
             data.ClassName = class_name
             data.DrawCount = draw_count
             data.DisplayDuration = display_duration
-            for student in selected_students:
-                cs_student = Student()
-                cs_student.StudentId = student[0]
-                cs_student.StudentName = student[1]
-                cs_student.Exists = student[2]
-                data.Items.Add(cs_student)
+            for student in coerced_students:
+                item = NotificationItem()
+                item.StudentId = student["student_id"]
+                item.StudentName = student["student_name"]
+                item.Exists = student["exists"]
+                item.HasGroup = bool(student["group_name"])
+                item.GroupName = student["group_name"]
+                item.IsLottery = bool(student["lottery_name"])
+                item.LotteryName = student["lottery_name"]
+                data.Items.Add(item)
 
             randomService.ShowNotification(data)
             return True
@@ -452,6 +478,61 @@ if CSHARP_AVAILABLE:
                 return randomService.IsAlive() == "Yes"
             except Exception:
                 return False
+
+        @staticmethod
+        def _safe_int(value: Any) -> int:
+            try:
+                if value is None:
+                    return 0
+                return int(value)
+            except Exception:
+                return 0
+
+        def _coerce_student(self, value: Any) -> SelectedStudentNotificationInfo | None:
+            if isinstance(value, dict):
+                student_id = self._safe_int(value.get("student_id", value.get("id", 0)))
+                student_name = str(
+                    value.get("student_name", value.get("name", "")) or ""
+                )
+                display_text = str(
+                    value.get(
+                        "display_text", value.get("display", value.get("text", ""))
+                    )
+                    or student_name
+                )
+                exists = bool(value.get("exists", value.get("exist", True)))
+                group_name = str(value.get("group_name", value.get("group", "")) or "")
+                lottery_name = str(
+                    value.get(
+                        "lottery_name",
+                        value.get(
+                            "lottery",
+                            value.get("prize_name", value.get("prize", "")),
+                        ),
+                    )
+                    or ""
+                )
+                return {
+                    "student_id": student_id,
+                    "student_name": student_name,
+                    "display_text": display_text,
+                    "exists": exists,
+                    "group_name": group_name,
+                    "lottery_name": lottery_name,
+                }
+
+            if isinstance(value, (list, tuple)) and len(value) >= 3:
+                student_name = str(value[1] or "")
+                return {
+                    "student_id": self._safe_int(value[0]),
+                    "student_name": student_name,
+                    "display_text": student_name,
+                    "exists": bool(value[2]),
+                    "group_name": "",
+                    "lottery_name": "",
+                }
+
+            return None
 else:
 
     class CSharpIPCHandler:

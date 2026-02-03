@@ -109,7 +109,7 @@ def create_set_class_name_window(parent=None):
     Returns:
         创建的窗口实例
     """
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "set_class_name",
         ("set_class_name", "title"),
         set_class_name_window_template,
@@ -117,6 +117,13 @@ def create_set_class_name_window(parent=None):
         600,
         parent=parent,
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return
 
 
@@ -145,7 +152,7 @@ def create_import_student_name_window(class_name=None, parent=None):
     Returns:
         创建的窗口实例
     """
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "import_student_name",
         ("import_student_name", "title"),
         lambda page_parent: import_student_name_window_template(
@@ -155,6 +162,13 @@ def create_import_student_name_window(class_name=None, parent=None):
         600,
         parent=parent,
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return
 
 
@@ -180,7 +194,7 @@ def create_name_setting_window(list_name=None, parent=None):
     Returns:
         创建的窗口实例
     """
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "name_setting",
         ("name_setting", "title"),
         lambda page_parent: name_setting_window_template(
@@ -190,6 +204,13 @@ def create_name_setting_window(list_name=None, parent=None):
         600,
         parent=parent,
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return
 
 
@@ -215,7 +236,7 @@ def create_gender_setting_window(list_name=None, parent=None):
     Returns:
         创建的窗口实例
     """
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "gender_setting",
         ("gender_setting", "title"),
         lambda page_parent: gender_setting_window_template(
@@ -225,6 +246,13 @@ def create_gender_setting_window(list_name=None, parent=None):
         600,
         parent=parent,
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return
 
 
@@ -250,7 +278,7 @@ def create_group_setting_window(list_name=None, parent=None):
     Returns:
         创建的窗口实例
     """
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "group_setting",
         ("group_setting", "title"),
         lambda page_parent: group_setting_window_template(
@@ -260,6 +288,13 @@ def create_group_setting_window(list_name=None, parent=None):
         600,
         parent=parent,
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return
 
 
@@ -281,13 +316,20 @@ def create_set_pool_name_window():
     Returns:
         创建的窗口实例
     """
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "set_prize_name",
         ("set_prize_name", "title"),
         set_pool_name_window_template,
         800,
         600,
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return
 
 
@@ -316,7 +358,7 @@ def create_import_prize_name_window(pool_name=None):
     Returns:
         创建的窗口实例
     """
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "import_prize_name",
         ("import_prize_name", "title"),
         lambda page_parent: import_prize_name_window_template(
@@ -325,6 +367,13 @@ def create_import_prize_name_window(pool_name=None):
         800,
         600,
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return
 
 
@@ -350,7 +399,7 @@ def create_prize_setting_window(list_name=None):
     Returns:
         创建的窗口实例
     """
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "prize_name_setting",
         ("prize_name_setting", "title"),
         lambda page_parent: prize_name_setting_window_template(
@@ -359,6 +408,13 @@ def create_prize_setting_window(list_name=None):
         800,
         600,
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return
 
 
@@ -384,7 +440,7 @@ def create_prize_weight_setting_window(list_name=None):
     Returns:
         创建的窗口实例
     """
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "prize_weight_setting",
         ("prize_weight_setting", "title"),
         lambda page_parent: prize_weight_setting_window_template(
@@ -393,6 +449,13 @@ def create_prize_weight_setting_window(list_name=None):
         800,
         600,
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return
 
 
@@ -414,13 +477,20 @@ def create_contributor_window():
     Returns:
         创建的窗口实例
     """
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "contributor",
         ("about", "contributor"),
         contributor_window_template,
         900,
         600,
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return
 
 
@@ -442,13 +512,20 @@ def create_countdown_timer_window():
     Returns:
         创建的窗口实例
     """
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "countdown_timer",
         ("countdown_timer", "title"),
         countdown_timer_window_template,
         980,
         650,
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return
 
 
@@ -550,13 +627,20 @@ def create_current_config_viewer_window():
     Returns:
         创建的窗口实例
     """
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "current_config_viewer",
         ("linkage_settings", "cses_import_settings", "name"),
         current_config_viewer_window_template,
         800,
         600,
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return
 
 
@@ -578,23 +662,40 @@ def create_log_viewer_window():
     Returns:
         创建的窗口实例
     """
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "log_viewer", ("log_viewer", "name"), log_viewer_window_template, 900, 600
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return
 
 
+# ==================================================
+# 备份管理窗口
+# ==================================================
 class backup_manager_window_template(PageTemplate):
     def __init__(self, parent=None):
         super().__init__(content_widget_class=BackupManagerWindow, parent=parent)
 
 
 def create_backup_manager_window():
-    _create_reusable_window(
+    window, _ = _create_reusable_window(
         "backup_manager",
         ("basic_settings", "backup_manager"),
         backup_manager_window_template,
         900,
         650,
     )
+    try:
+        if hasattr(window, "enable_close_guard"):
+            window.enable_close_guard(True)
+        else:
+            window.setProperty("srCloseGuard", True)
+    except Exception:
+        pass
     return

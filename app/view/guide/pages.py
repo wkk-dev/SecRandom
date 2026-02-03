@@ -1066,7 +1066,19 @@ class TestPage(QWidget):
         try:
             handler = CSharpIPCHandler.instance()
             if handler.is_connected:
-                handler.send_notification("SecRandom Test", [(0, "Test Student", True)])
+                handler.send_notification(
+                    "SecRandom Test",
+                    [
+                        {
+                            "student_id": 0,
+                            "student_name": "Test Student",
+                            "display_text": "Test Student",
+                            "exists": True,
+                            "group_name": "",
+                            "lottery_name": "",
+                        }
+                    ],
+                )
                 self.statusLabel.setText(
                     get_any_position_value_async("guide", "test_page", "success")
                 )
