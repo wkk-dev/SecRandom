@@ -39,6 +39,7 @@ class QuickDrawAnimation(QObject):
         self.final_selected_students = None
         self.final_class_name = None
         self.final_selected_students_dict = None
+        self.final_ipc_selected_students = None
         self.final_group_filter = None
         self.final_gender_filter = None
 
@@ -127,6 +128,7 @@ class QuickDrawAnimation(QObject):
         self.final_selected_students = result["selected_students"]
         self.final_class_name = result["class_name"]
         self.final_selected_students_dict = result["selected_students_dict"]
+        self.final_ipc_selected_students = result.get("ipc_selected_students")
         self.final_group_filter = result["group_filter"]
         self.final_gender_filter = result["gender_filter"]
 
@@ -135,6 +137,9 @@ class QuickDrawAnimation(QObject):
         self.roll_call_widget.final_class_name = self.final_class_name
         self.roll_call_widget.final_selected_students_dict = (
             self.final_selected_students_dict
+        )
+        self.roll_call_widget.final_ipc_selected_students = (
+            self.final_ipc_selected_students
         )
         self.roll_call_widget.final_group_filter = self.final_group_filter
         self.roll_call_widget.final_gender_filter = self.final_gender_filter
@@ -281,6 +286,7 @@ class QuickDrawAnimation(QObject):
                 draw_count=draw_count,
                 settings_group="quick_draw_notification_settings",
                 display_settings=self.quick_draw_settings,
+                ipc_selected_students=self.final_ipc_selected_students,
                 is_animating=False,
             )
 
@@ -412,7 +418,9 @@ class QuickDrawAnimation(QObject):
                     class_name=self.final_class_name,
                     selected_students=self.final_selected_students,
                     draw_count=draw_count,
-                    group_index=0,
+                    group_index=getattr(
+                        self.roll_call_widget.range_combobox, "currentIndex", lambda: 0
+                    )(),
                     settings_group="quick_draw_settings",
                     display_settings=quick_draw_settings,
                 )
@@ -437,6 +445,7 @@ class QuickDrawAnimation(QObject):
                     draw_count=draw_count,
                     settings_group="quick_draw_notification_settings",
                     display_settings=quick_draw_settings,
+                    ipc_selected_students=self.final_ipc_selected_students,
                 )
 
         except Exception as e:
@@ -478,6 +487,7 @@ class QuickDrawAnimation(QObject):
                     draw_count=draw_count,
                     settings_group="quick_draw_notification_settings",
                     display_settings=self.quick_draw_settings,
+                    ipc_selected_students=self.final_ipc_selected_students,
                     is_animating=True,
                 )
 
@@ -504,7 +514,9 @@ class QuickDrawAnimation(QObject):
             display_format=display_settings["display_format"],
             display_style=0,
             show_student_image=display_settings["student_image"],
-            group_index=0,
+            group_index=getattr(
+                self.roll_call_widget.range_combobox, "currentIndex", lambda: 0
+            )(),
             show_random=display_settings["show_random"],
             settings_group="quick_draw_settings",
         )

@@ -22,7 +22,7 @@ VSVersionInfo(
           StringStruct(u'FileDescription', u'SecRandom'),
           StringStruct(u'FileVersion', u'0.0.0.0'),
           StringStruct(u'InternalName', u'SecRandom'),
-          StringStruct(u'LegalCopyright', u'版权所有 © 2025 SecRandom'),
+          StringStruct(u'LegalCopyright', u'版权所有 © 2025-2026 SecRandom'),
           StringStruct(u'OriginalFilename', u'SecRandom.exe'),
           StringStruct(u'ProductName', u'SecRandom'),
           StringStruct(u'ProductVersion', u'0.0.0.0')])

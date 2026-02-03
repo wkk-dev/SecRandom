@@ -376,7 +376,16 @@ class LotteryManager(QObject):
             selected_prizes = [system_random.choice(self.prizes) for _ in range(count)]
 
             if not self.enable_student_assignment or not self.current_class_name:
-                return selected_prizes
+                prizes_with_meta = []
+                for prize in selected_prizes:
+                    prize_copy = dict(prize)
+                    prize_name = prize_copy.get("name", "")
+                    prize_copy["ipc_lottery_name"] = str(prize_name or "")
+                    prize_copy["ipc_group_name"] = ""
+                    prize_copy["ipc_student_name"] = ""
+                    prize_copy["ipc_display_text"] = str(prize_name or "")
+                    prizes_with_meta.append(prize_copy)
+                return prizes_with_meta
 
             candidates = RollCallUtils._get_filtered_candidates(
                 self.current_class_name,
@@ -400,6 +409,7 @@ class LotteryManager(QObject):
             for prize in selected_prizes:
                 prize_copy = dict(prize)
                 prize_name = prize_copy.get("name", "")
+                prize_copy["ipc_lottery_name"] = str(prize_name or "")
 
                 group_name = ""
                 student_name = ""
@@ -422,10 +432,13 @@ class LotteryManager(QObject):
                 else:
                     student_name = system_random.choice(candidates).get("name", "")
 
+                prize_copy["ipc_group_name"] = str(group_name or "")
+                prize_copy["ipc_student_name"] = str(student_name or "")
                 if group_name or student_name:
                     prize_copy["name"] = self._format_prize_student_text(
                         prize_name, group_name, student_name, show_random
                     )
+                prize_copy["ipc_display_text"] = str(prize_copy.get("name", "") or "")
 
                 prizes_with_students.append(prize_copy)
 
@@ -502,6 +515,7 @@ class LotteryManager(QObject):
         except Exception:
             show_random = 0
 
+        include_group = show_random in (0, 1, 2, 5, 6, 7, 8, 9)
         from app.common.data.list import get_group_members
 
         for idx, prize in enumerate(selected_prizes_dict):
@@ -522,6 +536,9 @@ class LotteryManager(QObject):
             )
 
             display_name = prize_name
+            ipc_group_name = ""
+            ipc_student_name = ""
+            ipc_display_text = str(prize_name or "")
             if student_tuple and len(student_tuple) >= 2 and student_tuple[1]:
                 group_name = ""
                 student_name = ""
@@ -545,18 +562,29 @@ class LotteryManager(QObject):
                 else:
                     student_name = str(student_tuple[1])
 
+                ipc_group_name = str(group_name or "")
+                ipc_student_name = str(student_name or "")
                 display_name = self._format_prize_student_text(
                     prize_name, group_name, student_name, show_random
                 )
+                ipc_display_text = str(display_name or "")
 
             selected_prizes_with_students.append((prize_id, display_name, prize_exist))
 
             prize_copy = dict(prize)
+            prize_copy["ipc_lottery_name"] = str(prize_name or "")
+            prize_copy["ipc_group_name"] = ipc_group_name if include_group else ""
+            prize_copy["ipc_student_name"] = ipc_student_name
+            prize_copy["ipc_display_text"] = ipc_display_text
             if isinstance(student_dict, dict):
                 prize_copy["student"] = student_dict
                 prize_copy["student_id"] = student_dict.get("id", "")
                 prize_copy["student_name"] = student_dict.get("name", "")
                 prize_copy["student_exist"] = student_dict.get("exist", True)
+                if include_group and not prize_copy["ipc_group_name"]:
+                    prize_copy["ipc_group_name"] = str(
+                        student_dict.get("group", "") or ""
+                    )
             updated_prizes_dict.append(prize_copy)
 
         result["selected_prizes"] = selected_prizes_with_students
@@ -937,11 +965,65 @@ def stop_animation(widget):
 
         settings = widget.manager.get_notification_settings(refresh=True)
         if settings is not None:
+            settings_for_notify = (
+                dict(settings) if isinstance(settings, dict) else settings
+            )
+            show_random = readme_settings_async("lottery_settings", "show_random")
+            try:
+                show_random = int(show_random or 0)
+            except Exception:
+                show_random = 0
+            include_group = show_random in (0, 1, 2, 5, 6, 7, 8, 9)
+            ipc_selected_students = []
+            for prize in widget.final_selected_students_dict or []:
+                if not isinstance(prize, dict):
+                    continue
+                student = prize.get("student")
+                if not isinstance(student, dict):
+                    student = None
+                try:
+                    student_id = int(prize.get("student_id", 0) or 0)
+                except Exception:
+                    student_id = 0
+                if not student_id and student is not None:
+                    try:
+                        student_id = int(student.get("id", 0) or 0)
+                    except Exception:
+                        student_id = 0
+                student_name = str(
+                    prize.get("ipc_student_name", "")
+                    or prize.get("student_name", "")
+                    or ""
+                )
+                display_text = str(
+                    prize.get("ipc_display_text", "") or prize.get("name", "") or ""
+                )
+                group_name = str(prize.get("ipc_group_name", "") or "")
+                if not include_group:
+                    group_name = ""
+                lottery_name = str(
+                    prize.get("ipc_lottery_name", "") or prize.get("name", "") or ""
+                )
+                exists = bool(prize.get("student_exist", prize.get("exist", True)))
+                ipc_selected_students.append(
+                    {
+                        "student_id": student_id,
+                        "student_name": student_name,
+                        "display_text": display_text,
+                        "exists": exists,
+                        "group_name": group_name,
+                        "lottery_name": lottery_name,
+                    }
+                )
+
+            if ipc_selected_students and isinstance(settings_for_notify, dict):
+                settings_for_notify["ipc_selected_students"] = ipc_selected_students
+
             ResultDisplayUtils.show_notification_if_enabled(
                 widget.final_pool_name,
                 widget.final_selected_students,
                 actual_draw_count,
-                settings,
+                settings_for_notify,
                 settings_group="lottery_notification_settings",
             )
 
@@ -991,6 +1073,24 @@ def draw_random(widget):
             display_count = min(display_count, remaining_count)
 
         prizes = widget.manager.get_random_items(display_count)
+        ipc_selected_students = []
+        for p in prizes or []:
+            if not isinstance(p, dict):
+                continue
+            ipc_selected_students.append(
+                {
+                    "student_id": 0,
+                    "student_name": str(p.get("ipc_student_name", "") or ""),
+                    "display_text": str(
+                        p.get("ipc_display_text", p.get("name", "")) or ""
+                    ),
+                    "exists": bool(p.get("exist", True)),
+                    "group_name": str(p.get("ipc_group_name", "") or ""),
+                    "lottery_name": str(
+                        p.get("ipc_lottery_name", p.get("name", "")) or ""
+                    ),
+                }
+            )
         selected_prizes = [(p["id"], p["name"], p.get("exist", True)) for p in prizes]
 
         display_result_animated(
@@ -998,6 +1098,7 @@ def draw_random(widget):
             selected_prizes,
             widget.manager.current_pool_name,
             draw_count=display_count,
+            ipc_selected_students=ipc_selected_students,
         )
 
 
@@ -1034,7 +1135,9 @@ def display_result(widget, selected_students, pool_name, draw_count=None):
         ResultDisplayUtils.display_results_in_grid(widget.result_grid, student_labels)
 
 
-def display_result_animated(widget, selected_students, pool_name, draw_count=None):
+def display_result_animated(
+    widget, selected_students, pool_name, draw_count=None, ipc_selected_students=None
+):
     render_settings = widget.manager.get_render_settings(refresh=False)
     if draw_count is None:
         draw_count = widget.current_count
@@ -1069,11 +1172,18 @@ def display_result_animated(widget, selected_students, pool_name, draw_count=Non
 
     settings = widget.manager.get_notification_settings(refresh=False)
     if settings is not None:
+        settings_for_notify = dict(settings) if isinstance(settings, dict) else settings
+        if (
+            ipc_selected_students
+            and isinstance(settings_for_notify, dict)
+            and isinstance(ipc_selected_students, list)
+        ):
+            settings_for_notify["ipc_selected_students"] = ipc_selected_students
         ResultDisplayUtils.show_notification_if_enabled(
             pool_name,
             selected_students,
             draw_count,
-            settings,
+            settings_for_notify,
             settings_group="lottery_notification_settings",
             is_animating=True,
         )

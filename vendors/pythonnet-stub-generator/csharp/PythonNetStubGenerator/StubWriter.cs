@@ -728,7 +728,7 @@ namespace PythonNetStubGenerator
             // be used more than once in Method signatures. In CLR, this is not the case, since the
             // Type of a single parameter can sometimes be used to infer the generic parameter of the method,
             // which can point to a different implementation/specialization.
-            // For now, I will assume that Python.NET uses some runtime information in the object reference to 
+            // For now, I will assume that Python.NET uses some runtime information in the object reference to
             // dispatch the correct method. And we can use the type bound to type the method parameter.
             // Todo: I've skipped this complication. For now we'll force the user to pass in the generic parameters
 
@@ -898,7 +898,7 @@ namespace PythonNetStubGenerator
             var underlyingType = stubType.GetEnumUnderlyingType().ToPythonType();
             sb.Indent().AppendLine($"class {stubType.Name}(typing.SupportsInt):");
             using var _ = new IndentScope();
-            
+
             sb.Indent().AppendLine("@typing.overload");
             sb.Indent().AppendLine($"def __init__(self, value : {underlyingType}) -> None: ...");
             sb.Indent().AppendLine("@typing.overload");

@@ -962,15 +962,17 @@ class FloatingNotificationManager:
         """
 
         try:
+            import re
 
             def _normalize_text(value):
                 text = str(value or "")
                 text = text.replace("\r\n", "\n").replace("\r", "\n")
+                text = text.strip()
                 if "\n" in text:
-                    text = " - ".join(
-                        [part.strip() for part in text.split("\n") if part.strip()]
-                    )
-                return text
+                    text = text.replace("\n", " - ")
+                text = re.sub(r"\s*-\s*", " - ", text)
+                text = re.sub(r"\s{2,}", " ", text)
+                return text.strip()
 
             show_random = 0
             if settings:
@@ -978,6 +980,10 @@ class FloatingNotificationManager:
                     show_random = int(settings.get("show_random", 0) or 0)
                 except Exception:
                     show_random = 0
+
+            ipc_students = None
+            if isinstance(settings, dict):
+                ipc_students = settings.get("ipc_selected_students")
 
             group_mode = False
             for item in selected_students or []:
@@ -989,28 +995,62 @@ class FloatingNotificationManager:
                     group_mode = True
                     break
 
-            if group_mode:
-                from app.common.data.list import get_group_members
-
+            if isinstance(ipc_students, list) and ipc_students:
+                selected_students_for_ipc = []
+                for item in ipc_students:
+                    if not isinstance(item, dict):
+                        continue
+                    try:
+                        student_id = int(item.get("student_id", 0) or 0)
+                    except Exception:
+                        student_id = 0
+                    student_name = _normalize_text(item.get("student_name", ""))
+                    display_text = (
+                        _normalize_text(item.get("display_text", "")) or student_name
+                    )
+                    group_name_raw = _normalize_text(item.get("group_name", ""))
+                    lottery_name = _normalize_text(item.get("lottery_name", ""))
+                    is_lottery = bool(
+                        settings_group and "lottery" in str(settings_group)
+                    ) or bool(lottery_name)
+                    group_name = group_name_raw if (group_mode or is_lottery) else ""
+                    if group_mode and (not is_lottery) and show_random == 0:
+                        group_name = ""
+                    selected_students_for_ipc.append(
+                        {
+                            "student_id": student_id,
+                            "student_name": student_name,
+                            "display_text": display_text,
+                            "exists": bool(item.get("exists", True)),
+                            "group_name": group_name,
+                            "lottery_name": lottery_name,
+                        }
+                    )
+            elif group_mode:
                 selected_students_for_ipc = []
                 for item in selected_students or []:
                     if not isinstance(item, (list, tuple)) or len(item) < 3:
                         continue
-                    group_name = _normalize_text(item[1])
+                    group_display_text = _normalize_text(item[1])
                     exist = bool(item[2])
 
-                    if show_random in (1, 2):
-                        group_members = get_group_members(class_name, group_name)
-                        if group_members:
-                            selected_member = system_random.choice(group_members)
-                            selected_name = _normalize_text(
-                                (selected_member or {}).get("name", "")
-                            )
-                            if selected_name:
-                                group_name = f"{group_name} - {selected_name}"
+                    group_name = ""
+                    student_name = group_display_text
+                    if show_random > 0 and " - " in group_display_text:
+                        parts = group_display_text.split(" - ", 1)
+                        if len(parts) == 2 and parts[0].strip() and parts[1].strip():
+                            group_name = parts[0].strip()
+                            student_name = parts[1].strip()
 
                     selected_students_for_ipc.append(
-                        (0, _normalize_text(group_name), exist)
+                        {
+                            "student_id": 0,
+                            "student_name": student_name,
+                            "display_text": group_display_text,
+                            "exists": exist,
+                            "group_name": group_name,
+                            "lottery_name": "",
+                        }
                     )
             else:
                 selected_students_for_ipc = []
@@ -1020,8 +1060,18 @@ class FloatingNotificationManager:
                     student_id = item[0]
                     if student_id is None:
                         student_id = 0
+                    normalized_name = _normalize_text(item[1])
+                    exist = bool(item[2])
+
                     selected_students_for_ipc.append(
-                        (student_id, _normalize_text(item[1]), bool(item[2]))
+                        {
+                            "student_id": int(student_id or 0),
+                            "student_name": normalized_name,
+                            "display_text": normalized_name,
+                            "exists": exist,
+                            "group_name": "",
+                            "lottery_name": "",
+                        }
                     )
 
             cs_ipc = CSharpIPCHandler.instance()

@@ -22,7 +22,7 @@ namespace PythonNetStubGenerator
             Scopes.Remove(this);
         }
 
-        public bool HasConflict(string cleanName, string typeNamespace) => 
+        public bool HasConflict(string cleanName, string typeNamespace) =>
             typeNamespace != Namespace && ReservedSymbols.Contains(cleanName);
     }
 }

@@ -291,10 +291,17 @@ class RollCallUtils:
             selected_groups = RollCallUtils.draw_random_groups(
                 students_dict_list, current_count, draw_type
             )
+            show_random = readme_settings_async("roll_call_settings", "show_random")
+            selected_groups, ipc_selected_students = (
+                RollCallUtils.render_group_display_students_and_ipc(
+                    class_name, selected_groups, show_random
+                )
+            )
             return {
                 "selected_students": selected_groups,
                 "class_name": class_name,
                 "selected_students_dict": [],
+                "ipc_selected_students": ipc_selected_students,
                 "group_filter": group_filter,
                 "gender_filter": gender_filter,
             }
@@ -404,6 +411,101 @@ class RollCallUtils:
         # _perform_weighted_draw already returns this format because _get_filtered_candidates sets it up
 
         return selected_groups
+
+    @staticmethod
+    def render_group_display_students(class_name, selected_students, show_random):
+        rendered, _ = RollCallUtils.render_group_display_students_and_ipc(
+            class_name, selected_students, show_random
+        )
+        return rendered
+
+    @staticmethod
+    def render_group_display_students_and_ipc(
+        class_name, selected_students, show_random
+    ):
+        try:
+            show_random = int(show_random or 0)
+        except Exception:
+            show_random = 0
+
+        try:
+            from app.common.data.list import get_group_members
+        except Exception:
+            get_group_members = None
+
+        rendered = []
+        ipc_selected_students = []
+        for item in selected_students or []:
+            if not isinstance(item, (list, tuple)) or len(item) < 3:
+                continue
+
+            student_id = item[0]
+            name = str(item[1] or "")
+            exist = bool(item[2])
+
+            if student_id is not None:
+                rendered.append((student_id, name, exist))
+                ipc_selected_students.append(
+                    {
+                        "student_id": int(student_id or 0),
+                        "student_name": name,
+                        "display_text": name,
+                        "exists": exist,
+                        "group_name": "",
+                        "lottery_name": "",
+                    }
+                )
+                continue
+
+            group_name = name
+            selected_name = ""
+            if (
+                show_random > 0
+                and get_group_members is not None
+                and class_name
+                and group_name
+            ):
+                try:
+                    group_members = get_group_members(class_name, group_name) or []
+                except Exception:
+                    group_members = []
+
+                if group_members:
+                    try:
+                        selected_member = system_random.choice(group_members)
+                    except Exception:
+                        selected_member = None
+                    selected_name = str(
+                        (selected_member or {}).get("name", "") or ""
+                    ).strip()
+            if selected_name:
+                display_text = f"{group_name} - {selected_name}"
+                rendered.append((None, display_text, exist))
+                ipc_selected_students.append(
+                    {
+                        "student_id": 0,
+                        "student_name": selected_name,
+                        "display_text": display_text,
+                        "exists": exist,
+                        "group_name": group_name,
+                        "lottery_name": "",
+                    }
+                )
+                continue
+
+            rendered.append((None, group_name, exist))
+            ipc_selected_students.append(
+                {
+                    "student_id": 0,
+                    "student_name": group_name,
+                    "display_text": group_name,
+                    "exists": exist,
+                    "group_name": group_name if show_random > 0 else "",
+                    "lottery_name": "",
+                }
+            )
+
+        return rendered, ipc_selected_students
 
     @staticmethod
     def prepare_notification_settings():
@@ -736,6 +838,7 @@ class RollCallUtils:
         draw_count,
         settings_group="roll_call_notification_settings",
         display_settings=None,
+        ipc_selected_students=None,
         is_animating=False,
     ):
         """
@@ -759,6 +862,12 @@ class RollCallUtils:
         settings = RollCallUtils.prepare_notification_settings_by_group(
             settings_group, display_settings
         )
+        if (
+            ipc_selected_students
+            and isinstance(ipc_selected_students, list)
+            and isinstance(settings, dict)
+        ):
+            settings["ipc_selected_students"] = ipc_selected_students
         ResultDisplayUtils.show_notification_if_enabled(
             class_name,
             selected_students,

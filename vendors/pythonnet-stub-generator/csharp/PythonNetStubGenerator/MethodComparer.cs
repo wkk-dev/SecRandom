@@ -16,7 +16,7 @@ namespace PythonNetStubGenerator
 
             var aName = a.NonGenericName();
             var bName = b.NonGenericName();
-            
+
             var nameCompare = string.Compare(aName, bName, StringComparison.InvariantCulture);
             if (nameCompare != 0) return nameCompare;
 

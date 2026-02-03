@@ -4,7 +4,7 @@ using System.Text;
 
 namespace PythonNetStubGenerator
 {
-    
+
     public static class StringBuilderExtensions
     {
         public static StringBuilder Indent(this StringBuilder sb)
@@ -22,5 +22,5 @@ namespace PythonNetStubGenerator
         public IndentScope() => IndentLevel++;
         public void Dispose() => IndentLevel--;
     }
-    
+
 }

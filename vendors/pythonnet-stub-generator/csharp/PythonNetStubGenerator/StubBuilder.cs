@@ -9,7 +9,7 @@ namespace PythonNetStubGenerator
     public static class StubBuilder
     {
         private static HashSet<DirectoryInfo> SearchPaths { get; } = new HashSet<DirectoryInfo>();
-        
+
         public static DirectoryInfo BuildAssemblyStubs(DirectoryInfo destPath, FileInfo[] targetAssemblyPaths, DirectoryInfo[] searchPaths = null)
         {
             // prepare resolver
@@ -21,7 +21,7 @@ namespace PythonNetStubGenerator
             {
                 var assemblyToStub = Assembly.LoadFrom(targetAssemblyPath.FullName);
                 SearchPaths.Add(targetAssemblyPath.Directory);
-                
+
                 if (searchPaths != null)
                     foreach (var path in SearchPaths)
                         SearchPaths.Add(path);
