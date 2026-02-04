@@ -28,6 +28,9 @@ _CACHED_DEVICES: list[CameraDeviceInfo] | None = None
 _CACHED_AT: float = 0.0
 _OPENCV_WARMUP_STARTED = False
 _QT_WARMUP_INFLIGHT = False
+_QT_WARMUP_THREAD: object | None = None
+_QT_WARMUP_WORKER: object | None = None
+_QT_WARMUP_HOOKED = False
 
 
 def _silence_opencv_logs(cv2: Any) -> None:
@@ -283,7 +286,7 @@ def warmup_camera_devices(force_refresh: bool = False) -> None:
 
 
 def warmup_camera_devices_async(force_refresh: bool = False) -> None:
-    global _QT_WARMUP_INFLIGHT
+    global _QT_WARMUP_INFLIGHT, _QT_WARMUP_THREAD, _QT_WARMUP_WORKER, _QT_WARMUP_HOOKED
 
     if not force_refresh:
         cached = _get_cached_devices()
@@ -297,7 +300,13 @@ def warmup_camera_devices_async(force_refresh: bool = False) -> None:
         _QT_WARMUP_INFLIGHT = True
 
     try:
-        from PySide6.QtCore import QObject, QThread, Signal, Slot  # type: ignore
+        from PySide6.QtCore import (  # type: ignore
+            QObject,
+            QThread,
+            Signal,
+            Slot,
+            QCoreApplication,
+        )
     except Exception:
         with _CACHE_LOCK:
             _QT_WARMUP_INFLIGHT = False
@@ -314,7 +323,13 @@ def warmup_camera_devices_async(force_refresh: bool = False) -> None:
                 devices = []
             self.finished.emit(devices)
 
-    thread = QThread()
+    app = None
+    try:
+        app = QCoreApplication.instance()
+    except Exception:
+        app = None
+
+    thread = QThread(app)
     worker = _Worker()
     worker.moveToThread(thread)
 
@@ -338,16 +353,53 @@ def warmup_camera_devices_async(force_refresh: bool = False) -> None:
             except Exception:
                 pass
             try:
-                worker.deleteLater()
-            except Exception:
-                pass
-            try:
-                thread.deleteLater()
+                thread.wait(1200)
             except Exception:
                 pass
 
+    def _on_thread_finished() -> None:
+        global _QT_WARMUP_THREAD, _QT_WARMUP_WORKER
+        obj_worker = _QT_WARMUP_WORKER
+        obj_thread = _QT_WARMUP_THREAD
+        _QT_WARMUP_WORKER = None
+        _QT_WARMUP_THREAD = None
+
+        try:
+            if obj_worker is not None:
+                obj_worker.deleteLater()
+        except Exception:
+            pass
+        try:
+            if obj_thread is not None:
+                obj_thread.deleteLater()
+        except Exception:
+            pass
+
+    def _on_app_about_to_quit() -> None:
+        t = _QT_WARMUP_THREAD
+        if t is None:
+            return
+        try:
+            t.quit()
+        except Exception:
+            pass
+        try:
+            t.wait(800)
+        except Exception:
+            pass
+
     worker.finished.connect(_on_finished)
     thread.started.connect(worker.run)
+    thread.finished.connect(_on_thread_finished)
+
+    _QT_WARMUP_THREAD = thread
+    _QT_WARMUP_WORKER = worker
+    if app is not None and not _QT_WARMUP_HOOKED:
+        _QT_WARMUP_HOOKED = True
+        try:
+            app.aboutToQuit.connect(_on_app_about_to_quit)
+        except Exception:
+            pass
     thread.start()
 
 

@@ -11,6 +11,7 @@ from qfluentwidgets import (
     FluentWindow,
     NavigationItemPosition,
     SingleDirectionScrollArea,
+    SearchLineEdit,
 )
 
 from app.tools.variable import (
@@ -32,6 +33,7 @@ from app.tools.settings_access import (
 from app.page_building.window_template import BackgroundLayer
 from app.Language.obtain_language import get_content_name_async
 from app.common.IPC_URL.url_command_handler import URLCommandHandler
+from app.common.search.settings_search_controller import SettingsSearchController
 
 
 # ==================================================
@@ -110,6 +112,77 @@ class SettingsWindow(FluentWindow):
         self._setup_background_layer()
         self._setup_settings_listener()
         self._setup_sidebar_scroll()
+        self._setup_titlebar_search()
+
+    def _setup_titlebar_search(self):
+        title_bar = getattr(self, "titleBar", None)
+        if title_bar is None:
+            return
+
+        if getattr(self, "_settings_search_line_edit", None) is not None:
+            return
+
+        self._settings_search_line_edit = SearchLineEdit(title_bar)
+        try:
+            self._settings_search_line_edit.setPlaceholderText(
+                get_content_name_async("settings", "search_placeholder")
+            )
+        except Exception:
+            pass
+
+        self._settings_search_controller = SettingsSearchController(
+            window=self,
+            title_bar=title_bar,
+            line_edit=self._settings_search_line_edit,
+            handle_page_request=self._handle_settings_page_request,
+            get_page_mapping=self._get_page_mapping,
+            get_created_page=lambda interface_attr: getattr(
+                self, "_created_pages", {}
+            ).get(interface_attr, None),
+            parent=self,
+        )
+        try:
+            self._settings_search_line_edit.searchSignal.connect(
+                self._settings_search_controller.on_search
+            )
+        except Exception:
+            pass
+
+        QTimer.singleShot(0, self._position_titlebar_search)
+
+    def _position_titlebar_search(self):
+        title_bar = getattr(self, "titleBar", None)
+        line_edit = getattr(self, "_settings_search_line_edit", None)
+        if title_bar is None or line_edit is None:
+            return
+
+        title_w = int(title_bar.width() or 0)
+        title_h = int(title_bar.height() or 0)
+        if title_w <= 0 or title_h <= 0:
+            return
+
+        left_reserve = 220
+        right_reserve = 180
+        max_w = max(200, title_w - left_reserve - right_reserve)
+        target_w = min(420, max_w)
+
+        try:
+            line_edit.setFixedWidth(int(target_w))
+        except Exception:
+            pass
+
+        try:
+            line_edit.adjustSize()
+        except Exception:
+            pass
+
+        w = int(line_edit.width() or target_w)
+        h = int(line_edit.height() or 28)
+        x = (title_w - w) // 2
+        x = max(left_reserve, min(x, title_w - right_reserve - w))
+        y = max(0, (title_h - h) // 2)
+        line_edit.move(int(x), int(y))
+        line_edit.raise_()
 
     def _setup_sidebar_scroll(self):
         navigation = getattr(self, "navigationInterface", None)
@@ -352,6 +425,10 @@ class SettingsWindow(FluentWindow):
             self._sync_sidebar_scroll_geometry()
         except Exception:
             pass
+        try:
+            self._position_titlebar_search()
+        except Exception:
+            pass
 
     def changeEvent(self, event):
         """窗口状态变化事件处理
@@ -478,6 +555,7 @@ class SettingsWindow(FluentWindow):
                 "notification_settings_item",
             ),
             "settings_safety": ("safetySettingsInterface", "safety_settings_item"),
+            "settings_linkage": ("courseSettingsInterface", "course_settings_item"),
             "settings_voice": ("voiceSettingsInterface", "voice_settings_item"),
             "settings_theme": ("themeManagementInterface", "theme_management_item"),
             "settings_history": ("historyInterface", "history_item"),
@@ -504,6 +582,10 @@ class SettingsWindow(FluentWindow):
             "safetySettingsInterface": (
                 "safetySettingsInterface",
                 "safety_settings_item",
+            ),
+            "courseSettingsInterface": (
+                "courseSettingsInterface",
+                "course_settings_item",
             ),
             "voiceSettingsInterface": ("voiceSettingsInterface", "voice_settings_item"),
             "themeManagementInterface": (

@@ -10,9 +10,22 @@ more_settings = {
 settings = {
     "ZH_CN": {
         "title": {"name": "设置", "description": "设置窗口"},
+        "search_placeholder": {"name": "搜索设置…", "description": "在设置中搜索"},
+        "search_no_result": {"name": "无匹配结果", "description": "搜索无结果提示"},
     },
-    "EN_US": {"title": {"name": "Settings", "description": "Settings window"}},
-    "JA_JP": {"title": {"name": "設定", "description": "設定ウィンドウ"}},
+    "EN_US": {
+        "title": {"name": "Settings", "description": "Settings window"},
+        "search_placeholder": {
+            "name": "Search settings…",
+            "description": "Search in settings",
+        },
+        "search_no_result": {"name": "No results", "description": "No search results"},
+    },
+    "JA_JP": {
+        "title": {"name": "設定", "description": "設定ウィンドウ"},
+        "search_placeholder": {"name": "設定を検索…", "description": "設定内を検索"},
+        "search_no_result": {"name": "該当なし", "description": "検索結果なし"},
+    },
 }
 
 # 快捷键设置
