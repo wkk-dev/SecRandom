@@ -3,7 +3,7 @@
 # ==================================================
 
 from loguru import logger
-from PySide6.QtWidgets import QApplication, QWidget, QScroller
+from PySide6.QtWidgets import QApplication, QWidget, QScroller, QSizePolicy
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import QTimer, QEvent, Signal, QSize, Qt
 from PySide6.QtWidgets import QVBoxLayout
@@ -119,7 +119,7 @@ class SettingsWindow(FluentWindow):
             return
 
         scroll_area = SingleDirectionScrollArea(self)
-        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidgetResizable(False)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setStyleSheet(
@@ -139,6 +139,9 @@ class SettingsWindow(FluentWindow):
             QScroller.ScrollerGestureType.LeftMouseButtonGesture,
         )
         scroll_area.setWidget(navigation)
+        scroll_area.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding
+        )
 
         layout = getattr(self, "hBoxLayout", None) or self.layout()
         if layout is not None:
@@ -149,6 +152,27 @@ class SettingsWindow(FluentWindow):
             layout.insertWidget(index, scroll_area)
 
         self._sidebar_scroll_area = scroll_area
+        self._sidebar_navigation_widget = navigation
+
+        navigation.installEventFilter(self)
+        scroll_area.installEventFilter(self)
+        QTimer.singleShot(0, self._sync_sidebar_scroll_geometry)
+
+    def _sync_sidebar_scroll_geometry(self):
+        scroll_area = getattr(self, "_sidebar_scroll_area", None)
+        navigation = getattr(self, "_sidebar_navigation_widget", None) or getattr(
+            self, "navigationInterface", None
+        )
+        if scroll_area is None or navigation is None:
+            return
+
+        target_width = int(navigation.width() or navigation.sizeHint().width() or 0)
+        if target_width > 0 and scroll_area.width() != target_width:
+            scroll_area.setFixedWidth(target_width)
+
+        viewport_h = int(scroll_area.viewport().height() or 0)
+        if viewport_h > 0 and navigation.minimumHeight() != viewport_h:
+            navigation.setMinimumHeight(viewport_h)
 
     def _setup_settings_listener(self):
         try:
@@ -324,6 +348,10 @@ class SettingsWindow(FluentWindow):
         except Exception:
             pass
         super().resizeEvent(event)
+        try:
+            self._sync_sidebar_scroll_geometry()
+        except Exception:
+            pass
 
     def changeEvent(self, event):
         """窗口状态变化事件处理
@@ -358,6 +386,30 @@ class SettingsWindow(FluentWindow):
                     )
 
         super().changeEvent(event)
+        if event.type() == QEvent.Type.WindowStateChange:
+            QTimer.singleShot(0, self._sync_sidebar_scroll_geometry)
+
+    def eventFilter(self, obj, event):
+        navigation = getattr(self, "_sidebar_navigation_widget", None)
+        scroll_area = getattr(self, "_sidebar_scroll_area", None)
+        if obj is navigation and event.type() in (
+            QEvent.Type.Resize,
+            QEvent.Type.LayoutRequest,
+            QEvent.Type.Show,
+        ):
+            try:
+                self._sync_sidebar_scroll_geometry()
+            except Exception:
+                pass
+        elif obj is scroll_area and event.type() in (
+            QEvent.Type.Resize,
+            QEvent.Type.Show,
+        ):
+            try:
+                self._sync_sidebar_scroll_geometry()
+            except Exception:
+                pass
+        return super().eventFilter(obj, event)
 
     # ==================================================
     # 页面请求处理
